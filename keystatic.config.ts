@@ -6,8 +6,14 @@ const hasGitHubCredentials = Boolean(
     process.env.KEYSTATIC_SECRET
 )
 
+// Use local file storage during development so the admin UI reads and writes
+// the repo's content directly. Only switch to GitHub-backed storage in
+// production builds, where editing happens through the GitHub App OAuth flow.
+const useGitHubStorage =
+  process.env.NODE_ENV !== 'development' && hasGitHubCredentials
+
 export default config({
-  storage: hasGitHubCredentials
+  storage: useGitHubStorage
     ? {
         kind: 'github',
         repo: {
