@@ -1,4 +1,4 @@
-import { config, collection, singleton, fields } from '@keystatic/core'
+import { config, collection, fields } from '@keystatic/core'
 
 const hasGitHubCredentials = Boolean(
   process.env.KEYSTATIC_GITHUB_CLIENT_ID &&
@@ -90,47 +90,40 @@ export default config({
       },
     }),
 
-    gigs: collection({
-      label: 'Gigs',
+    hobbies: collection({
+      label: 'Hobbies',
       slugField: 'title',
-      path: 'content/gigs/*',
+      path: 'content/hobbies/*',
       schema: {
-        title: fields.slug({ name: { label: 'Title (used as slug)' } }),
-        date: fields.date({ label: 'Date' }),
-        venue: fields.text({ label: 'Venue' }),
-        city: fields.text({ label: 'City' }),
-        country: fields.text({ label: 'Country' }),
-        description: fields.text({ label: 'Description', multiline: true }),
-        setlist: fields.array(
+        title: fields.slug({ name: { label: 'Title' } }),
+        blurb: fields.text({ label: 'Blurb', multiline: true }),
+        coverImage: fields.image({
+          label: 'Cover Image',
+          directory: 'public/images/hobbies',
+          publicPath: '/images/hobbies/',
+        }),
+        order: fields.number({ label: 'Display Order', defaultValue: 99 }),
+        showOnLandingPage: fields.checkbox({
+          label: 'Show on landing page',
+          defaultValue: true,
+        }),
+        route: fields.text({
+          label: 'Route override',
+          description:
+            'Optional external/override route for hobbies that need a non-generic page (leave empty to use /hobbies/[slug])',
+        }),
+        tiles: fields.array(
           fields.object({
-            title: fields.text({ label: 'Song Title' }),
-            artist: fields.text({ label: 'Original Artist (leave blank for originals)' }),
+            image: fields.image({
+              label: 'Image',
+              directory: 'public/images/hobbies',
+              publicPath: '/images/hobbies/',
+            }),
+            caption: fields.text({ label: 'Caption' }),
           }),
           {
-            label: 'Setlist',
-            itemLabel: (props) => props.fields.title.value || 'Untitled',
-          }
-        ),
-      },
-    }),
-  },
-
-  singletons: {
-    band: singleton({
-      label: 'Band',
-      path: 'content/band',
-      schema: {
-        name: fields.text({ label: 'Band Name' }),
-        description: fields.text({ label: 'Description', multiline: true }),
-        formedYear: fields.number({ label: 'Formed Year' }),
-        members: fields.array(
-          fields.object({
-            name: fields.text({ label: 'Name' }),
-            instrument: fields.text({ label: 'Instrument' }),
-          }),
-          {
-            label: 'Members',
-            itemLabel: (props) => props.fields.name.value || 'Member',
+            label: 'Tiles',
+            itemLabel: (props) => props.fields.caption.value || 'Tile',
           }
         ),
       },

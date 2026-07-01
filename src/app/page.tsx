@@ -116,12 +116,12 @@ export default async function HomePage() {
         </Button>
         <p className="text-sm text-muted-foreground">
           Also:{' '}
-          <Link href="/watching" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
-            Watching
+          <Link href="/hobbies" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+            Hobbies
           </Link>{' '}
           ·{' '}
-          <Link href="/music" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
-            Music
+          <Link href="/watching" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+            Watching
           </Link>
         </p>
       </div>
