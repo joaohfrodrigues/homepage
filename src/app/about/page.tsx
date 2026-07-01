@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import { getPage } from '@/lib/pages'
+import { PersonJsonLd } from '@/components/person-jsonld'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -18,6 +19,7 @@ export default function AboutPage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-16">
+      <PersonJsonLd />
       <h1 className="text-4xl font-bold tracking-tight mb-8">About</h1>
       <div className="prose prose-neutral dark:prose-invert max-w-none">
         <ReactMarkdown

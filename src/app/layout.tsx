@@ -2,8 +2,10 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
+import { SITE_URL, SITE_NAME } from '@/lib/site-config'
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'João Rodrigues',
     template: '%s | João Rodrigues',
@@ -13,7 +15,10 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    siteName: 'João Rodrigues',
+    siteName: SITE_NAME,
+  },
+  twitter: {
+    card: 'summary_large_image',
   },
 }
 

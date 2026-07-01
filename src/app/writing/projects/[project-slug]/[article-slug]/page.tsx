@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getArticle, getAdjacentArticles, getAllSlugs } from '@/lib/articles'
 import { getProject, getAllProjectSlugs } from '@/lib/projects'
 import { ArticleBody } from '@/components/article-body'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -27,12 +28,19 @@ export async function generateMetadata({
 }: {
   params: Promise<{ 'project-slug': string; 'article-slug': string }>
 }): Promise<Metadata> {
-  const { 'article-slug': articleSlug } = await params
+  const { 'project-slug': projectSlug, 'article-slug': articleSlug } = await params
   const article = await getArticle(articleSlug)
-  if (!article) return {}
+  if (!article || article.draft || article.project !== projectSlug) return {}
   return {
-    title: `${article.title} — João Rodrigues`,
+    title: article.title,
     description: article.description,
+    ...buildOpenGraphMetadata({
+      type: 'article',
+      title: article.title,
+      description: article.description,
+      publishedTime: article.publishedAt,
+      url: `/writing/projects/${projectSlug}/${articleSlug}`,
+    }),
   }
 }
 
@@ -53,7 +61,10 @@ export default async function ProjectArticlePage({
 
   return (
     <main className="container max-w-3xl py-12">
-      <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
+      <nav
+        aria-label="Breadcrumb"
+        className="mb-6 flex items-center gap-2 text-sm text-muted-foreground"
+      >
         <Link href="/writing" className="hover:text-foreground transition-colors">
           Writing
         </Link>

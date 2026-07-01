@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getAllProjectSlugs, getProject } from '@/lib/projects'
 import { getProjectArticles } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -19,8 +20,15 @@ export async function generateMetadata({
   const project = await getProject(projectSlug)
   if (!project) return {}
   return {
-    title: `${project.title} — João Rodrigues`,
+    title: project.title,
     description: project.description,
+    ...buildOpenGraphMetadata({
+      type: 'website',
+      title: project.title,
+      description: project.description,
+      image: project.coverImage,
+      url: `/writing/projects/${projectSlug}`,
+    }),
   }
 }
 

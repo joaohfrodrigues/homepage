@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Github } from 'lucide-react'
+import { GITHUB_URL, UNSPLASH_URL } from '@/lib/site-config'
 
 export function Footer() {
   return (
@@ -10,7 +11,7 @@ export function Footer() {
         </p>
         <div className="flex items-center gap-5">
           <a
-            href="https://github.com/joaohfrodrigues"
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="GitHub"
@@ -19,7 +20,7 @@ export function Footer() {
             <Github size={18} />
           </a>
           <a
-            href="https://unsplash.com/@joaohfrodrigues"
+            href={UNSPLASH_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

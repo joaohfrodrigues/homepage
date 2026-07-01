@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getCollectionBySlug, getCollectionPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -18,9 +19,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const collection = getCollectionBySlug(slug)
   if (!collection) return { title: 'Collection not found' }
+  const description = collection.description || `Photography collection: ${collection.title}`
   return {
     title: collection.title,
-    description: collection.description || `Photography collection: ${collection.title}`,
+    description,
+    ...buildOpenGraphMetadata({
+      type: 'website',
+      title: collection.title,
+      description,
+      image: collection.coverPhotoUrl,
+      url: `/photography/${slug}`,
+    }),
   }
 }
 

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getAdjacentArticles, getArticle, getStandaloneSlugs } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -16,10 +17,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params
   const article = await getArticle(slug)
-  if (!article) return {}
+  if (!article || article.draft || article.project) return {}
   return {
-    title: `${article.title} — João Rodrigues`,
+    title: article.title,
     description: article.description,
+    ...buildOpenGraphMetadata({
+      type: 'article',
+      title: article.title,
+      description: article.description,
+      publishedTime: article.publishedAt,
+      url: `/writing/${slug}`,
+    }),
   }
 }
 

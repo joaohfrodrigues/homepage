@@ -4,9 +4,12 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
+import { PersonJsonLd } from '@/components/person-jsonld'
 
 export const metadata: Metadata = {
   title: 'João Rodrigues',
+  description:
+    'Personal site of João Rodrigues — photography, writing, film & TV, and music.',
 }
 
 export default async function HomePage() {
@@ -15,6 +18,7 @@ export default async function HomePage() {
 
   return (
     <div className="container mx-auto px-4 py-16 flex flex-col gap-16 max-w-5xl">
+      <PersonJsonLd />
       {/* Hero */}
       <header className="flex flex-col gap-3 text-center items-center pt-8">
         <h1 className="text-5xl font-bold tracking-tight">João Rodrigues</h1>
