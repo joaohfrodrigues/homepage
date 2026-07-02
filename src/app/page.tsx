@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionTitle } from '@/components/ui/section-title'
 
 const description =
   'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.'
@@ -29,25 +30,28 @@ export default async function HomePage() {
     <div className="container mx-auto px-4 py-16 flex flex-col gap-16 max-w-5xl">
       <PersonJsonLd />
       {/* Hero */}
-      <header className="flex flex-col gap-3 text-center items-center pt-8">
-        <h1 className="text-5xl heading-lego">Joao Rodrigues</h1>
-        <p className="text-xl text-muted-foreground">
-          Data engineer by day — photographer, writer, film watcher, and drummer otherwise.
-        </p>
-      </header>
+      <PageHeader
+        title="Joao Rodrigues"
+        description="Data engineer by day — photographer, writer, film watcher, and drummer otherwise."
+        size="hero"
+        className="pt-8"
+      />
 
       {/* Photography */}
       {photos.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-lego tracking-tight">Photography</h2>
-            <Link
-              href="/photography"
-              className="text-sm text-muted-foreground hover:text-brand transition-colors"
-            >
-              View all →
-            </Link>
-          </div>
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/photography"
+                className="text-sm text-muted-foreground hover:text-brand transition-colors"
+              >
+                View all →
+              </Link>
+            }
+          >
+            Photography
+          </SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {photos.map((photo) => (
               <Link
@@ -73,16 +77,19 @@ export default async function HomePage() {
 
       {/* Writing */}
       {articles.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-lego tracking-tight">Writing</h2>
-            <Link
-              href="/writing"
-              className="text-sm text-muted-foreground hover:text-brand transition-colors"
-            >
-              View all →
-            </Link>
-          </div>
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/writing"
+                className="text-sm text-muted-foreground hover:text-brand transition-colors"
+              >
+                View all →
+              </Link>
+            }
+          >
+            Writing
+          </SectionTitle>
           <ul className="flex flex-col divide-y divide-border">
             {articles.map((article) => (
               <li key={article.slug}>
@@ -116,9 +123,6 @@ export default async function HomePage() {
 
       {/* Secondary */}
       <div className="flex flex-col items-center gap-3 text-center">
-        <Button asChild variant="outline">
-          <Link href="/about">About me</Link>
-        </Button>
         <p className="text-sm text-muted-foreground">
           Also:{' '}
           <Link href="/hobbies" className="hover:text-brand transition-colors underline-offset-4 hover:underline">

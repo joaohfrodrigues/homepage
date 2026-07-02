@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getCollectionBySlug, getCollectionPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { PageHeader } from '@/components/ui/page-header'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -55,13 +56,13 @@ export default async function CollectionPage({ params }: Props) {
         All photos
       </Link>
 
-      <header className="mb-8">
-        <h1 className="text-4xl heading-lego mb-2">{collection.title}</h1>
-        {collection.description && (
-          <p className="text-muted-foreground text-lg max-w-prose">{collection.description}</p>
-        )}
-        <p className="text-sm text-muted-foreground mt-2">{collection.totalPhotos} photos</p>
-      </header>
+      <PageHeader
+        title={collection.title}
+        description={collection.description}
+        align="left"
+        className="mb-2"
+      />
+      <p className="text-sm text-muted-foreground mb-8">{collection.totalPhotos} photos</p>
 
       <GalleryClient
         initialPhotos={photos}

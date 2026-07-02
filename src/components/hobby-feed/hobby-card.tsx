@@ -1,5 +1,5 @@
 import type { HobbySummary } from '@/lib/hobbies'
-import { pickAspectRatio } from '@/lib/aspect-ratio'
+import { CARD_ASPECT_RATIO } from '@/lib/aspect-ratio'
 import { PhotoCarousel } from './photo-carousel'
 
 export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string | null }) {
@@ -13,14 +13,12 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
         : []
 
   return (
-    <div className="group mb-6 break-inside-avoid rounded-lg bg-muted/40 p-5">
+    <div className="group flex h-full flex-col rounded-lg bg-muted/40 p-5">
       <p className="mb-2 text-sm text-muted-foreground">Hobbies</p>
-      {images.length > 0 && (
-        <PhotoCarousel images={images} aspectRatio={pickAspectRatio(hobby.slug)} />
-      )}
-      <h2 className="mt-3 font-serif text-lg leading-tight tracking-tight">{hobby.title}</h2>
+      {images.length > 0 && <PhotoCarousel images={images} aspectRatio={CARD_ASPECT_RATIO} />}
+      <h2 className="mt-3 line-clamp-2 font-serif text-lg leading-tight tracking-tight">{hobby.title}</h2>
       <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{hobby.blurb}</p>
-      {date && <p className="mt-3 text-xs text-muted-foreground">{date}</p>}
+      {date && <p className="mt-auto pt-3 text-xs text-muted-foreground">{date}</p>}
     </div>
   )
 }
