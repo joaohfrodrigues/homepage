@@ -19,6 +19,7 @@ export type HobbySummary = {
   order: number
   showOnLandingPage: boolean
   route: string
+  dateAdded: string
 }
 
 export type HobbyDetail = HobbySummary & {
@@ -36,6 +37,7 @@ export async function getHobbies(): Promise<HobbySummary[]> {
       order: e.entry.order ?? 99,
       showOnLandingPage: e.entry.showOnLandingPage,
       route: e.entry.route,
+      dateAdded: e.entry.dateAdded ?? '',
     }))
     .sort((a, b) => a.order - b.order)
 }
@@ -57,6 +59,7 @@ export async function getHobby(slug: string): Promise<HobbyDetail | null> {
     order: entry.order ?? 99,
     showOnLandingPage: entry.showOnLandingPage,
     route: entry.route,
+    dateAdded: entry.dateAdded ?? '',
     tiles: entry.tiles.map((tile) => ({
       image: resolveImage(tile.image),
       caption: tile.caption,
