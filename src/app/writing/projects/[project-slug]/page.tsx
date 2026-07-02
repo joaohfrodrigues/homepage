@@ -6,6 +6,8 @@ import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
 import type { Metadata } from 'next'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionTitle } from '@/components/ui/section-title'
 
 export async function generateStaticParams() {
   const slugs = await getAllProjectSlugs()
@@ -57,11 +59,14 @@ export default async function ProjectPage({
         </Link>
       </div>
 
-      <header className="mb-8">
-        <p className="text-sm text-muted-foreground mb-2 uppercase tracking-widest">Project</p>
-        <h1 className="text-3xl heading-lego mb-3">{project.title}</h1>
-        <p className="text-muted-foreground">{project.description}</p>
-      </header>
+      <PageHeader
+        title={project.title}
+        description={project.description}
+        eyebrow="Project"
+        size="compact"
+        align="left"
+        className="mb-8"
+      />
 
       {(project.body as unknown[]).length > 0 && (
         <div className="mb-12 prose-sm">
@@ -70,7 +75,7 @@ export default async function ProjectPage({
       )}
 
       <section>
-        <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">Articles</h2>
+        <SectionTitle>Articles</SectionTitle>
         {articles.length === 0 ? (
           <p className="text-muted-foreground">No articles yet.</p>
         ) : (

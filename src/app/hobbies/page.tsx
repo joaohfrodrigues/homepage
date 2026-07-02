@@ -5,6 +5,7 @@ import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatMonthYear } from '@/lib/format-date'
 import { HobbyCard } from '@/components/hobby-feed/hobby-card'
 import { GearCard } from '@/components/hobby-feed/gear-card'
+import { PageHeader } from '@/components/ui/page-header'
 
 type HobbyFeedEntry =
   | { kind: 'hobby'; dateAdded: string; hobby: HobbySummary }
@@ -32,10 +33,7 @@ export default async function HobbiesPage() {
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-16">
-      <header className="mb-10 text-center">
-        <h1 className="text-4xl heading-lego mb-3">Hobbies</h1>
-        <p className="text-muted-foreground text-lg">{description}</p>
-      </header>
+      <PageHeader title="Hobbies" description={description} className="mb-10" />
 
       <div className="columns-2 sm:columns-3 lg:columns-4 gap-6">
         {feed.map((entry) => {

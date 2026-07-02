@@ -6,6 +6,8 @@ import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
 import { EmptyState } from '@/components/ui/empty-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionTitle } from '@/components/ui/section-title'
 
 const description = 'Articles on home servers, photography, and technology.'
 
@@ -28,14 +30,11 @@ export default async function WritingPage() {
 
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
-      <header className="mb-12 text-center">
-        <h1 className="text-4xl heading-lego mb-3">Writing</h1>
-        <p className="text-muted-foreground text-lg">{description}</p>
-      </header>
+      <PageHeader title="Writing" description={description} className="mb-12" />
 
       {projects.length > 0 && (
         <section className="mb-16">
-          <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">Projects</h2>
+          <SectionTitle>Projects</SectionTitle>
           <ul className="space-y-6">
             {projects.map((project) => (
               <li key={project.slug}>
@@ -78,9 +77,7 @@ export default async function WritingPage() {
 
       {standaloneArticles.length > 0 && (
         <section>
-          <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">
-            Standalone Articles
-          </h2>
+          <SectionTitle>Standalone Articles</SectionTitle>
           <ul className="space-y-10">
             {standaloneArticles.map((article) => (
               <li key={article.slug}>

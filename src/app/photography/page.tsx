@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { getPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { PageHeader } from '@/components/ui/page-header'
+import { SectionTitle } from '@/components/ui/section-title'
 
 const description = 'Street, travel, and portrait photography by Joao Rodrigues.'
 
@@ -26,17 +28,12 @@ export default async function PhotographyPage() {
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-16">
-      <header className="mb-10 text-center">
-        <h1 className="text-4xl heading-lego mb-3">Photography</h1>
-        <p className="text-muted-foreground text-lg">{description}</p>
-      </header>
+      <PageHeader title="Photography" description={description} className="mb-10" />
 
       {/* Collections — the primary way to browse */}
       {collections.length > 0 && (
         <section className="mb-12" aria-label="Collections">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-            Collections
-          </h2>
+          <SectionTitle>Collections</SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {collections.map((col) => (
               <Link
@@ -68,9 +65,7 @@ export default async function PhotographyPage() {
 
       {/* All photos — secondary, searchable feed */}
       <section aria-label="All photos">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-          All photos
-        </h2>
+        <SectionTitle>All photos</SectionTitle>
         <GalleryClient initialPhotos={photos} initialHasMore={hasMore} />
       </section>
     </main>

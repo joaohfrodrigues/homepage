@@ -12,7 +12,6 @@ const navLinks = [
   { href: '/photography', label: 'Photography' },
   { href: '/hobbies', label: 'Hobbies' },
   { href: '/watching', label: 'Watching' },
-  { href: '/about', label: 'About' },
 ]
 
 export function Header() {

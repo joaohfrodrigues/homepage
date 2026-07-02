@@ -5,6 +5,7 @@ import { getPage } from '@/lib/pages'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { LegoBricksIllustration } from '@/components/ui/lego-bricks-illustration'
+import { PageHeader } from '@/components/ui/page-header'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -28,10 +29,12 @@ export default function AboutPage() {
   return (
     <div className="container mx-auto max-w-2xl px-4 py-16">
       <PersonJsonLd />
-      <div className="flex items-start justify-between gap-4 mb-8">
-        <h1 className="text-4xl heading-lego">About</h1>
-        <LegoBricksIllustration className="h-14 w-14 text-brand shrink-0" />
-      </div>
+      <PageHeader
+        title="About"
+        icon={<LegoBricksIllustration className="h-14 w-14 text-brand shrink-0" />}
+        align="left"
+        className="mb-8"
+      />
       <div className="prose prose-neutral dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{
