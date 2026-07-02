@@ -30,7 +30,12 @@ export async function getGearItems(): Promise<GearItem[]> {
   const items: GearItem[] = []
   for (const entry of gearEntries) {
     const hobby = entry.entry.hobby ? hobbiesBySlug.get(entry.entry.hobby) : undefined
-    if (!hobby) continue
+    if (!hobby) {
+      console.warn(
+        `Gear item "${entry.slug}" references unknown hobby "${entry.entry.hobby}" — skipping.`
+      )
+      continue
+    }
 
     items.push({
       slug: entry.slug,
