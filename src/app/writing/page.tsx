@@ -4,6 +4,7 @@ import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const description = 'Articles on home servers, photography, and technology.'
 
@@ -109,7 +110,7 @@ export default async function WritingPage() {
       )}
 
       {projects.length === 0 && standaloneArticles.length === 0 && (
-        <p className="text-muted-foreground">No articles yet.</p>
+        <EmptyState message="No articles yet." />
       )}
     </main>
   )
