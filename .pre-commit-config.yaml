@@ -87,7 +87,7 @@ repos:
 
     # Security: Bandit (matches CI: bandit -r . -c pyproject.toml)
     - repo: https://github.com/PyCQA/bandit
-      rev: 1.7.10
+      rev: 1.9.4
       hooks:
           - id: bandit
             args: [-c, pyproject.toml]

@@ -43,7 +43,7 @@ def insights_page(theme: str = 'dark'):
 
     return Html(
         create_head(
-            title='Dataset Insights | João Rodrigues',
+            title='Dataset Insights | Joao Rodrigues',
             description='Explore analytics from my photography collections: locations, engagement, and top tags.',
             current_url='https://joaohfrodrigues.com/insights',
         ),

@@ -4,7 +4,7 @@ from fasthtml.common import *
 
 
 def create_head(
-    title='João Rodrigues | Photography',
+    title='Joao Rodrigues | Photography',
     description=None,
     current_url='https://joaohfrodrigues.com',
     og_image=None,
@@ -21,7 +21,7 @@ def create_head(
     """
 
     if description is None:
-        description = 'Professional photography portfolio by João Rodrigues. Explore stunning photographs from around the world, featuring landscapes, portraits, and travel photography.'
+        description = 'Professional photography portfolio by Joao Rodrigues. Explore stunning photographs from around the world, featuring landscapes, portraits, and travel photography.'
 
     if og_image is None:
         og_image = 'https://joaohfrodrigues.com/static/favicons/apple-touch-icon.png'
@@ -33,7 +33,7 @@ def create_head(
     {
         "@context": "https://schema.org",
         "@type": "Person",
-        "name": "João Rodrigues",
+        "name": "Joao Rodrigues",
         "url": "https://joaohfrodrigues.com",
         "jobTitle": "Photographer",
         "description": "Data Engineer and hobbyist photographer based in Lisbon, Portugal.",
@@ -53,9 +53,9 @@ def create_head(
         Meta(name='description', content=description),
         Meta(
             name='keywords',
-            content='photography, portfolio, João Rodrigues, photos, landscape, portrait, travel',
+            content='photography, portfolio, Joao Rodrigues, photos, landscape, portrait, travel',
         ),
-        Meta(name='author', content='João Rodrigues'),
+        Meta(name='author', content='Joao Rodrigues'),
         Meta(charset='utf-8'),
         # Canonical URL for SEO (prevents duplicate content issues)
         Link(rel='canonical', href=current_url),
@@ -112,7 +112,7 @@ def create_head(
         Meta(property='og:title', content=title),
         Meta(property='og:description', content=description),
         Meta(property='og:url', content=current_url),
-        Meta(property='og:site_name', content='João Rodrigues Photography'),
+        Meta(property='og:site_name', content='Joao Rodrigues Photography'),
         Meta(property='og:image', content=og_image),
         # Twitter Card
         Meta(name='twitter:card', content='summary_large_image'),
