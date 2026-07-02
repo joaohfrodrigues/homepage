@@ -19,48 +19,23 @@ test.describe('/hobbies', () => {
     await expect(musicCard.getByRole('link')).toHaveCount(0)
   })
 
-  test('hovering a hobby card reveals its blurb', async ({ page }) => {
+  test("a hobby card's blurb is visible without any interaction", async ({ page }) => {
     await page.goto('/hobbies')
     const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    const blurb = musicCard.getByText(/Drumming in 404s/)
-    await expect(blurb).not.toBeVisible()
-    await musicCard.hover()
-    await expect(blurb).toBeVisible()
+    await expect(musicCard.getByText(/Drumming in 404s/)).toBeVisible()
   })
 
-  test('clicking (tapping) a hobby card reveals its blurb', async ({ page }) => {
-    await page.goto('/hobbies')
-    const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    const blurb = musicCard.getByText(/Drumming in 404s/)
-    await expect(blurb).not.toBeVisible()
-    await musicCard.click()
-    await expect(blurb).toBeVisible()
-  })
-
-  test('leaving a tapped-open hobby card closes it again', async ({ page }) => {
-    await page.goto('/hobbies')
-    const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    const blurb = musicCard.getByText(/Drumming in 404s/)
-    await musicCard.click()
-    await expect(blurb).toBeVisible()
-    await page.mouse.move(0, 0)
-    await expect(blurb).not.toBeVisible()
-  })
-
-  test('shows a known gear item with its hobby and category tags', async ({ page }) => {
+  test("shows a known gear item's hobby eyebrow and category tag", async ({ page }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')
-    await expect(drumKit.getByText('Music', { exact: true })).toBeVisible()
+    await expect(drumKit.getByText(/Hobbies · Music/)).toBeVisible()
     await expect(drumKit.getByText('Drum Kit', { exact: true })).toBeVisible()
   })
 
-  test('hovering a gear card reveals its note', async ({ page }) => {
+  test("a gear item's note is visible without any interaction", async ({ page }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')
-    const note = drumKit.getByText(/Set up in the garage/)
-    await expect(note).not.toBeVisible()
-    await drumKit.hover()
-    await expect(note).toBeVisible()
+    await expect(drumKit.getByText(/Set up in the garage/)).toBeVisible()
   })
 
   test('a gear item with a link renders a working link', async ({ page }) => {
@@ -83,6 +58,6 @@ test.describe('/hobbies', () => {
     await expect(page.getByRole('heading', { name: 'Mirrorless Body' })).toBeVisible()
     await expect(page.getByRole('heading', { name: '50mm Prime Lens' })).toBeVisible()
     const lens = page.getByRole('heading', { name: '50mm Prime Lens' }).locator('..')
-    await expect(lens.getByText('Photography', { exact: true })).toBeVisible()
+    await expect(lens.getByText(/Hobbies · Photography/)).toBeVisible()
   })
 })

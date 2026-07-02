@@ -35,7 +35,7 @@ export default async function HobbiesPage() {
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="columns-2 sm:columns-3 lg:columns-4 gap-6">
         {feed.map((entry) => {
           const date = formatDate(entry.dateAdded)
 

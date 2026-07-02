@@ -10,7 +10,13 @@ type PhotoCarouselImage = {
 
 const ROTATE_INTERVAL_MS = 4000
 
-export function PhotoCarousel({ images }: { images: PhotoCarouselImage[] }) {
+export function PhotoCarousel({
+  images,
+  aspectRatio,
+}: {
+  images: PhotoCarouselImage[]
+  aspectRatio: string
+}) {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
@@ -24,7 +30,7 @@ export function PhotoCarousel({ images }: { images: PhotoCarouselImage[] }) {
   if (images.length === 0) return null
 
   return (
-    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
+    <div className={`relative overflow-hidden rounded-md bg-muted ${aspectRatio}`}>
       {images.map((image, i) => (
         <Image
           key={`${image.src}-${i}`}
