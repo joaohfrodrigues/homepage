@@ -45,7 +45,7 @@ export default async function ArticlePage({
   if (!article || article.draft || article.project) notFound()
 
   return (
-    <main className="container max-w-3xl py-12">
+    <main className="container mx-auto max-w-3xl px-4 py-12">
       <div className="mb-2">
         <Link
           href="/writing"

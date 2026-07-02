@@ -60,7 +60,7 @@ export default async function ProjectArticlePage({
   if (!article || article.draft || !project || article.project !== projectSlug) notFound()
 
   return (
-    <main className="container max-w-3xl py-12">
+    <main className="container mx-auto max-w-3xl px-4 py-12">
       <nav
         aria-label="Breadcrumb"
         className="mb-6 flex items-center gap-2 text-sm text-muted-foreground"

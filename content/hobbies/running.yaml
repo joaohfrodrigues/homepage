@@ -6,7 +6,6 @@ dateAdded: '2026-07-02'
 coverImage: running-cover.png
 order: 2
 showOnLandingPage: true
-route: ''
 tiles:
     - image: running-tile-1.png
       caption: Sunrise along the river — Lisbon, 2026

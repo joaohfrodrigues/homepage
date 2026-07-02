@@ -46,7 +46,7 @@ export default async function ProjectPage({
   if (!project) notFound()
 
   return (
-    <main className="container max-w-3xl py-12">
+    <main className="container mx-auto max-w-3xl px-4 py-12">
       <div className="mb-6">
         <Link
           href="/writing"

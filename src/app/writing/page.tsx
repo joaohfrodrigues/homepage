@@ -25,7 +25,7 @@ export default async function WritingPage() {
   ])
 
   return (
-    <main className="container max-w-3xl py-12">
+    <main className="container mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold tracking-tight mb-2">Writing</h1>
       <p className="text-muted-foreground mb-12">
         Articles on home servers, photography, and technology.

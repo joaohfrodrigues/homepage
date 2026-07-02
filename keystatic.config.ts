@@ -130,11 +130,6 @@ export default config({
           label: 'Show on landing page',
           defaultValue: true,
         }),
-        route: fields.text({
-          label: 'Route override',
-          description:
-            'Optional external/override route for hobbies that need a non-generic page (leave empty to use /hobbies/[slug])',
-        }),
         tiles: fields.array(
           fields.object({
             image: fields.image({
