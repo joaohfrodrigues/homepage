@@ -1,6 +1,0 @@
-# Allow all search engines
-User-agent: *
-Allow: /
-
-# Sitemap location
-Sitemap: https://joaohfrodrigues.com/sitemap.xml

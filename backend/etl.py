@@ -22,9 +22,9 @@ from backend.database import (
 )
 from backend.providers.base import BaseProvider
 from backend.providers.unsplash import UnsplashProvider
+from backend.slug import slugify
+from backend.unsplash_client import UnsplashClient
 from config import DEFAULT_USER_NAME
-from services.slug import slugify
-from services.unsplash import UnsplashClient
 
 # Setup logging
 logging.basicConfig(

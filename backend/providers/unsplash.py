@@ -5,8 +5,8 @@ from collections.abc import Generator
 from typing import Any
 
 from backend.providers.base import validate_photo_structure
+from backend.unsplash_client import UnsplashClient
 from config import ETL_STRICT_VALIDATION, FETCH_MODE
-from services.unsplash import UnsplashClient
 
 from .base import BaseProvider
 
@@ -57,7 +57,7 @@ class UnsplashProvider(BaseProvider):
                 for photo in photos:
                     # Validate provider output shape before yielding
                     if not validate_photo_structure(photo):
-                        msg = f"Invalid photo shape from Unsplash provider (missing required keys): {photo.get('id', '<no-id>')}"
+                        msg = f'Invalid photo shape from Unsplash provider (missing required keys): {photo.get("id", "<no-id>")}'
                         if ETL_STRICT_VALIDATION:
                             logger.error(msg)
                             raise ValueError(msg)
@@ -135,7 +135,7 @@ class UnsplashProvider(BaseProvider):
                 for photo in photos:
                     # Validate provider output shape before yielding
                     if not validate_photo_structure(photo):
-                        msg = f"Invalid photo shape from Unsplash provider (missing required keys): {photo.get('id', '<no-id>')}"
+                        msg = f'Invalid photo shape from Unsplash provider (missing required keys): {photo.get("id", "<no-id>")}'
                         if ETL_STRICT_VALIDATION:
                             logger.error(msg)
                             raise ValueError(msg)

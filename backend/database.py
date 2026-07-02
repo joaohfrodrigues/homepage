@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from services.slug import slugify
+from backend.slug import slugify
 
 logger = logging.getLogger(__name__)
 

@@ -5,16 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "photography-home"
 version = "1.0.0"
-description = "Photography portfolio website"
+description = "Photography portfolio data pipeline"
 authors = [{name = "Joao Rodrigues"}]
 requires-python = ">=3.10"
 dependencies = [
-    "python-fasthtml",
-    "uvicorn",
     "requests",
     "python-dotenv",
-    "markdown",
-    "plotly",
     "pycountry",
 ]
 
@@ -28,8 +24,8 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["backend*", "components*", "routes*", "services*"]
-exclude = ["tests*", "data*", "static*", "content*", ".venv*", "*.egg-info"]
+include = ["backend*"]
+exclude = ["tests*", "data*", "content*", ".venv*", "*.egg-info"]
 
 [tool.ruff]
 # Exclude common directories
@@ -72,10 +68,6 @@ ignore = [
     "B008",   # do not perform function calls in argument defaults
     "PLR0913", # too many arguments
     "PLR2004", # magic value comparison
-    "F403",   # star imports (required by FastHTML)
-    "F405",   # undefined names from star imports (required by FastHTML)
-    "F811",   # redefinition of unused function (FastHTML route pattern)
-    "ARG001", # unused function argument (required by FastAPI/Starlette handlers)
 ]
 
 # Allow fix for all enabled rules
@@ -99,7 +91,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["components", "services", "routes"]
+known-first-party = ["backend"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.bandit]
