@@ -20,7 +20,7 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
       }}
       onClick={() => setTapped((current) => !current)}
     >
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mb-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <p className="shrink-0 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Gear
         </p>
@@ -47,8 +47,8 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
       ) : (
         item.note && <p className="text-sm text-muted-foreground">{item.note}</p>
       )}
-      <h3 className="mt-4 text-xl font-semibold tracking-tight">{item.name}</h3>
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <h3 className="mt-2 text-base font-medium tracking-tight">{item.name}</h3>
+      <div className="mt-1 flex items-center justify-between gap-2">
         {date && <p className="text-xs text-muted-foreground">{date}</p>}
         {item.link && (
           <a

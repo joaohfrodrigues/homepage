@@ -28,7 +28,7 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
       }}
       onClick={() => setTapped((current) => !current)}
     >
-      <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="mb-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
         Hobbies
       </p>
       {images.length > 0 ? (
@@ -45,8 +45,8 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
       ) : (
         <p className="text-sm text-muted-foreground">{hobby.blurb}</p>
       )}
-      <h2 className="mt-4 text-xl font-semibold tracking-tight">{hobby.title}</h2>
-      {date && <p className="mt-3 text-xs text-muted-foreground">{date}</p>}
+      <h2 className="mt-2 text-base font-medium tracking-tight">{hobby.title}</h2>
+      {date && <p className="mt-1 text-xs text-muted-foreground">{date}</p>}
     </div>
   )
 }
