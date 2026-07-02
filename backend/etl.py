@@ -20,11 +20,9 @@ from backend.database import (
     insert_photo,
     link_photo_to_collection,
 )
-from backend.providers.base import BaseProvider
 from backend.providers.unsplash import UnsplashProvider
+from backend.slug import slugify
 from config import DEFAULT_USER_NAME
-from services.slug import slugify
-from services.unsplash import UnsplashClient
 
 # Setup logging
 logging.basicConfig(
@@ -147,7 +145,7 @@ def transform_photo(photo: dict) -> dict:
 
 def _process_user_photos(
     conn,
-    provider: BaseProvider,
+    provider: UnsplashProvider,
     username: str,
     existing_photos: dict,
     max_photos: int | None,
@@ -182,10 +180,7 @@ def _process_user_photos(
                     continue
 
             # Enrich EXIF/location when missing (function short-circuits if already present)
-            if getattr(provider, 'client', None) and hasattr(
-                provider.client, 'enrich_photo_with_details'
-            ):
-                provider.client.enrich_photo_with_details(photo, force_enrich=full_load)
+            provider.enrich_photo_with_details(photo, force_enrich=full_load)
 
             # Transform and insert
             photo_data = transform_photo(photo)
@@ -208,7 +203,7 @@ def _process_user_photos(
 
 def _process_collections(
     conn,
-    provider: BaseProvider,
+    provider: UnsplashProvider,
     photo_ids: set,
     existing_photos: dict,
     max_photos: int | None,
@@ -273,10 +268,7 @@ def _process_collections(
                                 continue
 
                         # Enrich EXIF/location when missing (function short-circuits if already present)
-                        if getattr(provider, 'client', None) and hasattr(
-                            provider.client, 'enrich_photo_with_details'
-                        ):
-                            provider.client.enrich_photo_with_details(photo, force_enrich=full_load)
+                        provider.enrich_photo_with_details(photo, force_enrich=full_load)
 
                         photo_data = transform_photo(photo)
                         insert_photo(conn, photo_data)
@@ -306,7 +298,10 @@ def _process_collections(
 
 
 def sync_data(
-    provider: BaseProvider, username: str, max_photos: int | None = None, full_load: bool = False
+    provider: UnsplashProvider,
+    username: str,
+    max_photos: int | None = None,
+    full_load: bool = False,
 ):
     """Main ETL function to sync data from a provider to the database
 
@@ -398,8 +393,7 @@ def main():
     logger.info(f'Using fetch mode: {fetch_mode}')
 
     # Initialize the provider with fetch mode
-    unsplash_client = UnsplashClient(access_key, username, fetch_mode=fetch_mode)
-    provider = UnsplashProvider(unsplash_client)
+    provider = UnsplashProvider(access_key, username, fetch_mode=fetch_mode)
 
     max_photos = 5 if args.test else args.max_photos
 

@@ -1,8 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getAdjacentArticles, getArticle, getStandaloneSlugs } from '@/lib/articles'
+import { getAdjacentArticles, getStandaloneArticle, getStandaloneSlugs } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { formatDate } from '@/lib/format-date'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -16,8 +17,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const article = await getArticle(slug)
-  if (!article || article.draft || article.project) return {}
+  const article = await getStandaloneArticle(slug)
+  if (!article) return {}
   return {
     title: article.title,
     description: article.description,
@@ -38,11 +39,11 @@ export default async function ArticlePage({
 }) {
   const { slug } = await params
   const [article, adjacent] = await Promise.all([
-    getArticle(slug),
+    getStandaloneArticle(slug),
     getAdjacentArticles(slug),
   ])
 
-  if (!article || article.draft || article.project) notFound()
+  if (!article) notFound()
 
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
@@ -58,13 +59,7 @@ export default async function ArticlePage({
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-3">{article.title}</h1>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <time>
-            {new Date(article.publishedAt).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </time>
+          <time>{formatDate(article.publishedAt)}</time>
           <span>{article.readingTime} min read</span>
         </div>
       </header>

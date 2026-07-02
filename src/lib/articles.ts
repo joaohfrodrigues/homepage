@@ -61,7 +61,7 @@ export async function getStandaloneSlugs(): Promise<string[]> {
   return entries.filter((e) => !e.entry.project).map((e) => e.slug)
 }
 
-export async function getArticle(slug: string): Promise<ArticleDetail | null> {
+async function getArticle(slug: string): Promise<ArticleDetail | null> {
   const entry = await reader.collections.articles.read(slug, { resolveLinkedFiles: true })
   if (!entry) return null
 
@@ -79,6 +79,23 @@ export async function getArticle(slug: string): Promise<ArticleDetail | null> {
     body,
     readingTime,
   }
+}
+
+/** A standalone article page: published, and not owned by a project. */
+export async function getStandaloneArticle(slug: string): Promise<ArticleDetail | null> {
+  const article = await getArticle(slug)
+  if (!article || article.draft || article.project) return null
+  return article
+}
+
+/** A project article page: published, and owned by the given project. */
+export async function getProjectArticle(
+  projectSlug: string,
+  slug: string
+): Promise<ArticleDetail | null> {
+  const article = await getArticle(slug)
+  if (!article || article.draft || article.project !== projectSlug) return null
+  return article
 }
 
 export async function getAdjacentArticles(slug: string, projectSlug?: string) {

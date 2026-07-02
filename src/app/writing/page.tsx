@@ -4,6 +4,7 @@ import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { formatDate } from '@/lib/format-date'
 import { EmptyState } from '@/components/ui/empty-state'
 
 const description = 'Articles on home servers, photography, and technology.'
@@ -85,11 +86,7 @@ export default async function WritingPage() {
               <li key={article.slug}>
                 <article>
                   <time className="text-sm text-muted-foreground">
-                    {new Date(article.publishedAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {formatDate(article.publishedAt)}
                   </time>
                   <h3 className="text-xl font-semibold mt-1 mb-2">
                     <Link

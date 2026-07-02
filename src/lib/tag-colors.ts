@@ -1,3 +1,5 @@
+import { pick } from './deterministic-pick'
+
 const PALETTE = [
   { bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-800 dark:text-green-200' },
   { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-800 dark:text-orange-200' },
@@ -8,9 +10,5 @@ const PALETTE = [
 ]
 
 export function tagColor(label: string) {
-  let hash = 0
-  for (let i = 0; i < label.length; i++) {
-    hash = (hash * 31 + label.charCodeAt(i)) >>> 0
-  }
-  return PALETTE[hash % PALETTE.length]
+  return pick(label, PALETTE)
 }

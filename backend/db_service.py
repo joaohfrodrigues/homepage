@@ -5,8 +5,8 @@ import logging
 from typing import Any
 
 from backend.database import get_db_connection
+from backend.slug import slugify
 from config import DEFAULT_USER_NAME
-from services.slug import slugify
 
 logger = logging.getLogger(__name__)
 

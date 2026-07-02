@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getArticle, getAdjacentArticles, getAllSlugs } from '@/lib/articles'
+import { getProjectArticle, getAdjacentArticles, getAllSlugs } from '@/lib/articles'
 import { getProject, getAllProjectSlugs } from '@/lib/projects'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { formatDate } from '@/lib/format-date'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -29,8 +30,8 @@ export async function generateMetadata({
   params: Promise<{ 'project-slug': string; 'article-slug': string }>
 }): Promise<Metadata> {
   const { 'project-slug': projectSlug, 'article-slug': articleSlug } = await params
-  const article = await getArticle(articleSlug)
-  if (!article || article.draft || article.project !== projectSlug) return {}
+  const article = await getProjectArticle(projectSlug, articleSlug)
+  if (!article) return {}
   return {
     title: article.title,
     description: article.description,
@@ -52,12 +53,12 @@ export default async function ProjectArticlePage({
   const { 'project-slug': projectSlug, 'article-slug': articleSlug } = await params
 
   const [article, project, adjacent] = await Promise.all([
-    getArticle(articleSlug),
+    getProjectArticle(projectSlug, articleSlug),
     getProject(projectSlug),
     getAdjacentArticles(articleSlug, projectSlug),
   ])
 
-  if (!article || article.draft || !project || article.project !== projectSlug) notFound()
+  if (!article || !project) notFound()
 
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
@@ -82,13 +83,7 @@ export default async function ProjectArticlePage({
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight mb-3">{article.title}</h1>
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <time>
-            {new Date(article.publishedAt).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </time>
+          <time>{formatDate(article.publishedAt)}</time>
           <span>{article.readingTime} min read</span>
         </div>
       </header>

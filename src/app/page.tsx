@@ -6,6 +6,7 @@ import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { formatDate } from '@/lib/format-date'
 
 const description =
   'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.'
@@ -95,11 +96,7 @@ export default async function HomePage() {
                 >
                   {article.publishedAt && (
                     <time className="text-xs text-muted-foreground">
-                      {new Date(article.publishedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {formatDate(article.publishedAt)}
                     </time>
                   )}
                   <h3 className="font-medium group-hover:underline underline-offset-4">
