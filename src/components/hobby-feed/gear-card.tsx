@@ -12,12 +12,12 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
 
   return (
     <div
-      className="group mb-6 break-inside-avoid rounded-lg bg-muted/40 p-5"
+      className="group flex h-full flex-col rounded-lg bg-muted/40 p-5"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => setTapped((current) => !current)}
     >
-      <div className="mb-3 flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mb-3 flex shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <p className="shrink-0 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Gear
         </p>
@@ -28,8 +28,8 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
           <Tag label={item.category} />
         </span>
       </div>
-      {item.photo && (
-        <div className="relative">
+      {item.photo ? (
+        <div className="relative min-h-0 flex-1">
           <PhotoCarousel images={[{ src: item.photo, alt: item.name }]} />
           {item.note && (
             <div
@@ -41,12 +41,15 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
             </div>
           )}
         </div>
+      ) : (
+        item.note && (
+          <p className="min-h-0 flex-1 overflow-hidden text-sm text-muted-foreground">
+            {item.note}
+          </p>
+        )
       )}
-      <h3 className="mt-4 text-xl font-semibold tracking-tight">{item.name}</h3>
-      {!item.photo && item.note && (
-        <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>
-      )}
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <h3 className="mt-4 shrink-0 truncate text-xl font-semibold tracking-tight">{item.name}</h3>
+      <div className="mt-3 flex shrink-0 items-center justify-between gap-2">
         {date && <p className="text-xs text-muted-foreground">{date}</p>}
         {item.link && (
           <a
