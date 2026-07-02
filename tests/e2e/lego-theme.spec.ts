@@ -28,8 +28,9 @@ test.describe('Lego theme', () => {
     expect(response.headers()['content-type']).toContain('image/png')
   })
 
-  test('footer renders the brick-row divider', async ({ page }) => {
+  test('footer renders the Lego badge divider', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('footer svg[viewBox="0 0 240 24"]')).toBeVisible()
+    const divider = page.locator('footer > div').first().locator('svg')
+    await expect(divider).toBeVisible()
   })
 })
