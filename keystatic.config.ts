@@ -90,6 +90,27 @@ export default config({
       },
     }),
 
+    gear: collection({
+      label: 'Gear',
+      slugField: 'name',
+      path: 'content/gear/*',
+      schema: {
+        name: fields.slug({ name: { label: 'Name' } }),
+        hobby: fields.relationship({
+          label: 'Hobby',
+          collection: 'hobbies',
+        }),
+        category: fields.text({ label: 'Category' }),
+        photo: fields.image({
+          label: 'Photo',
+          directory: 'public/images/gear',
+          publicPath: '/images/gear/',
+        }),
+        note: fields.text({ label: 'Note', multiline: true }),
+        link: fields.text({ label: 'Link', description: 'Optional purchase/product link' }),
+      },
+    }),
+
     hobbies: collection({
       label: 'Hobbies',
       slugField: 'title',
