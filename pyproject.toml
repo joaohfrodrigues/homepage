@@ -77,6 +77,11 @@ unfixable = []
 # Allow unused variables when underscore-prefixed
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
+[tool.ruff.lint.per-file-ignores]
+# Pytest fixture arguments are injected for their side effects (DB setup,
+# fixtures) and are often unused in the test body by design.
+"tests/*" = ["ARG001"]
+
 [tool.ruff.format]
 # Use double quotes for strings
 quote-style = "single"
