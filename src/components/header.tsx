@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Stud } from '@/components/ui/stud'
+import { LegoBricksIllustration } from '@/components/ui/lego-bricks-illustration'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -26,7 +26,7 @@ export function Header() {
           href="/"
           className="group relative flex items-center gap-1.5 font-semibold text-lg tracking-tight"
         >
-          <Stud className="h-2.5 w-2.5 text-brand opacity-0 -translate-y-0.5 scale-75 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100" />
+          <LegoBricksIllustration className="h-4 w-4 text-brand opacity-0 -translate-y-0.5 scale-75 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100" />
           Joao Rodrigues
         </Link>
 
@@ -40,9 +40,9 @@ export function Header() {
                 className="group relative flex flex-col items-center gap-1 text-sm text-muted-foreground hover:text-brand transition-colors"
               >
                 {link.label}
-                <Stud
+                <LegoBricksIllustration
                   className={cn(
-                    'text-brand transition-opacity duration-150',
+                    'h-4 w-4 text-brand transition-opacity duration-150',
                     isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   )}
                 />
@@ -76,7 +76,9 @@ export function Header() {
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {pathname?.startsWith(link.href) && <Stud className="text-brand" />}
+                {pathname?.startsWith(link.href) && (
+                  <LegoBricksIllustration className="h-4 w-4 text-brand" />
+                )}
                 {link.label}
               </Link>
             ))}

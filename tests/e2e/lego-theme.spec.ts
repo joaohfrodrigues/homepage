@@ -7,19 +7,19 @@ test.describe('Lego theme', () => {
     await expect(h1).toHaveClass(/heading-lego/)
   })
 
-  test('active nav link shows a filled brand-colored stud', async ({ page }) => {
+  test('active nav link shows a filled brand-colored brick icon', async ({ page }) => {
     await page.goto('/photography')
     const activeLink = page.locator('nav').first().locator('a[href="/photography"]')
-    const stud = activeLink.locator('svg')
-    await expect(stud).toHaveClass(/opacity-100/)
-    await expect(stud).toHaveClass(/text-brand/)
+    const icon = activeLink.locator('svg')
+    await expect(icon).toHaveClass(/opacity-100/)
+    await expect(icon).toHaveClass(/text-brand/)
   })
 
-  test('inactive nav links keep the stud hidden until hover', async ({ page }) => {
+  test('inactive nav links keep the brick icon hidden until hover', async ({ page }) => {
     await page.goto('/photography')
     const inactiveLink = page.locator('nav').first().locator('a[href="/writing"]')
-    const stud = inactiveLink.locator('svg')
-    await expect(stud).toHaveClass(/opacity-0/)
+    const icon = inactiveLink.locator('svg')
+    await expect(icon).toHaveClass(/opacity-0/)
   })
 
   test('favicon route responds with a PNG', async ({ request }) => {
