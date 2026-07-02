@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import ReactMarkdown from 'react-markdown'
 import { getPage } from '@/lib/pages'
 import { PersonJsonLd } from '@/components/person-jsonld'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -10,6 +11,12 @@ export function generateMetadata(): Metadata {
   return {
     title: 'About',
     description: page.description,
+    ...buildOpenGraphMetadata({
+      type: 'website',
+      title: 'About',
+      description: page.description,
+      url: '/about',
+    }),
   }
 }
 

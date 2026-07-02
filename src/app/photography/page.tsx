@@ -3,10 +3,19 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description = 'Street, travel, and portrait photography by João Rodrigues.'
 
 export const metadata: Metadata = {
   title: 'Photography',
-  description: 'Street, travel, and portrait photography by João Rodrigues.',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'Photography',
+    description,
+    url: '/photography',
+  }),
 }
 
 export default async function PhotographyPage() {

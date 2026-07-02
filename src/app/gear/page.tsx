@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { getGearGroupedByHobby } from '@/lib/gear'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { Tag } from '@/components/tag'
 
 const description = 'The equipment behind João\'s hobbies, grouped by hobby and category.'
 
@@ -30,48 +31,45 @@ export default async function GearPage() {
         {groups.map((group) => (
           <section key={group.hobbySlug}>
             <h2 className="text-2xl font-semibold tracking-tight mb-6">{group.hobbyTitle}</h2>
-            <div className="flex flex-col gap-8">
-              {group.categories.map((category) => (
-                <div key={category.category}>
-                  <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-4">
-                    {category.category}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {category.items.map((item) => (
-                      <div
-                        key={item.slug}
-                        className="flex flex-col gap-3 rounded-lg border border-border p-4"
-                      >
-                        <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-                          {item.photo && (
-                            <Image
-                              src={item.photo}
-                              alt={item.name}
-                              fill
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                              className="object-cover"
-                            />
-                          )}
-                        </div>
-                        <h4 className="text-lg font-semibold tracking-tight">{item.name}</h4>
-                        {item.note && (
-                          <p className="text-sm text-muted-foreground">{item.note}</p>
-                        )}
-                        {item.link && (
-                          <a
-                            href={item.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground"
-                          >
-                            View product
-                          </a>
-                        )}
+            <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
+              {group.categories.flatMap((category) =>
+                category.items.map((item) => (
+                  <div
+                    key={item.slug}
+                    className="mb-6 break-inside-avoid rounded-lg bg-muted/40 p-5"
+                  >
+                    <div className="mb-3 flex items-center gap-2">
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                        Gear
+                      </p>
+                      <Tag label={category.category} />
+                    </div>
+                    {item.photo && (
+                      <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-md bg-muted">
+                        <Image
+                          src={item.photo}
+                          alt={item.name}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover"
+                        />
                       </div>
-                    ))}
+                    )}
+                    <h3 className="text-xl font-semibold tracking-tight">{item.name}</h3>
+                    {item.note && <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>}
+                    {item.link && (
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-block text-sm font-medium text-foreground underline underline-offset-4 hover:text-muted-foreground"
+                      >
+                        View product
+                      </a>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
         ))}

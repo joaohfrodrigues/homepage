@@ -14,7 +14,7 @@ test.describe('/gear', () => {
   }) => {
     await page.goto('/gear')
     const musicSection = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    await expect(musicSection.getByRole('heading', { name: 'Drum Kit', exact: true })).toBeVisible()
+    await expect(musicSection.getByText('Drum Kit', { exact: true })).toBeVisible()
     await expect(musicSection.getByRole('heading', { name: '5-Piece Drum Kit' })).toBeVisible()
     await expect(musicSection.getByText(/Set up in the garage/)).toBeVisible()
   })

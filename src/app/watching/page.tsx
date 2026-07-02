@@ -1,8 +1,17 @@
 import type { Metadata } from 'next'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description = 'Films and TV shows from the Plex library.'
 
 export const metadata: Metadata = {
   title: 'Watching',
-  description: 'Films and TV shows from the Plex library.',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'Watching',
+    description,
+    url: '/watching',
+  }),
 }
 
 export default function WatchingPage() {

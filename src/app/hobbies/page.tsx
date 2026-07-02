@@ -27,15 +27,18 @@ export default async function HobbiesPage() {
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6">
         {hobbies.map((hobby) => (
           <Link
             key={hobby.slug}
             href={hobby.route || `/hobbies/${hobby.slug}`}
-            className="group flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:border-foreground/30"
+            className="group mb-6 block break-inside-avoid rounded-lg bg-muted/40 p-5 transition-colors hover:bg-muted/70"
           >
-            <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-              {hobby.coverImage && (
+            <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+              Hobbies
+            </p>
+            {hobby.coverImage && (
+              <div className="relative mb-4 aspect-[4/3] overflow-hidden rounded-md bg-muted">
                 <Image
                   src={hobby.coverImage}
                   alt={hobby.title}
@@ -43,10 +46,10 @@ export default async function HobbiesPage() {
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-              )}
-            </div>
+              </div>
+            )}
             <h2 className="text-xl font-semibold tracking-tight">{hobby.title}</h2>
-            <p className="text-sm text-muted-foreground line-clamp-2">{hobby.blurb}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{hobby.blurb}</p>
           </Link>
         ))}
       </div>

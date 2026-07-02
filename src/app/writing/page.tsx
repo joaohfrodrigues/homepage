@@ -3,10 +3,19 @@ import Image from 'next/image'
 import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description = 'Articles on home servers, photography, and technology.'
 
 export const metadata: Metadata = {
-  title: 'Writing — João Rodrigues',
-  description: 'Articles on home servers, photography, and technology.',
+  title: 'Writing',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'Writing',
+    description,
+    url: '/writing',
+  }),
 }
 
 export default async function WritingPage() {
