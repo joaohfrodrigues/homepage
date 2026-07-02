@@ -35,7 +35,7 @@ export default async function HobbiesPage() {
     <main className="container mx-auto max-w-5xl px-4 py-16">
       <PageHeader title="Hobbies" description={description} className="mb-10" />
 
-      <div className="columns-2 sm:columns-3 lg:columns-4 gap-6">
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
         {feed.map((entry) => {
           const date = formatMonthYear(entry.dateAdded)
 
