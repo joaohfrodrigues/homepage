@@ -26,10 +26,10 @@ export default async function WritingPage() {
 
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl font-bold tracking-tight mb-2">Writing</h1>
-      <p className="text-muted-foreground mb-12">
-        Articles on home servers, photography, and technology.
-      </p>
+      <header className="mb-12 text-center">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Writing</h1>
+        <p className="text-muted-foreground">{description}</p>
+      </header>
 
       {projects.length > 0 && (
         <section className="mb-16">

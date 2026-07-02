@@ -28,16 +28,23 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
           <Tag label={item.category} />
         </span>
       </div>
-      {item.photo && <PhotoCarousel images={[{ src: item.photo, alt: item.name }]} />}
+      {item.photo && (
+        <div className="relative">
+          <PhotoCarousel images={[{ src: item.photo, alt: item.name }]} />
+          {item.note && (
+            <div
+              className={`absolute inset-0 flex items-end rounded-md bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 transition-[opacity,visibility] duration-300 ${
+                revealed ? 'visible opacity-100' : 'invisible opacity-0'
+              }`}
+            >
+              <p className="text-sm text-white">{item.note}</p>
+            </div>
+          )}
+        </div>
+      )}
       <h3 className="mt-4 text-xl font-semibold tracking-tight">{item.name}</h3>
-      {item.note && (
-        <p
-          className={`mt-2 text-sm text-muted-foreground transition-all duration-300 ${
-            revealed ? 'max-h-40 opacity-100' : 'max-h-0 overflow-hidden opacity-0'
-          }`}
-        >
-          {item.note}
-        </p>
+      {!item.photo && item.note && (
+        <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>
       )}
       <div className="mt-3 flex items-center justify-between gap-2">
         {date && <p className="text-xs text-muted-foreground">{date}</p>}

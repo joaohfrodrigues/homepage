@@ -28,15 +28,22 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
       <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
         Hobbies
       </p>
-      {images.length > 0 && <PhotoCarousel images={images} />}
+      {images.length > 0 && (
+        <div className="relative">
+          <PhotoCarousel images={images} />
+          <div
+            className={`absolute inset-0 flex items-end rounded-md bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 transition-[opacity,visibility] duration-300 ${
+              revealed ? 'visible opacity-100' : 'invisible opacity-0'
+            }`}
+          >
+            <p className="text-sm text-white">{hobby.blurb}</p>
+          </div>
+        </div>
+      )}
       <h2 className="mt-4 text-xl font-semibold tracking-tight">{hobby.title}</h2>
-      <p
-        className={`mt-2 text-sm text-muted-foreground transition-all duration-300 ${
-          revealed ? 'max-h-40 opacity-100' : 'max-h-0 overflow-hidden opacity-0'
-        }`}
-      >
-        {hobby.blurb}
-      </p>
+      {images.length === 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">{hobby.blurb}</p>
+      )}
       {date && <p className="mt-3 text-xs text-muted-foreground">{date}</p>}
     </div>
   )
