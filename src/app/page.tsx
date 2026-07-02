@@ -8,13 +8,13 @@ import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 
 const description =
-  'Personal site of João Rodrigues — photography, writing, film & TV, and music.'
+  'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.'
 
 export const metadata: Metadata = {
   description,
   ...buildOpenGraphMetadata({
     type: 'website',
-    title: 'João Rodrigues',
+    title: 'Joao Rodrigues',
     description,
     url: '/',
   }),
@@ -29,7 +29,7 @@ export default async function HomePage() {
       <PersonJsonLd />
       {/* Hero */}
       <header className="flex flex-col gap-3 text-center items-center pt-8">
-        <h1 className="text-5xl font-bold tracking-tight">João Rodrigues</h1>
+        <h1 className="text-5xl heading-lego">Joao Rodrigues</h1>
         <p className="text-xl text-muted-foreground">
           Data engineer by day — photographer, writer, film watcher, and drummer otherwise.
         </p>
@@ -39,10 +39,10 @@ export default async function HomePage() {
       {photos.length > 0 && (
         <section className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">Photography</h2>
+            <h2 className="text-2xl font-lego tracking-tight">Photography</h2>
             <Link
               href="/photography"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-brand transition-colors"
             >
               View all →
             </Link>
@@ -57,7 +57,7 @@ export default async function HomePage() {
               >
                 <Image
                   src={photo.url}
-                  alt={photo.altDescription || photo.title || 'Photograph by João Rodrigues'}
+                  alt={photo.altDescription || photo.title || 'Photograph by Joao Rodrigues'}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -74,10 +74,10 @@ export default async function HomePage() {
       {articles.length > 0 && (
         <section className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">Writing</h2>
+            <h2 className="text-2xl font-lego tracking-tight">Writing</h2>
             <Link
               href="/writing"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-muted-foreground hover:text-brand transition-colors"
             >
               View all →
             </Link>
@@ -124,11 +124,11 @@ export default async function HomePage() {
         </Button>
         <p className="text-sm text-muted-foreground">
           Also:{' '}
-          <Link href="/hobbies" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+          <Link href="/hobbies" className="hover:text-brand transition-colors underline-offset-4 hover:underline">
             Hobbies
           </Link>{' '}
           ·{' '}
-          <Link href="/watching" className="hover:text-foreground transition-colors underline-offset-4 hover:underline">
+          <Link href="/watching" className="hover:text-brand transition-colors underline-offset-4 hover:underline">
             Watching
           </Link>
         </p>

@@ -5,7 +5,7 @@ import { getPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 
-const description = 'Street, travel, and portrait photography by João Rodrigues.'
+const description = 'Street, travel, and portrait photography by Joao Rodrigues.'
 
 export const metadata: Metadata = {
   title: 'Photography',
@@ -27,7 +27,7 @@ export default async function PhotographyPage() {
   return (
     <main className="container mx-auto max-w-5xl px-4 py-16">
       <header className="mb-10 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-3">Photography</h1>
+        <h1 className="text-4xl heading-lego mb-3">Photography</h1>
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 

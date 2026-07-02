@@ -4,7 +4,7 @@ import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { HobbyCard } from '@/components/hobby-feed/hobby-card'
 import { GearCard } from '@/components/hobby-feed/gear-card'
 
-const description = "Hobbies João keeps outside of work, and the gear behind them."
+const description = "Hobbies Joao keeps outside of work, and the gear behind them."
 
 export const metadata: Metadata = {
   title: 'Hobbies',
@@ -31,7 +31,7 @@ export default async function HobbiesPage() {
   return (
     <main className="container mx-auto max-w-5xl px-4 py-16">
       <header className="mb-10 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-3">Hobbies</h1>
+        <h1 className="text-4xl heading-lego mb-3">Hobbies</h1>
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 

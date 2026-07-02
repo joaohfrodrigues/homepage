@@ -58,7 +58,7 @@ export default async function ProjectPage({
 
       <header className="mb-8">
         <p className="text-sm text-muted-foreground mb-2 uppercase tracking-widest">Project</p>
-        <h1 className="text-3xl font-bold tracking-tight mb-3">{project.title}</h1>
+        <h1 className="text-3xl heading-lego mb-3">{project.title}</h1>
         <p className="text-muted-foreground">{project.description}</p>
       </header>
 
@@ -69,7 +69,7 @@ export default async function ProjectPage({
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-6 border-b border-border pb-3">Articles</h2>
+        <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">Articles</h2>
         {articles.length === 0 ? (
           <p className="text-muted-foreground">No articles yet.</p>
         ) : (

@@ -27,7 +27,7 @@ export function PhotoImage({
   style?: CSSProperties
 }) {
   const [loaded, setLoaded] = useState(false)
-  const alt = photo.altDescription || photo.title || 'Photograph by João Rodrigues'
+  const alt = photo.altDescription || photo.title || 'Photograph by Joao Rodrigues'
 
   return (
     <div className={`${className ?? ''} relative bg-muted`} style={style}>

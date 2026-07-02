@@ -27,7 +27,7 @@ export default function AboutPage() {
   return (
     <div className="container mx-auto max-w-2xl px-4 py-16">
       <PersonJsonLd />
-      <h1 className="text-4xl font-bold tracking-tight mb-8">About</h1>
+      <h1 className="text-4xl heading-lego mb-8">About</h1>
       <div className="prose prose-neutral dark:prose-invert max-w-none">
         <ReactMarkdown
           components={{

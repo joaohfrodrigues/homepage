@@ -117,7 +117,7 @@ function rowToPhoto(row: RawRow): Photo {
     },
     tags,
     photographer: {
-      name: (row.photographer_name as string) || 'João Rodrigues',
+      name: (row.photographer_name as string) || 'Joao Rodrigues',
       username: (row.photographer_username as string) || '',
       profileUrl: (row.photographer_url as string) || '',
     },
