@@ -101,6 +101,7 @@ export default config({
           collection: 'hobbies',
         }),
         category: fields.text({ label: 'Category' }),
+        dateAdded: fields.date({ label: 'Date added' }),
         photo: fields.image({
           label: 'Photo',
           directory: 'public/images/gear',
@@ -118,6 +119,7 @@ export default config({
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
         blurb: fields.text({ label: 'Blurb', multiline: true }),
+        dateAdded: fields.date({ label: 'Date added' }),
         coverImage: fields.image({
           label: 'Cover Image',
           directory: 'public/images/hobbies',
@@ -127,11 +129,6 @@ export default config({
         showOnLandingPage: fields.checkbox({
           label: 'Show on landing page',
           defaultValue: true,
-        }),
-        route: fields.text({
-          label: 'Route override',
-          description:
-            'Optional external/override route for hobbies that need a non-generic page (leave empty to use /hobbies/[slug])',
         }),
         tiles: fields.array(
           fields.object({

@@ -3,10 +3,19 @@ import Image from 'next/image'
 import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description = 'Articles on home servers, photography, and technology.'
 
 export const metadata: Metadata = {
-  title: 'Writing — João Rodrigues',
-  description: 'Articles on home servers, photography, and technology.',
+  title: 'Writing',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'Writing',
+    description,
+    url: '/writing',
+  }),
 }
 
 export default async function WritingPage() {
@@ -16,11 +25,11 @@ export default async function WritingPage() {
   ])
 
   return (
-    <main className="container max-w-3xl py-12">
-      <h1 className="text-3xl font-bold tracking-tight mb-2">Writing</h1>
-      <p className="text-muted-foreground mb-12">
-        Articles on home servers, photography, and technology.
-      </p>
+    <main className="container mx-auto max-w-3xl px-4 py-12">
+      <header className="mb-12 text-center">
+        <h1 className="text-4xl font-bold tracking-tight mb-3">Writing</h1>
+        <p className="text-muted-foreground text-lg">{description}</p>
+      </header>
 
       {projects.length > 0 && (
         <section className="mb-16">

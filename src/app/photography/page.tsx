@@ -3,10 +3,19 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPhotos, getAllCollections } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description = 'Street, travel, and portrait photography by João Rodrigues.'
 
 export const metadata: Metadata = {
   title: 'Photography',
-  description: 'Street, travel, and portrait photography by João Rodrigues.',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'Photography',
+    description,
+    url: '/photography',
+  }),
 }
 
 export default async function PhotographyPage() {
@@ -16,12 +25,10 @@ export default async function PhotographyPage() {
   ])
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Photography</h1>
-        <p className="text-muted-foreground text-lg">
-          João Rodrigues — street, travel, and portrait.
-        </p>
+    <main className="container mx-auto max-w-5xl px-4 py-16">
+      <header className="mb-10 text-center">
+        <h1 className="text-4xl font-bold tracking-tight mb-3">Photography</h1>
+        <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 
       {/* Collections — the primary way to browse */}
@@ -66,6 +73,6 @@ export default async function PhotographyPage() {
         </h2>
         <GalleryClient initialPhotos={photos} initialHasMore={hasMore} />
       </section>
-    </div>
+    </main>
   )
 }

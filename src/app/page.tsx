@@ -5,11 +5,19 @@ import { Button } from '@/components/ui/button'
 import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
 import { PersonJsonLd } from '@/components/person-jsonld'
+import { buildOpenGraphMetadata } from '@/lib/site-config'
+
+const description =
+  'Personal site of João Rodrigues — photography, writing, film & TV, and music.'
 
 export const metadata: Metadata = {
-  title: 'João Rodrigues',
-  description:
-    'Personal site of João Rodrigues — photography, writing, film & TV, and music.',
+  description,
+  ...buildOpenGraphMetadata({
+    type: 'website',
+    title: 'João Rodrigues',
+    description,
+    url: '/',
+  }),
 }
 
 export default async function HomePage() {

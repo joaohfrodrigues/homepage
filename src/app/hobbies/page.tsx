@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
-import Link from 'next/link'
-import { getLandingHobbies } from '@/lib/hobbies'
+import { getHobbyFeed } from '@/lib/hobby-feed'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { HobbyCard } from '@/components/hobby-feed/hobby-card'
+import { GearCard } from '@/components/hobby-feed/gear-card'
 
-const description = 'Photos and write-ups from the hobbies João keeps outside of work.'
+const description = "Hobbies João keeps outside of work, and the gear behind them."
 
 export const metadata: Metadata = {
   title: 'Hobbies',
@@ -17,8 +17,16 @@ export const metadata: Metadata = {
   }),
 }
 
+function formatDate(dateAdded: string): string | null {
+  if (!dateAdded) return null
+  return new Date(`${dateAdded}T00:00:00`).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+  })
+}
+
 export default async function HobbiesPage() {
-  const hobbies = await getLandingHobbies()
+  const feed = await getHobbyFeed()
 
   return (
     <main className="container mx-auto max-w-5xl px-4 py-16">
@@ -27,28 +35,16 @@ export default async function HobbiesPage() {
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {hobbies.map((hobby) => (
-          <Link
-            key={hobby.slug}
-            href={hobby.route || `/hobbies/${hobby.slug}`}
-            className="group flex flex-col gap-3 rounded-lg border border-border p-4 transition-colors hover:border-foreground/30"
-          >
-            <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-              {hobby.coverImage && (
-                <Image
-                  src={hobby.coverImage}
-                  alt={hobby.title}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              )}
-            </div>
-            <h2 className="text-xl font-semibold tracking-tight">{hobby.title}</h2>
-            <p className="text-sm text-muted-foreground line-clamp-2">{hobby.blurb}</p>
-          </Link>
-        ))}
+      <div className="columns-2 sm:columns-3 lg:columns-4 gap-6">
+        {feed.map((entry) => {
+          const date = formatDate(entry.dateAdded)
+
+          if (entry.kind === 'hobby') {
+            return <HobbyCard key={`hobby-${entry.hobby.slug}`} hobby={entry.hobby} date={date} />
+          }
+
+          return <GearCard key={`gear-${entry.item.slug}`} item={entry.item} date={date} />
+        })}
       </div>
     </main>
   )

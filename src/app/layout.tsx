@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
+import { Lora } from 'next/font/google'
 import './globals.css'
 import { Header } from '@/components/header'
 import { Footer } from '@/components/footer'
 import { SITE_URL, SITE_NAME } from '@/lib/site-config'
+
+const lora = Lora({ subsets: ['latin'], variable: '--font-serif' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -28,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={lora.variable}>
       <body className="font-sans min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">{children}</main>
