@@ -134,7 +134,7 @@ def collections_page(collections=None):
 
     return Html(
         create_head(
-            title='Collections | João Rodrigues',
+            title='Collections | Joao Rodrigues',
             description='Browse my photography collections from travels and adventures around the world.',
             current_url='https://joaohfrodrigues.com/collections',
             og_image=og_image,

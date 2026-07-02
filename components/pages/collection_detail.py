@@ -107,7 +107,7 @@ def collection_detail_page(collection_slug: str, page: int = 1, search_query: st
 
     return Html(
         create_head(
-            title=f'{collection["title"]} | João Rodrigues',
+            title=f'{collection["title"]} | Joao Rodrigues',
             description=collection['description']
             or f'Browse {collection["total_photos"]} photos from {collection["title"]}',
             current_url=f'https://joaohfrodrigues.com/collection/{collection["slug"]}',

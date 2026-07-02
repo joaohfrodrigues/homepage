@@ -43,6 +43,10 @@ const config: Config = {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
+        brand: {
+          DEFAULT: 'hsl(var(--brand))',
+          foreground: 'hsl(var(--brand-foreground))',
+        },
         popover: {
           DEFAULT: 'hsl(var(--popover))',
           foreground: 'hsl(var(--popover-foreground))',
@@ -59,6 +63,8 @@ const config: Config = {
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'ui-serif', 'Georgia', 'serif'],
+        lego: ['var(--font-lego)', 'ui-sans-serif', 'sans-serif'],
+        'lego-thick': ['var(--font-lego-thick)', 'ui-sans-serif', 'sans-serif'],
       },
     },
   },

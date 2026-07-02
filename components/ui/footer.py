@@ -9,7 +9,7 @@ def create_footer():
     """Create the footer section with Vercel Web Analytics"""
     return Footer(
         Div(
-            P('© 2025 João Rodrigues. All rights reserved.'),
+            P('© 2025 Joao Rodrigues. All rights reserved.'),
             P(
                 A(
                     'Instagram',

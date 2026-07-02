@@ -28,7 +28,7 @@ def create_navbar(current_page: str = 'home'):
 
     nav = Nav(
         Div(
-            A('JOÃO RODRIGUES', href='/', cls='navbar-title', style='text-decoration: none;'),
+            A('JOAO RODRIGUES', href='/', cls='navbar-title', style='text-decoration: none;'),
             Details(
                 Summary(
                     Span('', cls='burger-line'),
@@ -148,7 +148,7 @@ def create_header(current_page: str = 'home'):
     """Create the hero section (no longer contains navigation)."""
     return Header(
         Div(
-            H1('JOÃO RODRIGUES'),
+            H1('JOAO RODRIGUES'),
             P(
                 'Photography, Data and Development',
                 style='margin-bottom: 1rem; color: var(--text-tertiary); letter-spacing: 0.2rem; text-transform: uppercase;',

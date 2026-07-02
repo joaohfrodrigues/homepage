@@ -15,7 +15,7 @@ def about_page():
 
     return Html(
         create_head(
-            title=metadata.get('title', 'About | João Rodrigues'),
+            title=metadata.get('title', 'About | Joao Rodrigues'),
             description=metadata.get(
                 'description', 'Data Engineer and hobbyist photographer based in Lisbon, Portugal'
             ),

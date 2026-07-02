@@ -39,7 +39,7 @@ def gallery_page(
 
     return Html(
         create_head(
-            title='Gallery | João Rodrigues',
+            title='Gallery | Joao Rodrigues',
             description='Browse my complete photography collection with advanced search and filtering.',
             og_image=og_image,
         ),

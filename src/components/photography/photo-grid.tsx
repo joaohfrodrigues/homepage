@@ -5,6 +5,7 @@ import 'react-photo-album/rows.css'
 import type { Photo as AlbumPhotoBase } from 'react-photo-album'
 import type { Photo } from '@/lib/photos'
 import { PhotoImage, PhotoOverlay } from './photo-card'
+import { EmptyState } from '@/components/ui/empty-state'
 
 interface AlbumPhoto extends AlbumPhotoBase {
   original: Photo
@@ -17,7 +18,7 @@ interface Props {
 
 export function PhotoGrid({ photos, onPhotoClick }: Props) {
   if (photos.length === 0) {
-    return <p className="text-center text-muted-foreground py-12">No photos found.</p>
+    return <EmptyState message="No photos found." />
   }
 
   // react-photo-album lays out photos in stable, in-order rows: appended pages
@@ -27,7 +28,7 @@ export function PhotoGrid({ photos, onPhotoClick }: Props) {
     src: p.url,
     width: p.width || 1080,
     height: p.height || 720,
-    alt: p.altDescription || p.title || 'Photograph by João Rodrigues',
+    alt: p.altDescription || p.title || 'Photograph by Joao Rodrigues',
     original: p,
   }))
 

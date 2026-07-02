@@ -4,6 +4,7 @@ import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
+import { EmptyState } from '@/components/ui/empty-state'
 
 const description = 'Articles on home servers, photography, and technology.'
 
@@ -27,13 +28,13 @@ export default async function WritingPage() {
   return (
     <main className="container mx-auto max-w-3xl px-4 py-12">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-3">Writing</h1>
+        <h1 className="text-4xl heading-lego mb-3">Writing</h1>
         <p className="text-muted-foreground text-lg">{description}</p>
       </header>
 
       {projects.length > 0 && (
         <section className="mb-16">
-          <h2 className="text-lg font-semibold mb-6 border-b border-border pb-3">Projects</h2>
+          <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">Projects</h2>
           <ul className="space-y-6">
             {projects.map((project) => (
               <li key={project.slug}>
@@ -76,7 +77,7 @@ export default async function WritingPage() {
 
       {standaloneArticles.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-6 border-b border-border pb-3">
+          <h2 className="text-lg font-lego mb-6 border-b border-border pb-3">
             Standalone Articles
           </h2>
           <ul className="space-y-10">
@@ -109,7 +110,7 @@ export default async function WritingPage() {
       )}
 
       {projects.length === 0 && standaloneArticles.length === 0 && (
-        <p className="text-muted-foreground">No articles yet.</p>
+        <EmptyState message="No articles yet." />
       )}
     </main>
   )

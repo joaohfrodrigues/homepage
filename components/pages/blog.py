@@ -110,7 +110,7 @@ def blog_list_page():
 
     return Html(
         create_head(
-            title='Blog | João Rodrigues',
+            title='Blog | Joao Rodrigues',
             description='Articles about technology, photography, and home servers',
             current_url='https://joaohfrodrigues.com/blog',
         ),
@@ -240,7 +240,7 @@ def blog_page(article_slug: str = 'home-server-part-1-foundation'):
 
     return Html(
         create_head(
-            title=metadata.get('title', 'Blog | João Rodrigues'),
+            title=metadata.get('title', 'Blog | Joao Rodrigues'),
             description=metadata.get(
                 'description', 'Articles about technology, photography, and home servers'
             ),

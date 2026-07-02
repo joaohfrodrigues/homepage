@@ -56,7 +56,7 @@ export default async function CollectionPage({ params }: Props) {
       </Link>
 
       <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">{collection.title}</h1>
+        <h1 className="text-4xl heading-lego mb-2">{collection.title}</h1>
         {collection.description && (
           <p className="text-muted-foreground text-lg max-w-prose">{collection.description}</p>
         )}

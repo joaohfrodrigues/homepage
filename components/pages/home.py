@@ -399,7 +399,7 @@ def home_page(
 
     return Html(
         create_head(
-            title='Home | João Rodrigues',
+            title='Home | Joao Rodrigues',
             description='Browse my best photography work, curated by popularity and views. Landscapes, portraits, and travel photography.',
             og_image=og_image,
         ),
