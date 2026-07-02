@@ -37,6 +37,16 @@ test.describe('/hobbies', () => {
     await expect(blurb).toBeVisible()
   })
 
+  test('leaving a tapped-open hobby card closes it again', async ({ page }) => {
+    await page.goto('/hobbies')
+    const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
+    const blurb = musicCard.getByText(/Drumming in 404s/)
+    await musicCard.click()
+    await expect(blurb).toBeVisible()
+    await page.mouse.move(0, 0)
+    await expect(blurb).not.toBeVisible()
+  })
+
   test('shows a known gear item with its hobby and category tags', async ({ page }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')

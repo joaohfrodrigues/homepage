@@ -24,7 +24,7 @@ export function PhotoCarousel({ images }: { images: PhotoCarouselImage[] }) {
   if (images.length === 0) return null
 
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-muted">
+    <div className="relative aspect-[4/3] overflow-hidden rounded-md bg-muted">
       {images.map((image, i) => (
         <Image
           key={`${image.src}-${i}`}

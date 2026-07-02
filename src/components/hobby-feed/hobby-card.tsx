@@ -18,20 +18,21 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
         ? [{ src: hobby.coverImage, alt: hobby.title }]
         : []
 
-  const wide = images.length > 1
-
   return (
     <div
-      className={`group flex h-full flex-col rounded-lg bg-muted/40 p-5 ${wide ? 'sm:col-span-2' : ''}`}
+      className="group rounded-lg bg-muted/40 p-5"
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => {
+        setHovered(false)
+        setTapped(false)
+      }}
       onClick={() => setTapped((current) => !current)}
     >
-      <p className="mb-3 shrink-0 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">
         Hobbies
       </p>
       {images.length > 0 ? (
-        <div className="relative min-h-0 flex-1">
+        <div className="relative">
           <PhotoCarousel images={images} />
           <div
             className={`absolute inset-0 flex items-end rounded-md bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3 transition-[opacity,visibility] duration-300 ${
@@ -42,14 +43,10 @@ export function HobbyCard({ hobby, date }: { hobby: HobbySummary; date: string |
           </div>
         </div>
       ) : (
-        <p className="min-h-0 flex-1 overflow-hidden text-sm text-muted-foreground">
-          {hobby.blurb}
-        </p>
+        <p className="text-sm text-muted-foreground">{hobby.blurb}</p>
       )}
-      <h2 className="mt-4 shrink-0 truncate text-xl font-semibold tracking-tight">
-        {hobby.title}
-      </h2>
-      {date && <p className="mt-3 shrink-0 text-xs text-muted-foreground">{date}</p>}
+      <h2 className="mt-4 text-xl font-semibold tracking-tight">{hobby.title}</h2>
+      {date && <p className="mt-3 text-xs text-muted-foreground">{date}</p>}
     </div>
   )
 }

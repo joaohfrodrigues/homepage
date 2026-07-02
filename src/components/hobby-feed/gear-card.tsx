@@ -12,12 +12,15 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
 
   return (
     <div
-      className="group flex h-full flex-col rounded-lg bg-muted/40 p-5"
+      className="group rounded-lg bg-muted/40 p-5"
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => {
+        setHovered(false)
+        setTapped(false)
+      }}
       onClick={() => setTapped((current) => !current)}
     >
-      <div className="mb-3 flex shrink-0 items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mb-3 flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <p className="shrink-0 text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Gear
         </p>
@@ -29,7 +32,7 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
         </span>
       </div>
       {item.photo ? (
-        <div className="relative min-h-0 flex-1">
+        <div className="relative">
           <PhotoCarousel images={[{ src: item.photo, alt: item.name }]} />
           {item.note && (
             <div
@@ -42,14 +45,10 @@ export function GearCard({ item, date }: { item: GearItem; date: string | null }
           )}
         </div>
       ) : (
-        item.note && (
-          <p className="min-h-0 flex-1 overflow-hidden text-sm text-muted-foreground">
-            {item.note}
-          </p>
-        )
+        item.note && <p className="text-sm text-muted-foreground">{item.note}</p>
       )}
-      <h3 className="mt-4 shrink-0 truncate text-xl font-semibold tracking-tight">{item.name}</h3>
-      <div className="mt-3 flex shrink-0 items-center justify-between gap-2">
+      <h3 className="mt-4 text-xl font-semibold tracking-tight">{item.name}</h3>
+      <div className="mt-3 flex items-center justify-between gap-2">
         {date && <p className="text-xs text-muted-foreground">{date}</p>}
         {item.link && (
           <a
