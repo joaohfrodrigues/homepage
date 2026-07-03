@@ -16,7 +16,7 @@ export default config({
         kind: 'github',
         repo: {
           owner: 'joaohfrodrigues',
-          name: 'photography-home',
+          name: 'homepage',
         },
       }
     : { kind: 'local' },
