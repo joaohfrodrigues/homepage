@@ -6,6 +6,7 @@ import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { LegoBricksIllustration } from '@/components/ui/lego-bricks-illustration'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageContainer } from '@/components/ui/page-container'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -27,7 +28,7 @@ export default function AboutPage() {
   if (!page) notFound()
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-16">
+    <PageContainer width="narrow" className="py-16">
       <PersonJsonLd />
       <PageHeader
         title="About"
@@ -52,6 +53,6 @@ export default function AboutPage() {
           {page.content}
         </ReactMarkdown>
       </div>
-    </div>
+    </PageContainer>
   )
 }

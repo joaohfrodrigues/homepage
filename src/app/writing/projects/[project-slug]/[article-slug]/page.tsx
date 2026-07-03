@@ -1,10 +1,13 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { getProjectArticle, getAdjacentArticles, getAllSlugs } from '@/lib/articles'
 import { getProject, getAllProjectSlugs } from '@/lib/projects'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { formatDate } from '@/lib/format-date'
+import { PageHeader } from '@/components/ui/page-header'
+import { PageContainer } from '@/components/ui/page-container'
+import { Breadcrumb } from '@/components/writing/breadcrumb'
+import { ArticleMeta } from '@/components/writing/article-meta'
+import { ArticlePrevNext } from '@/components/writing/article-prev-next'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -61,66 +64,42 @@ export default async function ProjectArticlePage({
   if (!article || !project) notFound()
 
   return (
-    <main className="container mx-auto max-w-3xl px-4 py-12">
-      <nav
-        aria-label="Breadcrumb"
-        className="mb-6 flex items-center gap-2 text-sm text-muted-foreground"
-      >
-        <Link href="/writing" className="hover:text-foreground transition-colors">
-          Writing
-        </Link>
-        <span>/</span>
-        <Link
-          href={`/writing/projects/${projectSlug}`}
-          className="hover:text-foreground transition-colors"
-        >
-          {project.title}
-        </Link>
-        <span>/</span>
-        <span className="text-foreground">{article.title}</span>
-      </nav>
+    <PageContainer as="main" width="narrow" className="py-12">
+      <Breadcrumb
+        items={[
+          { label: 'Writing', href: '/writing' },
+          { label: project.title, href: `/writing/projects/${projectSlug}` },
+          { label: article.title },
+        ]}
+      />
 
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-3">{article.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <time>{formatDate(article.publishedAt)}</time>
-          <span>{article.readingTime} min read</span>
-        </div>
-      </header>
+      <PageHeader title={article.title} align="left" size="compact" className="mb-3" />
+      <ArticleMeta
+        publishedAt={article.publishedAt}
+        readingTime={article.readingTime}
+        className="mb-8"
+      />
 
       <ArticleBody document={article.body} />
 
-      <nav
-        className="mt-16 pt-8 border-t border-border grid grid-cols-2 gap-4"
-        aria-label="Article navigation"
-      >
-        <div>
-          {adjacent.prev && (
-            <Link
-              href={`/writing/projects/${projectSlug}/${adjacent.prev.slug}`}
-              className="group flex flex-col gap-1"
-            >
-              <span className="text-xs text-muted-foreground">← Previous</span>
-              <span className="text-sm font-medium group-hover:underline underline-offset-4">
-                {adjacent.prev.title}
-              </span>
-            </Link>
-          )}
-        </div>
-        <div className="text-right">
-          {adjacent.next && (
-            <Link
-              href={`/writing/projects/${projectSlug}/${adjacent.next.slug}`}
-              className="group flex flex-col gap-1 items-end"
-            >
-              <span className="text-xs text-muted-foreground">Next →</span>
-              <span className="text-sm font-medium group-hover:underline underline-offset-4">
-                {adjacent.next.title}
-              </span>
-            </Link>
-          )}
-        </div>
-      </nav>
-    </main>
+      <ArticlePrevNext
+        prev={
+          adjacent.prev
+            ? {
+                href: `/writing/projects/${projectSlug}/${adjacent.prev.slug}`,
+                title: adjacent.prev.title,
+              }
+            : undefined
+        }
+        next={
+          adjacent.next
+            ? {
+                href: `/writing/projects/${projectSlug}/${adjacent.next.slug}`,
+                title: adjacent.next.title,
+              }
+            : undefined
+        }
+      />
+    </PageContainer>
   )
 }
