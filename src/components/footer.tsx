@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Github } from 'lucide-react'
 import { GITHUB_URL, UNSPLASH_URL } from '@/lib/site-config'
 import { LegoBadgeIcon } from '@/components/ui/lego-badge-icon'
-import { PageContainer } from '@/components/ui/page-container'
 
 export function Footer() {
   return (
@@ -10,7 +9,7 @@ export function Footer() {
       <div className="pt-4 flex justify-center">
         <LegoBadgeIcon className="h-6 w-6 text-muted-foreground/40" />
       </div>
-      <PageContainer className="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="container mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} Joao Rodrigues
         </p>
@@ -39,7 +38,7 @@ export function Footer() {
             About
           </Link>
         </div>
-      </PageContainer>
+      </div>
     </footer>
   )
 }
