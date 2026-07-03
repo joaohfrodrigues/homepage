@@ -4,11 +4,11 @@ import { getStandaloneArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { formatDate } from '@/lib/format-date'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
+import { ArticleListItem } from '@/components/writing/article-list-item'
 
 const description = 'Articles on home servers, photography, and technology.'
 
@@ -81,24 +81,13 @@ export default async function WritingPage() {
           <SectionTitle>Standalone Articles</SectionTitle>
           <ul className="space-y-10">
             {standaloneArticles.map((article) => (
-              <li key={article.slug}>
-                <article>
-                  <time className="text-sm text-muted-foreground">
-                    {formatDate(article.publishedAt)}
-                  </time>
-                  <h3 className="text-xl font-semibold mt-1 mb-2">
-                    <Link
-                      href={`/writing/${article.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {article.title}
-                    </Link>
-                  </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {article.description}
-                  </p>
-                </article>
-              </li>
+              <ArticleListItem
+                key={article.slug}
+                href={`/writing/${article.slug}`}
+                title={article.title}
+                publishedAt={article.publishedAt}
+                description={article.description}
+              />
             ))}
           </ul>
         </section>

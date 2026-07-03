@@ -1,14 +1,14 @@
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { getAllProjectSlugs, getProject } from '@/lib/projects'
 import { getProjectArticles } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { formatDate } from '@/lib/format-date'
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
+import { BackLink } from '@/components/ui/back-link'
+import { ArticleListItem } from '@/components/writing/article-list-item'
 
 export async function generateStaticParams() {
   const slugs = await getAllProjectSlugs()
@@ -52,12 +52,7 @@ export default async function ProjectPage({
   return (
     <PageContainer as="main" width="narrow" className="py-12">
       <div className="mb-6">
-        <Link
-          href="/writing"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Writing
-        </Link>
+        <BackLink href="/writing" label="Writing" />
       </div>
 
       <PageHeader
@@ -82,24 +77,13 @@ export default async function ProjectPage({
         ) : (
           <ul className="space-y-8">
             {articles.map((article) => (
-              <li key={article.slug}>
-                <article>
-                  <time className="text-sm text-muted-foreground">
-                    {formatDate(article.publishedAt)}
-                  </time>
-                  <h3 className="text-xl font-semibold mt-1 mb-2">
-                    <Link
-                      href={`/writing/projects/${projectSlug}/${article.slug}`}
-                      className="hover:underline underline-offset-4"
-                    >
-                      {article.title}
-                    </Link>
-                  </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {article.description}
-                  </p>
-                </article>
-              </li>
+              <ArticleListItem
+                key={article.slug}
+                href={`/writing/projects/${projectSlug}/${article.slug}`}
+                title={article.title}
+                publishedAt={article.publishedAt}
+                description={article.description}
+              />
             ))}
           </ul>
         )}
