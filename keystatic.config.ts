@@ -1,16 +1,14 @@
 import { config, collection, fields } from '@keystatic/core'
 
-const hasGitHubCredentials = Boolean(
-  process.env.KEYSTATIC_GITHUB_CLIENT_ID &&
-    process.env.KEYSTATIC_GITHUB_CLIENT_SECRET &&
-    process.env.KEYSTATIC_SECRET
-)
-
 // Use local file storage during development so the admin UI reads and writes
 // the repo's content directly. Only switch to GitHub-backed storage in
 // production builds, where editing happens through the GitHub App OAuth flow.
-const useGitHubStorage =
-  process.env.NODE_ENV !== 'development' && hasGitHubCredentials
+//
+// This must branch on NODE_ENV alone (not on credential presence) because
+// keystatic.config.ts is imported by a client component (src/app/keystatic).
+// Non-NEXT_PUBLIC_ env vars are undefined in the browser bundle, so gating on
+// them made the client and server disagree on storage kind in production.
+const useGitHubStorage = process.env.NODE_ENV !== 'development'
 
 export default config({
   storage: useGitHubStorage
@@ -72,9 +70,10 @@ export default config({
         title: fields.slug({ name: { label: 'Title' } }),
         publishedAt: fields.date({ label: 'Published at' }),
         description: fields.text({ label: 'Description', multiline: true }),
-        project: fields.text({
+        project: fields.relationship({
           label: 'Project',
-          description: 'Slug of the project this article belongs to (leave empty for standalone)',
+          collection: 'projects',
+          description: 'Leave empty for a standalone article',
         }),
         draft: fields.checkbox({ label: 'Draft', defaultValue: false }),
         body: fields.document({
@@ -99,6 +98,7 @@ export default config({
         hobby: fields.relationship({
           label: 'Hobby',
           collection: 'hobbies',
+          validation: { isRequired: true },
         }),
         category: fields.text({ label: 'Category' }),
         dateAdded: fields.date({ label: 'Date added' }),
@@ -108,7 +108,7 @@ export default config({
           publicPath: '/images/gear/',
         }),
         note: fields.text({ label: 'Note', multiline: true }),
-        link: fields.text({ label: 'Link', description: 'Optional purchase/product link' }),
+        link: fields.url({ label: 'Link', description: 'Optional purchase/product link' }),
       },
     }),
 
