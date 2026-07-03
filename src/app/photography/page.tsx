@@ -6,6 +6,7 @@ import { GalleryClient } from '@/components/photography/gallery-client'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
+import { PageContainer } from '@/components/ui/page-container'
 
 const description = 'Street, travel, and portrait photography by Joao Rodrigues.'
 
@@ -27,7 +28,7 @@ export default async function PhotographyPage() {
   ])
 
   return (
-    <main className="container mx-auto max-w-5xl px-4 py-16">
+    <PageContainer as="main" className="py-16">
       <PageHeader title="Photography" description={description} className="mb-10" />
 
       {/* Collections — the primary way to browse */}
@@ -68,6 +69,6 @@ export default async function PhotographyPage() {
         <SectionTitle>All photos</SectionTitle>
         <GalleryClient initialPhotos={photos} initialHasMore={hasMore} />
       </section>
-    </main>
+    </PageContainer>
   )
 }

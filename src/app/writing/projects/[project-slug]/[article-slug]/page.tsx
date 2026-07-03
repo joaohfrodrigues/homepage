@@ -5,6 +5,8 @@ import { getProject, getAllProjectSlugs } from '@/lib/projects'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
+import { PageHeader } from '@/components/ui/page-header'
+import { PageContainer } from '@/components/ui/page-container'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
@@ -61,7 +63,7 @@ export default async function ProjectArticlePage({
   if (!article || !project) notFound()
 
   return (
-    <main className="container mx-auto max-w-3xl px-4 py-12">
+    <PageContainer as="main" width="narrow" className="py-12">
       <nav
         aria-label="Breadcrumb"
         className="mb-6 flex items-center gap-2 text-sm text-muted-foreground"
@@ -80,13 +82,11 @@ export default async function ProjectArticlePage({
         <span className="text-foreground">{article.title}</span>
       </nav>
 
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-3">{article.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <time>{formatDate(article.publishedAt)}</time>
-          <span>{article.readingTime} min read</span>
-        </div>
-      </header>
+      <PageHeader title={article.title} align="left" size="compact" className="mb-3" />
+      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
+        <time>{formatDate(article.publishedAt)}</time>
+        <span>{article.readingTime} min read</span>
+      </div>
 
       <ArticleBody document={article.body} />
 
@@ -121,6 +121,6 @@ export default async function ProjectArticlePage({
           )}
         </div>
       </nav>
-    </main>
+    </PageContainer>
   )
 }

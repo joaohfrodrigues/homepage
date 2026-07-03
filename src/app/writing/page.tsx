@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/format-date'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
+import { PageContainer } from '@/components/ui/page-container'
 
 const description = 'Articles on home servers, photography, and technology.'
 
@@ -29,7 +30,7 @@ export default async function WritingPage() {
   ])
 
   return (
-    <main className="container mx-auto max-w-3xl px-4 py-12">
+    <PageContainer as="main" width="narrow" className="py-12">
       <PageHeader title="Writing" description={description} className="mb-12" />
 
       {projects.length > 0 && (
@@ -106,6 +107,6 @@ export default async function WritingPage() {
       {projects.length === 0 && standaloneArticles.length === 0 && (
         <EmptyState message="No articles yet." />
       )}
-    </main>
+    </PageContainer>
   )
 }

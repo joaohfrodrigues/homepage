@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/format-date'
 import type { Metadata } from 'next'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
+import { PageContainer } from '@/components/ui/page-container'
 
 export async function generateStaticParams() {
   const slugs = await getAllProjectSlugs()
@@ -49,7 +50,7 @@ export default async function ProjectPage({
   if (!project) notFound()
 
   return (
-    <main className="container mx-auto max-w-3xl px-4 py-12">
+    <PageContainer as="main" width="narrow" className="py-12">
       <div className="mb-6">
         <Link
           href="/writing"
@@ -103,6 +104,6 @@ export default async function ProjectPage({
           </ul>
         )}
       </section>
-    </main>
+    </PageContainer>
   )
 }

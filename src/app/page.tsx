@@ -8,6 +8,7 @@ import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
+import { PageContainer } from '@/components/ui/page-container'
 
 const description =
   'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.'
@@ -27,7 +28,7 @@ export default async function HomePage() {
   const articles = (await getPublishedArticles()).slice(0, 3)
 
   return (
-    <div className="container mx-auto px-4 py-16 flex flex-col gap-16 max-w-5xl">
+    <PageContainer className="py-16 flex flex-col gap-16">
       <PersonJsonLd />
       {/* Hero */}
       <PageHeader
@@ -134,6 +135,6 @@ export default async function HomePage() {
           </Link>
         </p>
       </div>
-    </div>
+    </PageContainer>
   )
 }

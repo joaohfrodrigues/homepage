@@ -6,6 +6,7 @@ import { formatMonthYear } from '@/lib/format-date'
 import { HobbyCard } from '@/components/hobby-feed/hobby-card'
 import { GearCard } from '@/components/hobby-feed/gear-card'
 import { PageHeader } from '@/components/ui/page-header'
+import { PageContainer } from '@/components/ui/page-container'
 
 type HobbyFeedEntry =
   | { kind: 'hobby'; dateAdded: string; hobby: HobbySummary }
@@ -32,7 +33,7 @@ export default async function HobbiesPage() {
   ].sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
 
   return (
-    <main className="container mx-auto max-w-5xl px-4 py-16">
+    <PageContainer as="main" className="py-16">
       <PageHeader title="Hobbies" description={description} className="mb-10" />
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
@@ -46,6 +47,6 @@ export default async function HobbiesPage() {
           return <GearCard key={`gear-${entry.item.slug}`} item={entry.item} date={date} />
         })}
       </div>
-    </main>
+    </PageContainer>
   )
 }
