@@ -43,7 +43,7 @@ export async function getGearItems(): Promise<GearItem[]> {
       category: entry.entry.category,
       photo: resolveImage(entry.entry.photo),
       note: entry.entry.note,
-      link: entry.entry.link,
+      link: entry.entry.link ?? '',
       dateAdded: entry.entry.dateAdded ?? '',
       hobbySlug: hobby.slug,
       hobbyTitle: hobby.title,
