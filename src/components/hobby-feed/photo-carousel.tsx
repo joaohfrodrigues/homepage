@@ -39,6 +39,7 @@ export function PhotoCarousel({
           src={image.src}
           alt={image.alt}
           fill
+          unoptimized={/^https?:\/\//.test(image.src)}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className={`object-cover transition-transform duration-700 ease-out group-hover:scale-110 ${
             i === index ? 'opacity-100' : 'opacity-0'

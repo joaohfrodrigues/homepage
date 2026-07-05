@@ -1,0 +1,286 @@
+"""Tests for the Plex watch-history ETL transform logic"""
+
+import sys
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+import yaml
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from backend import plex_etl
+from backend.plex_etl import _aggregate_series, transform_history_item, write_watch_item_files
+
+
+@dataclass
+class FakeHistoryItem:
+    ratingKey: int | None
+    type: str
+    title: str
+    thumb: str | None = None
+    parentThumb: str | None = None
+    grandparentThumb: str | None = None
+    grandparentTitle: str | None = None
+    grandparentRatingKey: int | None = None
+    year: int | None = None
+    parentYear: int | None = None
+    viewedAt: datetime | None = None
+    userRating: float | None = None
+
+
+def test_transform_movie():
+    item = FakeHistoryItem(
+        ratingKey=101,
+        type='movie',
+        title='Dune: Part Two',
+        thumb='/library/metadata/101/thumb',
+        year=2024,
+        viewedAt=datetime(2026, 6, 28, 20, 0, tzinfo=timezone.utc),
+        userRating=8.0,
+    )
+
+    result = transform_history_item(item)
+
+    assert result == {
+        'id': '101',
+        'title': 'Dune: Part Two',
+        'type': 'film',
+        'watchedAt': '2026-06-28T20:00:00+00:00',
+        'year': 2024,
+        'posterUrl': '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F101%2Fthumb',
+        'rating': 8.0,
+        'note': None,
+    }
+
+
+def test_transform_does_not_leak_plex_token_into_poster_url():
+    """content/watch-items/*.yaml is committed to git — the poster URL must
+    never contain a Plex token, only a token-free path the frontend proxy
+    can attach credentials to server-side."""
+    item = FakeHistoryItem(
+        ratingKey=101,
+        type='movie',
+        title='Dune: Part Two',
+        thumb='/library/metadata/101/thumb',
+    )
+
+    result = transform_history_item(item)
+
+    assert 'X-Plex-Token' not in result['posterUrl']
+    assert result['posterUrl'].startswith('/api/watch-poster?path=')
+
+
+def test_transform_episode_uses_show_title_and_id():
+    item = FakeHistoryItem(
+        ratingKey=202,
+        type='episode',
+        title='Nights',
+        grandparentTitle='The Bear',
+        grandparentRatingKey=200,
+        parentThumb='/library/metadata/200/thumb',
+        parentYear=2022,
+        viewedAt=datetime(2026, 7, 3, 21, 15, tzinfo=timezone.utc),
+    )
+
+    result = transform_history_item(item)
+
+    assert result['id'] == '200'
+    assert result['title'] == 'The Bear'
+    assert result['type'] == 'series'
+    assert result['year'] == 2022
+
+
+def test_transform_prefers_season_poster_over_episode_still():
+    """An episode's own `thumb` is usually a video-frame still, not
+    artwork — the season poster (`parentThumb`) should win when both are
+    present, so the card shows the poster of the season containing the
+    most recently watched episode (aggregation already keeps that one)."""
+    item = FakeHistoryItem(
+        ratingKey=202,
+        type='episode',
+        title='Nights',
+        grandparentTitle='The Bear',
+        grandparentRatingKey=200,
+        thumb='/library/metadata/202/thumb',
+        parentThumb='/library/metadata/201/thumb',
+        grandparentThumb='/library/metadata/200/thumb',
+    )
+
+    result = transform_history_item(item)
+
+    assert result['posterUrl'] == '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F201%2Fthumb'
+
+
+def test_transform_falls_back_to_show_poster_when_no_season_or_episode_thumb():
+    item = FakeHistoryItem(
+        ratingKey=202,
+        type='episode',
+        title='Nights',
+        grandparentTitle='The Bear',
+        grandparentRatingKey=200,
+        grandparentThumb='/library/metadata/200/thumb',
+    )
+
+    result = transform_history_item(item)
+
+    assert result['posterUrl'] == '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F200%2Fthumb'
+
+
+def test_transform_unsupported_type_returns_none():
+    item = FakeHistoryItem(ratingKey=303, type='track', title='Some Song')
+
+    assert transform_history_item(item) is None
+
+
+def test_transform_falls_back_to_slug_when_movie_rating_key_missing():
+    """Plex can drop ratingKey for history entries whose media was later
+    deleted from the library — str(None) would otherwise produce the
+    literal id "None" and collide across unrelated items."""
+    item = FakeHistoryItem(ratingKey=None, type='movie', title='Exit 8')
+
+    result = transform_history_item(item)
+
+    assert result['id'] == 'exit-8'
+
+
+def test_transform_falls_back_to_slug_when_episode_grandparent_key_missing():
+    item = FakeHistoryItem(
+        ratingKey=505,
+        type='episode',
+        title='Episode 1',
+        grandparentTitle='House of the Dragon',
+        grandparentRatingKey=None,
+    )
+
+    result = transform_history_item(item)
+
+    assert result['id'] == 'house-of-the-dragon'
+
+
+def test_transform_pulls_trailing_year_out_of_title():
+    """Plex can bake a disambiguating year into grandparentTitle (e.g. a
+    library with both the 1999 anime and 2023 live-action "One Piece"),
+    usually alongside a missing parentYear. A literal "(2023)" in the
+    search query makes TMDB return zero results, so it needs splitting
+    out into its own year field before the TMDB fallback runs."""
+    item = FakeHistoryItem(
+        ratingKey=606,
+        type='episode',
+        title='Episode 1',
+        grandparentTitle='ONE PIECE (2023)',
+        grandparentRatingKey=None,
+    )
+
+    result = transform_history_item(item)
+
+    assert result['title'] == 'ONE PIECE'
+    assert result['year'] == 2023
+    # id keeps the raw (un-split) title so "One Piece" and "One Piece
+    # (2023)" — two distinct shows missing their native key — don't collide.
+    assert result['id'] == 'one-piece-2023'
+
+
+def test_transform_prefers_native_year_over_title_suffix():
+    item = FakeHistoryItem(
+        ratingKey=101,
+        type='movie',
+        title='Movie (2020)',
+        year=2024,
+    )
+
+    result = transform_history_item(item)
+
+    assert result['year'] == 2024
+
+
+def _series_entry(entry_id, watched_at):
+    return {
+        'id': entry_id,
+        'title': 'The Bear',
+        'type': 'series',
+        'watchedAt': watched_at,
+        'year': 2022,
+        'posterUrl': None,
+        'rating': None,
+        'note': None,
+    }
+
+
+def _film_entry(entry_id):
+    return {
+        'id': entry_id,
+        'title': 'Dune: Part Two',
+        'type': 'film',
+        'watchedAt': '2026-06-28T20:00:00+00:00',
+        'year': 2024,
+        'posterUrl': None,
+        'rating': None,
+        'note': None,
+    }
+
+
+def test_aggregate_series_drops_shows_with_fewer_than_three_episodes():
+    entries = [
+        _series_entry('200', '2026-07-01T00:00:00+00:00'),
+        _series_entry('200', '2026-07-02T00:00:00+00:00'),
+    ]
+
+    assert _aggregate_series(entries) == []
+
+
+def test_aggregate_series_keeps_shows_with_three_or_more_episodes():
+    entries = [
+        _series_entry('200', '2026-07-01T00:00:00+00:00'),
+        _series_entry('200', '2026-07-03T00:00:00+00:00'),
+        _series_entry('200', '2026-07-02T00:00:00+00:00'),
+    ]
+
+    result = _aggregate_series(entries)
+
+    assert len(result) == 1
+    assert result[0]['watchedAt'] == '2026-07-03T00:00:00+00:00'
+
+
+def test_aggregate_series_keeps_all_films_regardless_of_count():
+    entries = [_film_entry('101')]
+
+    assert _aggregate_series(entries) == entries
+
+
+def test_write_watch_item_files_creates_new_file_unhidden(tmp_path, monkeypatch):
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    written = yaml.safe_load((tmp_path / 'dune-part-two.yaml').read_text())
+    assert written['title'] == 'Dune: Part Two'
+    assert written['hidden'] is False
+
+
+def test_write_watch_item_files_preserves_hidden_flag_on_resync(tmp_path, monkeypatch):
+    """Every field is overwritten on each sync except `hidden` — that's a
+    manual curation flag set through Keystatic, and a daily re-sync must
+    never silently un-hide something someone hid."""
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+    path = tmp_path / 'dune-part-two.yaml'
+    path.write_text(yaml.safe_dump({'title': 'Dune: Part Two', 'hidden': True}))
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    written = yaml.safe_load(path.read_text())
+    assert written['hidden'] is True
+    assert written['title'] == 'Dune: Part Two'
+
+
+def test_write_watch_item_files_does_not_remove_stale_entries(tmp_path, monkeypatch):
+    """A show dropping back below MIN_EPISODES_FOR_SERIES (or a hidden
+    entry no longer present in the latest sync) should stay on disk —
+    manual edits/hides are never deleted out from under the user."""
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+    stale_path = tmp_path / 'stale-show.yaml'
+    stale_path.write_text(yaml.safe_dump({'title': 'Stale Show', 'hidden': False}))
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    assert stale_path.exists()

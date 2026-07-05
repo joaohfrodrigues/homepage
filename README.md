@@ -1,16 +1,22 @@
-# Photography Portfolio - joaohfrodrigues.com
+# joaohfrodrigues.com
 
-A photography and writing portfolio site. The frontend is a Next.js 15 app (App Router, TypeScript,
-Tailwind CSS, Keystatic CMS); photo data is synced from Unsplash into a local SQLite database by a
-Python ETL pipeline that runs daily via GitHub Actions.
+João Rodrigues' personal site — photography, writing, and hobbies (music, running, watching).
+The frontend is a Next.js 15 app (App Router, TypeScript, Tailwind CSS, Keystatic CMS); photo data
+and watch items are synced daily by Python ETL pipelines that commit their output straight to
+the repo.
 
 ## 🏗️ Architecture
 
 - **Frontend** (`src/`) - Next.js 15 App Router site, deployed to Vercel. Reads photo data directly
-    from `data/photos.db` (via `better-sqlite3`) and content from `content/` (Markdown/YAML, managed
-    through Keystatic CMS).
-- **ETL pipeline** (`backend/`) - Python scripts that sync photos and collections from the Unsplash
-    API into `data/photos.db`. Runs daily via `.github/workflows/etl.yaml`.
+    from `data/photos.db` (via `better-sqlite3`), watch items from the `watchItems` Keystatic
+    collection, and other content from `content/` (Markdown/YAML, managed through Keystatic CMS).
+- **ETL pipelines** (`backend/`) - Python scripts that sync data into the repo, each on its own
+    daily GitHub Actions schedule:
+    - `backend/etl.py` - syncs photos and collections from the Unsplash API into `data/photos.db`
+      (`.github/workflows/etl.yaml`).
+    - `backend/plex_etl.py` - syncs watch history from a Plex server into one Keystatic content
+      file per title under `content/watch-items/*` (each editable/hideable in the CMS), falling
+      back to TMDB for posters Plex doesn't have (`.github/workflows/plex-etl.yaml`).
 
 ## 🚀 Frontend - Quick Start
 
@@ -21,12 +27,14 @@ bun run dev
 
 Visit <http://localhost:3000> to see the site.
 
-## 📸 ETL Pipeline - Quick Start
+## 📸 ETL Pipelines - Quick Start
 
 ### Prerequisites
 
 - Python 3.12+
-- An [Unsplash](https://unsplash.com/developers) API account (free tier: 50 requests/hour)
+- An [Unsplash](https://unsplash.com/developers) API account (free tier: 50 requests/hour) for the
+    photo sync
+- A Plex server and token for the watch-history sync (optional — see below)
 
 ### Setup
 
@@ -39,7 +47,8 @@ Visit <http://localhost:3000> to see the site.
 
 2. **Set up environment variables:**
 
-    Create a `.env` file in the project root:
+    Create a `.env` file in the project root — see [.env.example](./.env.example) for the full list.
+    At minimum for the photo sync:
 
     ```bash
     UNSPLASH_ACCESS_KEY=your_unsplash_access_key
@@ -59,6 +68,23 @@ Visit <http://localhost:3000> to see the site.
     This fetches photos and collections from Unsplash, extracts EXIF data for featured photos, and
     stores everything in `data/photos.db`.
 
+4. **Sync watch history from Plex (optional):**
+
+    ```bash
+    PLEX_URL=http://localhost:32400 PLEX_TOKEN=your_plex_token python backend/plex_etl.py
+    ```
+
+    Reads Plex watch history and writes one YAML file per title to `content/watch-items/`. Set
+    `TMDB_API_KEY` to fill in posters for items Plex doesn't have a thumbnail for. By default this
+    pulls Plex's entire retained history (no date cutoff); pass `--since YYYY-MM-DD` to bound a
+    historical backfill, e.g. `python backend/plex_etl.py --since 2026-01-01`. A series only gets a
+    Watching entry once at least 3 of its episodes have been watched — its date is the most
+    recently watched episode.
+
+    Every field except `hidden` is overwritten on each sync. `hidden` is a manual flag set through
+    Keystatic — check a watch item's "Hidden" box in the CMS to drop it from the `/hobbies` feed
+    without deleting it; the ETL will never re-show it on a later sync.
+
 See [backend/README.md](./backend/README.md) for detailed ETL documentation.
 
 ### Database Schema
@@ -73,8 +99,12 @@ Full-text search uses an FTS5 virtual table.
 
 ### Automated Sync
 
-`.github/workflows/etl.yaml` runs daily to sync new photos, update statistics for existing photos,
-and commit the updated database. Vercel then picks up the change on the next deploy.
+- `.github/workflows/etl.yaml` runs daily to sync new photos, update statistics for existing photos,
+    and commit the updated database.
+- `.github/workflows/plex-etl.yaml` runs daily to sync watch history and commit any changed
+    files under `content/watch-items/`.
+
+Vercel then picks up the change on the next deploy.
 
 ## 🌐 Deploy to Vercel
 
@@ -89,35 +119,39 @@ and commit the updated database. Vercel then picks up the change on the next dep
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
 - **[Unsplash API](https://unsplash.com/developers)** - Photo source with CDN
+- **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
+    poster fallback
 - **[Playwright](https://playwright.dev/)** - End-to-end tests
 - **[pytest](https://pytest.org/)** - ETL pipeline tests
 - **[Ruff](https://docs.astral.sh/ruff/)** - Python linter and formatter
 - **[Vercel](https://vercel.com)** - Deployment platform
-- **[GitHub Actions](https://github.com/features/actions)** - CI/CD and daily photo sync
+- **[GitHub Actions](https://github.com/features/actions)** - CI/CD and daily data sync
 
 ## 📚 Documentation
 
 - **[backend/README.md](./backend/README.md)** - Database schema and ETL pipeline details
-- **[tests/fixtures/README.md](./tests/fixtures/README.md)** - Test data and fixture documentation
 - **[content/pages/README.md](./content/pages/README.md)** - Managing static content pages
 - **[data/README.md](./data/README.md)** - Database file information
 
 ## 📁 Project Structure
 
 ```text
-photography-home/
+homepage/
 ├── .github/
 │   └── workflows/       # CI/CD pipelines
-│       ├── dev.yaml     # Linting, testing
-│       └── etl.yaml     # Daily photo sync
+│       ├── dev.yaml         # Linting, testing
+│       ├── etl.yaml         # Daily photo sync
+│       └── plex-etl.yaml    # Daily watch-items sync
 ├── backend/             # Database and ETL (Python)
 │   ├── database.py      # Schema and operations
 │   ├── db_service.py    # Query layer
-│   ├── providers/       # Unsplash API client
-│   └── etl.py           # Unsplash sync pipeline
+│   ├── providers/       # Unsplash and TMDB API clients
+│   ├── etl.py           # Unsplash sync pipeline
+│   └── plex_etl.py      # Plex watch-items sync pipeline
 ├── content/             # Keystatic-managed content (Markdown/YAML)
-├── data/                # SQLite database
-│   └── photos.db        # Local photo database
+│   └── watch-items/         # One file per synced film/show (editable/hideable)
+├── data/                # Synced data
+│   └── photos.db            # Local photo database
 ├── src/                 # Next.js app (App Router)
 │   ├── app/              # Routes and pages
 │   ├── components/       # React components
