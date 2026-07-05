@@ -135,6 +135,35 @@ export default config({
       },
     }),
 
+    watchItems: collection({
+      label: 'Watch Items',
+      slugField: 'title',
+      path: 'content/watch-items/*',
+      schema: {
+        title: fields.slug({ name: { label: 'Title' } }),
+        type: fields.select({
+          label: 'Type',
+          options: [
+            { label: 'Film', value: 'film' },
+            { label: 'Series', value: 'series' },
+          ],
+          defaultValue: 'film',
+        }),
+        // Stored as a full ISO 8601 timestamp (not fields.date, which is
+        // date-only) so same-day entries still sort correctly by time.
+        watchedAt: fields.text({ label: 'Watched At (ISO timestamp)' }),
+        year: fields.number({ label: 'Year' }),
+        posterUrl: fields.text({ label: 'Poster URL' }),
+        rating: fields.number({ label: 'Rating' }),
+        note: fields.text({ label: 'Note', multiline: true }),
+        hidden: fields.checkbox({
+          label: 'Hidden',
+          description: 'Hide this entry from the /hobbies feed without deleting it',
+          defaultValue: false,
+        }),
+      },
+    }),
+
     hobbies: collection({
       label: 'Hobbies',
       slugField: 'title',

@@ -1,7 +1,11 @@
-"""ETL script to sync watch history from a Plex server to data/watch-history.json"""
+"""ETL script to sync watch history from a Plex server into content/watch-items/*.
+
+Each watched film/show becomes its own Keystatic content file (like Gear and
+Events), so entries can be manually edited or hidden through the CMS. Every
+sync overwrites all fields except `hidden`, which is only ever set by hand.
+"""
 
 import argparse
-import json
 import logging
 import os
 import re
@@ -10,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
+import yaml
 from dotenv import load_dotenv
 from plexapi.server import PlexServer
 
@@ -24,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WATCH_HISTORY_PATH = Path(__file__).parent.parent / 'data' / 'watch-history.json'
+WATCH_ITEMS_DIR = Path(__file__).parent.parent / 'content' / 'watch-items'
 
 TYPE_MAP = {
     'movie': 'film',
@@ -64,7 +69,7 @@ def _poster_path(item) -> str | None:
 
     The frontend proxies this through /api/watch-poster, which attaches
     PLEX_URL/PLEX_TOKEN server-side at request time — the token must never
-    end up written into data/watch-history.json, since that file is
+    end up written into a content/watch-items/*.yaml file, since those are
     committed to git.
     """
     return (
@@ -172,6 +177,45 @@ def fetch_watch_history(
     return entries
 
 
+def _existing_hidden(path: Path) -> bool:
+    """Read back a previously-synced entry's `hidden` flag, if any.
+
+    Every other field is overwritten wholesale on each sync, but `hidden`
+    is a manual curation flag set through Keystatic — the ETL must never
+    silently un-hide something someone hid.
+    """
+    if not path.exists():
+        return False
+    try:
+        data = yaml.safe_load(path.read_text()) or {}
+    except yaml.YAMLError:
+        return False
+    return bool(data.get('hidden', False))
+
+
+def write_watch_item_files(entries: list[dict]) -> None:
+    """Write one Keystatic content file per entry to content/watch-items/.
+
+    Existing files for ids no longer present in `entries` (e.g. a series
+    that dropped back below MIN_EPISODES_FOR_SERIES) are left untouched
+    rather than deleted, so manual edits/hides are never lost.
+    """
+    WATCH_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
+    for entry in entries:
+        path = WATCH_ITEMS_DIR / f'{entry["id"]}.yaml'
+        content = {
+            'title': entry['title'],
+            'type': entry['type'],
+            'watchedAt': entry['watchedAt'],
+            'year': entry['year'],
+            'posterUrl': entry['posterUrl'],
+            'rating': entry['rating'],
+            'note': entry['note'],
+            'hidden': _existing_hidden(path),
+        }
+        path.write_text(yaml.safe_dump(content, sort_keys=False, allow_unicode=True))
+
+
 def sync_data(
     plex_url: str,
     plex_token: str,
@@ -179,18 +223,15 @@ def sync_data(
     since: datetime | None = None,
 ) -> list[dict]:
     entries = fetch_watch_history(plex_url, plex_token, tmdb_api_key, since)
-    WATCH_HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    WATCH_HISTORY_PATH.write_text(json.dumps(entries, indent=2) + '\n')
-    logger.info('Wrote %d watch history entries to %s', len(entries), WATCH_HISTORY_PATH)
+    write_watch_item_files(entries)
+    logger.info('Wrote %d watch item files to %s', len(entries), WATCH_ITEMS_DIR)
     return entries
 
 
 def main() -> int:
     load_dotenv()
 
-    parser = argparse.ArgumentParser(
-        description='Sync Plex watch history to data/watch-history.json'
-    )
+    parser = argparse.ArgumentParser(description='Sync Plex watch history to content/watch-items/*')
     parser.add_argument(
         '--since',
         metavar='YYYY-MM-DD',

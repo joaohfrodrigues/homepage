@@ -13,6 +13,7 @@ dependencies = [
     "python-dotenv",
     "pycountry",
     "plexapi",
+    "pyyaml",
 ]
 
 [project.optional-dependencies]

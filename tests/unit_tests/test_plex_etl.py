@@ -5,9 +5,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from backend.plex_etl import _aggregate_series, transform_history_item
+from backend import plex_etl
+from backend.plex_etl import _aggregate_series, transform_history_item, write_watch_item_files
 
 
 @dataclass
@@ -52,7 +55,7 @@ def test_transform_movie():
 
 
 def test_transform_does_not_leak_plex_token_into_poster_url():
-    """data/watch-history.json is committed to git — the poster URL must
+    """content/watch-items/*.yaml is committed to git — the poster URL must
     never contain a Plex token, only a token-free path the frontend proxy
     can attach credentials to server-side."""
     item = FakeHistoryItem(
@@ -243,3 +246,41 @@ def test_aggregate_series_keeps_all_films_regardless_of_count():
     entries = [_film_entry('101')]
 
     assert _aggregate_series(entries) == entries
+
+
+def test_write_watch_item_files_creates_new_file_unhidden(tmp_path, monkeypatch):
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    written = yaml.safe_load((tmp_path / 'dune-part-two.yaml').read_text())
+    assert written['title'] == 'Dune: Part Two'
+    assert written['hidden'] is False
+
+
+def test_write_watch_item_files_preserves_hidden_flag_on_resync(tmp_path, monkeypatch):
+    """Every field is overwritten on each sync except `hidden` — that's a
+    manual curation flag set through Keystatic, and a daily re-sync must
+    never silently un-hide something someone hid."""
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+    path = tmp_path / 'dune-part-two.yaml'
+    path.write_text(yaml.safe_dump({'title': 'Dune: Part Two', 'hidden': True}))
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    written = yaml.safe_load(path.read_text())
+    assert written['hidden'] is True
+    assert written['title'] == 'Dune: Part Two'
+
+
+def test_write_watch_item_files_does_not_remove_stale_entries(tmp_path, monkeypatch):
+    """A show dropping back below MIN_EPISODES_FOR_SERIES (or a hidden
+    entry no longer present in the latest sync) should stay on disk —
+    manual edits/hides are never deleted out from under the user."""
+    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
+    stale_path = tmp_path / 'stale-show.yaml'
+    stale_path.write_text(yaml.safe_dump({'title': 'Stale Show', 'hidden': False}))
+
+    write_watch_item_files([_film_entry('dune-part-two')])
+
+    assert stale_path.exists()

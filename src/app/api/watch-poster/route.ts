@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 // Only Plex's own thumbnail path shape is allowed through — this proxies
 // requests to the Plex server, attaching PLEX_TOKEN server-side so the
-// token never reaches the client or gets written into data/watch-history.json
+// token never reaches the client or gets written into a content/watch-items/*.yaml file
 // (which is committed to git).
 const PLEX_THUMB_PATH_PATTERN = /^\/library\/metadata\/\d+\/thumb(\/\d+)?$/
 
