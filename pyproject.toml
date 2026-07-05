@@ -12,6 +12,7 @@ dependencies = [
     "requests",
     "python-dotenv",
     "pycountry",
+    "plexapi",
 ]
 
 [project.optional-dependencies]

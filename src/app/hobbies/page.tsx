@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { getLandingHobbies, type HobbySummary } from '@/lib/hobbies'
 import { getGearItems, type GearItem } from '@/lib/gear'
 import { getEventItems, type EventItem } from '@/lib/events'
+import { getWatchItems } from '@/lib/watch-items'
 import { assignTileColors } from '@/lib/tile-colors'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { HobbyCard } from '@/components/hobby-feed/hobby-card'
@@ -15,6 +16,7 @@ type HobbyFeedEntry =
   | { kind: 'hobby'; dateAdded: string; hobby: HobbySummary }
   | { kind: 'gear'; dateAdded: string; item: GearItem }
   | { kind: 'event'; dateAdded: string; item: EventItem }
+  | { kind: 'watch'; dateAdded: string; item: GearItem }
 
 const description = "Out and about."
 
@@ -30,15 +32,17 @@ export const metadata: Metadata = {
 }
 
 export default async function HobbiesPage() {
-  const [landingHobbies, gearItems, eventItems] = await Promise.all([
+  const [landingHobbies, gearItems, eventItems, watchItems] = await Promise.all([
     getLandingHobbies(),
     getGearItems(),
     getEventItems(),
+    getWatchItems(),
   ])
   const feed: HobbyFeedEntry[] = [
     ...landingHobbies.map((hobby): HobbyFeedEntry => ({ kind: 'hobby', dateAdded: hobby.dateAdded, hobby })),
     ...gearItems.map((item): HobbyFeedEntry => ({ kind: 'gear', dateAdded: item.dateAdded, item })),
     ...eventItems.map((item): HobbyFeedEntry => ({ kind: 'event', dateAdded: item.dateAdded, item })),
+    ...watchItems.map((item): HobbyFeedEntry => ({ kind: 'watch', dateAdded: item.dateAdded, item })),
   ].sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
 
   const groups = Array.from(
@@ -67,11 +71,21 @@ export default async function HobbiesPage() {
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
         {feed.map((entry) => {
           if (entry.kind === 'hobby') {
-            return <HobbyCard key={`hobby-${entry.hobby.slug}`} hobby={entry.hobby} color={tileColors.get(entry.hobby.slug)!} />
+            return (
+              <HobbyCard
+                key={`hobby-${entry.hobby.slug}`}
+                hobby={entry.hobby}
+                color={tileColors.get(entry.hobby.slug)!}
+              />
+            )
           }
 
           if (entry.kind === 'event') {
             return <EventCard key={`event-${entry.item.slug}`} item={entry.item} color={tileColors.get(entry.item.hobbySlug)!} />
+          }
+
+          if (entry.kind === 'watch') {
+            return <GearCard key={`watch-${entry.item.slug}`} item={entry.item} color={tileColors.get(entry.item.hobbySlug)!} />
           }
 
           return <GearCard key={`gear-${entry.item.slug}`} item={entry.item} color={tileColors.get(entry.item.hobbySlug)!} />

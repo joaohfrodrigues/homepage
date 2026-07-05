@@ -1,0 +1,252 @@
+[
+    {
+        "id": "the-boys",
+        "title": "The Boys",
+        "type": "series",
+        "watchedAt": "2026-06-26T23:34:14",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F4161%2Fthumb%2F1780279235",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "seinfeld",
+        "title": "Seinfeld",
+        "type": "series",
+        "watchedAt": "2026-06-21T03:17:12",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F2450%2Fthumb%2F1781489376",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "widows-bay",
+        "title": "Widow's Bay",
+        "type": "series",
+        "watchedAt": "2026-06-17T23:02:30",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F4260%2Fthumb%2F1782097951",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "565",
+        "title": "Hercules",
+        "type": "film",
+        "watchedAt": "2026-06-15T23:46:31",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F565%2Fthumb%2F1783047352",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "4231",
+        "title": "Normal",
+        "type": "film",
+        "watchedAt": "2026-06-14T21:24:42",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F4231%2Fthumb%2F1782706233",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "1290",
+        "title": "Shrek",
+        "type": "film",
+        "watchedAt": "2026-06-07T21:03:20",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F1290%2Fthumb%2F1783047364",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "exit-8",
+        "title": "Exit 8",
+        "type": "film",
+        "watchedAt": "2026-06-06T12:15:51",
+        "year": null,
+        "posterUrl": "https://image.tmdb.org/t/p/w500/nQXYTvm6AY4WmtcPskroqC7Skh.jpg",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3618",
+        "title": "Oldboy",
+        "type": "film",
+        "watchedAt": "2026-04-19T12:12:42",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3618%2Fthumb%2F1783220752",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "one-piece-2023",
+        "title": "ONE PIECE (2023)",
+        "type": "series",
+        "watchedAt": "2026-04-12T23:12:08",
+        "year": null,
+        "posterUrl": null,
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "young-sherlock-2026",
+        "title": "Young Sherlock (2026)",
+        "type": "series",
+        "watchedAt": "2026-03-23T23:48:21",
+        "year": null,
+        "posterUrl": null,
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "4028",
+        "title": "Wuthering Heights",
+        "type": "film",
+        "watchedAt": "2026-03-21T17:59:50",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F4028%2Fthumb%2F1783220765",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3924",
+        "title": "The Secret Agent",
+        "type": "film",
+        "watchedAt": "2026-03-15T22:53:14",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3924%2Fthumb%2F1783220763",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "4005",
+        "title": "If I Had Legs I'd Kick You",
+        "type": "film",
+        "watchedAt": "2026-03-07T18:04:10",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F4005%2Fthumb%2F1782958211",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "reality-check-inside-americas-next-top-model",
+        "title": "Reality Check: Inside America's Next Top Model",
+        "type": "series",
+        "watchedAt": "2026-03-04T15:56:25",
+        "year": null,
+        "posterUrl": "https://image.tmdb.org/t/p/w500/lxlsvsgvEYlf2wrSV9qUipHRAuk.jpg",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "1935",
+        "title": "Wicked: For Good",
+        "type": "film",
+        "watchedAt": "2026-02-27T19:14:37",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F1935%2Fthumb%2F1783220752",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "a-knight-of-the-seven-kingdoms",
+        "title": "A Knight of the Seven Kingdoms",
+        "type": "series",
+        "watchedAt": "2026-02-23T21:59:55",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3999%2Fthumb%2F1781489169",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "779",
+        "title": "Kingdom of Heaven",
+        "type": "film",
+        "watchedAt": "2026-02-17T14:59:26",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F779%2Fthumb%2F1782958187",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3988",
+        "title": "Marcello Hernandez: American Boy",
+        "type": "film",
+        "watchedAt": "2026-02-14T23:30:52",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3988%2Fthumb%2F1782958211",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3970",
+        "title": "Bring Her Back",
+        "type": "film",
+        "watchedAt": "2026-02-13T23:48:00",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3970%2Fthumb%2F1781489192",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3941",
+        "title": "Pillion",
+        "type": "film",
+        "watchedAt": "2026-02-07T20:19:02",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3941%2Fthumb%2F1783220763",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "3925",
+        "title": "Hamnet",
+        "type": "film",
+        "watchedAt": "2026-02-07T12:53:03",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3925%2Fthumb%2F1782958210",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "63",
+        "title": "Anastasia",
+        "type": "film",
+        "watchedAt": "2026-01-29T23:13:27",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F63%2Fthumb%2F1782958172",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "the-white-lotus",
+        "title": "The White Lotus",
+        "type": "series",
+        "watchedAt": "2026-01-25T00:29:31",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3899%2Fthumb%2F1781488954",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "1289",
+        "title": "Sentimental Value",
+        "type": "film",
+        "watchedAt": "2026-01-23T21:30:56",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F1289%2Fthumb%2F1780281555",
+        "rating": null,
+        "note": null
+    },
+    {
+        "id": "plur1bus",
+        "title": "PLUR1BUS",
+        "type": "series",
+        "watchedAt": "2026-01-10T20:06:49",
+        "year": null,
+        "posterUrl": "/api/watch-poster?path=%2Flibrary%2Fmetadata%2F3869%2Fthumb%2F1781488944",
+        "rating": null,
+        "note": null
+    }
+]

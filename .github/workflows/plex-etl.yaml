@@ -1,0 +1,56 @@
+name: 'Daily Plex Watch History Sync'
+
+on:
+    schedule:
+        - cron: '15 0 * * *' # Runs daily, offset from the photo sync
+    workflow_dispatch: # Allows you to click "Run Now" manually for testing
+
+concurrency:
+    group: daily-plex-sync
+    cancel-in-progress: false
+
+jobs:
+    update-data:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Crucial! Allows the robot to commit changes
+
+        steps:
+            - name: Check out repo
+              uses: actions/checkout@v5
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.12'
+
+            - name: Cache pip
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pip
+                  key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pip-
+
+            - name: Install dependencies
+              run: |
+                  set -euo pipefail
+                  python -m pip install --upgrade pip build
+                  echo "Installing project and dependencies from pyproject.toml"
+                  pip install .
+
+            - name: Run Plex ETL Script
+              env:
+                  PLEX_URL: ${{ secrets.PLEX_URL }}
+                  PLEX_TOKEN: ${{ secrets.PLEX_TOKEN }}
+                  TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+              run: |
+                  set -euo pipefail
+                  python backend/plex_etl.py
+
+            - name: Commit and Push if changed
+              run: |
+                  git config user.name "GitHub Action"
+                  git config user.email "action@github.com"
+                  git add data/watch-history.json
+                  git diff --quiet && git diff --staged --quiet || (git commit -m "🎬 Update watch history - $(date +'%Y-%m-%d')" && git push)
