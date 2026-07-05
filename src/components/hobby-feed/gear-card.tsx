@@ -1,11 +1,16 @@
 import type { GearItem } from '@/lib/gear'
+import { Tag } from '@/components/tag'
 import { CARD_ASPECT_RATIO } from '@/lib/aspect-ratio'
 import { PhotoCarousel } from './photo-carousel'
 import { TextTile } from './text-tile'
 
 export function GearCard({ item, testId }: { item: GearItem; testId?: string }) {
   return (
-    <div className="group flex h-full flex-col" data-testid={testId}>
+    <div className="group relative flex h-full flex-col" data-testid={testId}>
+      <div className="absolute left-3 top-3 z-10">
+        <Tag label={item.category} />
+      </div>
+
       {item.photo ? (
         <PhotoCarousel
           images={[{ src: item.photo, alt: item.name }]}
