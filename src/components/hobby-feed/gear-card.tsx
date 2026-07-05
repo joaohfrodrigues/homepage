@@ -1,17 +1,11 @@
 import type { GearItem } from '@/lib/gear'
-import type { TileColor } from '@/lib/tile-colors'
-import { Tag } from '@/components/tag'
 import { CARD_ASPECT_RATIO } from '@/lib/aspect-ratio'
 import { PhotoCarousel } from './photo-carousel'
 import { TextTile } from './text-tile'
 
-export function GearCard({ item, color }: { item: GearItem; color: TileColor }) {
+export function GearCard({ item, testId }: { item: GearItem; testId?: string }) {
   return (
-    <div className="group relative flex h-full flex-col">
-      <div className="absolute left-3 top-3 z-10">
-        <Tag label={item.category} />
-      </div>
-
+    <div className="group flex h-full flex-col" data-testid={testId}>
       {item.photo ? (
         <PhotoCarousel
           images={[{ src: item.photo, alt: item.name }]}
@@ -26,7 +20,7 @@ export function GearCard({ item, color }: { item: GearItem; color: TileColor }) 
           }
         />
       ) : (
-        <TextTile color={color} title={item.name} description={item.note} />
+        <TextTile title={item.name} description={item.note} />
       )}
     </div>
   )

@@ -1,10 +1,9 @@
 import type { HobbySummary } from '@/lib/hobbies'
-import type { TileColor } from '@/lib/tile-colors'
 import { CARD_ASPECT_RATIO } from '@/lib/aspect-ratio'
 import { PhotoCarousel } from './photo-carousel'
 import { TextTile } from './text-tile'
 
-export function HobbyCard({ hobby, color }: { hobby: HobbySummary; color: TileColor }) {
+export function HobbyCard({ hobby }: { hobby: HobbySummary }) {
   const images =
     hobby.tiles.length > 0
       ? hobby.tiles
@@ -30,7 +29,7 @@ export function HobbyCard({ hobby, color }: { hobby: HobbySummary; color: TileCo
           }
         />
       ) : (
-        <TextTile color={color} title={hobby.title} description={hobby.blurb} />
+        <TextTile title={hobby.title} description={hobby.blurb} />
       )}
     </div>
   )

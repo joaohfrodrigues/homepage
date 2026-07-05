@@ -25,11 +25,10 @@ test.describe('/hobbies', () => {
     await expect(musicCard.getByText(/Drumming in 404s/)).toBeVisible()
   })
 
-  test("shows a known gear item's hobby eyebrow and category tag", async ({ page }) => {
+  test("shows a known gear item's hobby eyebrow", async ({ page }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')
     await expect(drumKit.getByText(/Hobbies · Music/)).toBeVisible()
-    await expect(drumKit.getByText('Drum Kit', { exact: true })).toBeVisible()
   })
 
   test("a gear item's note is visible without any interaction", async ({ page }) => {
