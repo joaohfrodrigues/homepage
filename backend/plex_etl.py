@@ -167,9 +167,11 @@ def fetch_watch_history(
 
     `since` limits history to items watched on or after that date — useful
     for a one-off historical backfill (Plex defaults to returning its
-    entire retained history otherwise). When a Plex item has no poster of
-    its own and a TMDB API key is configured, fall back to searching TMDB
-    by title/type/year.
+    entire retained history otherwise). When a TMDB API key is configured,
+    every entry's poster is preferred from TMDB (a public CDN URL, so the
+    frontend can render it directly with no Plex token/proxy involved);
+    the Plex thumbnail proxy path is only kept as a fallback when TMDB has
+    no match for the title.
     """
     plex = PlexServer(plex_url, plex_token)
     history = plex.history(mindate=since) if since else plex.history()
@@ -184,10 +186,10 @@ def fetch_watch_history(
     _assign_readable_slugs(entries)
 
     for entry in entries:
-        if entry['posterUrl'] is None and tmdb_api_key:
-            entry['posterUrl'] = search_poster(
-                entry['title'], entry['type'], entry['year'], tmdb_api_key
-            )
+        if tmdb_api_key:
+            tmdb_poster = search_poster(entry['title'], entry['type'], entry['year'], tmdb_api_key)
+            if tmdb_poster is not None:
+                entry['posterUrl'] = tmdb_poster
 
     entries.sort(key=lambda e: e['watchedAt'], reverse=True)
     return entries
