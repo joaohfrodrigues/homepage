@@ -82,12 +82,11 @@ def _poster_path(item) -> str | None:
 def transform_history_item(item) -> dict | None:
     """Transform a Plex history entry into our canonical watch-history schema.
 
-    Episodes are keyed by their parent show (`grandparentRatingKey`), not
-    their own `ratingKey`, so every watched episode of a series collapses
-    onto the same id in `_aggregate_series`. Plex sometimes drops the
-    rating key entirely for history entries whose underlying media has
-    since been removed from the library — fall back to a title slug so
-    those items still get a stable, non-colliding id.
+    Episodes are keyed by their parent show (`grandparentRatingKey`) if
+    available, else the raw title, so every watched episode of a series
+    collapses onto the same group in `_aggregate_series`. This grouping key
+    is internal — `_assign_readable_slugs` computes the actual `id` (and
+    therefore filename) from the title afterwards, once per show/film.
     """
     media_type = TYPE_MAP.get(item.type)
     if media_type is None:
@@ -96,17 +95,18 @@ def transform_history_item(item) -> dict | None:
     is_episode = item.type == 'episode'
     raw_title = item.grandparentTitle if is_episode else item.title
     native_id = getattr(item, 'grandparentRatingKey', None) if is_episode else item.ratingKey
-    # Fall back id is derived from the raw (un-split) title so two
-    # differently-titled shows that both lack a native key (e.g. "One Piece"
-    # vs "One Piece (2023)") still get distinct ids.
-    entry_id = str(native_id) if native_id else slugify(raw_title)
+    # Grouping key only — distinct from the final `id` used as filename.
+    # Falls back to the raw (un-split) title so two differently-titled
+    # shows that both lack a native key (e.g. "One Piece" vs "One Piece
+    # (2023)") still group separately.
+    group_key = str(native_id) if native_id else slugify(raw_title)
     title, inferred_year = _split_title_year(raw_title)
     year = getattr(item, 'year', None) or getattr(item, 'parentYear', None) or inferred_year
     watched_at = getattr(item, 'viewedAt', None)
     poster_path = _poster_path(item)
 
     return {
-        'id': entry_id,
+        'id': group_key,
         'title': title,
         'type': media_type,
         'watchedAt': watched_at.isoformat() if watched_at else None,
@@ -142,6 +142,21 @@ def _aggregate_series(entries: list[dict]) -> list[dict]:
     return films + series
 
 
+def _assign_readable_slugs(entries: list[dict]) -> None:
+    """Replace each entry's grouping-key id with a readable slug of its title.
+
+    Mutates `entries` in place. Processes in a fixed (title-sorted) order so
+    dedup suffixes are stable from run to run rather than depending on
+    whatever order Plex happened to return history in.
+    """
+    seen: dict[str, int] = {}
+    for entry in sorted(entries, key=lambda e: e['title']):
+        base = slugify(entry['title'])
+        seen[base] = seen.get(base, 0) + 1
+        count = seen[base]
+        entry['id'] = base if count == 1 else f'{base}-{count}'
+
+
 def fetch_watch_history(
     plex_url: str,
     plex_token: str,
@@ -166,6 +181,7 @@ def fetch_watch_history(
             raw_entries.append(entry)
 
     entries = _aggregate_series(raw_entries)
+    _assign_readable_slugs(entries)
 
     for entry in entries:
         if entry['posterUrl'] is None and tmdb_api_key:

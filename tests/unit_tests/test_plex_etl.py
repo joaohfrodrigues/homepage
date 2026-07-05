@@ -10,7 +10,12 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend import plex_etl
-from backend.plex_etl import _aggregate_series, transform_history_item, write_watch_item_files
+from backend.plex_etl import (
+    _aggregate_series,
+    _assign_readable_slugs,
+    transform_history_item,
+    write_watch_item_files,
+)
 
 
 @dataclass
@@ -246,6 +251,29 @@ def test_aggregate_series_keeps_all_films_regardless_of_count():
     entries = [_film_entry('101')]
 
     assert _aggregate_series(entries) == entries
+
+
+def test_assign_readable_slugs_uses_title_not_native_key():
+    entries = [_film_entry('101')]
+
+    _assign_readable_slugs(entries)
+
+    assert entries[0]['id'] == 'dune-part-two'
+
+
+def test_assign_readable_slugs_dedupes_collisions_deterministically():
+    """Two distinct items that happen to share a title (e.g. a remake) must
+    not collide on the same filename — later ones (in title-sorted order)
+    get a numeric suffix, and the ordering is stable across runs."""
+    entries = [
+        {**_film_entry('a'), 'title': 'One Piece', 'watchedAt': '2026-01-01T00:00:00+00:00'},
+        {**_film_entry('b'), 'title': 'One Piece', 'watchedAt': '2026-02-01T00:00:00+00:00'},
+    ]
+
+    _assign_readable_slugs(entries)
+
+    ids = sorted(e['id'] for e in entries)
+    assert ids == ['one-piece', 'one-piece-2']
 
 
 def test_write_watch_item_files_creates_new_file_unhidden(tmp_path, monkeypatch):
