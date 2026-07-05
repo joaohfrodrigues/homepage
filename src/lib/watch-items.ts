@@ -15,7 +15,11 @@ export async function getWatchItems(): Promise<GearItem[]> {
 
     return {
       slug: entry.id,
-      name: entry.year ? `${entry.title} (${entry.year})` : entry.title,
+      // Plex's history API rarely populates year at all (only a couple of
+      // entries ever have it, when the title itself disambiguates a
+      // duplicate show name) — omit it everywhere so every card is
+      // consistent rather than showing it for a handful of entries.
+      name: entry.title,
       category: CATEGORY_LABEL[entry.type],
       photo: entry.posterUrl,
       note,
