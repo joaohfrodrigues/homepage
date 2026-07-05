@@ -1,15 +1,9 @@
 title: Music
 blurb: >-
-    Drumming in 404s, the office band at Critical Techworks — the occasional
-    gig, a lot of practice, and a good excuse to hit things rhythmically.
-dateAdded: '2026-07-02'
-coverImage: music-cover.png
+    Drumming in 404s, one of the Lisbon office bands at Critical Techworks — the
+    occasional gig, a lot of practice, and a good excuse to hit things
+    rhythmically.
+dateAdded: 2026-07-02
 order: 1
-showOnLandingPage: true
-tiles:
-    - image: music-tile-1.png
-      caption: 404s live at the Critical Techworks summer party — Lisbon, 2026
-    - image: music-tile-2.png
-      caption: Soundcheck before an office gig
-    - image: music-tile-3.png
-      caption: Practice session ahead of a Friday show
+showOnLandingPage: false
+tiles: []

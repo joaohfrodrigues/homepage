@@ -112,6 +112,29 @@ export default config({
       },
     }),
 
+    events: collection({
+      label: 'Events',
+      slugField: 'name',
+      path: 'content/events/*',
+      schema: {
+        name: fields.slug({ name: { label: 'Name' } }),
+        hobby: fields.relationship({
+          label: 'Hobby',
+          collection: 'hobbies',
+          validation: { isRequired: true },
+        }),
+        location: fields.text({ label: 'Location' }),
+        date: fields.date({ label: 'Date' }),
+        photo: fields.image({
+          label: 'Photo',
+          directory: 'public/images/events',
+          publicPath: '/images/events/',
+        }),
+        note: fields.text({ label: 'Note', multiline: true }),
+        link: fields.url({ label: 'Link', description: 'Optional event link' }),
+      },
+    }),
+
     hobbies: collection({
       label: 'Hobbies',
       slugField: 'title',

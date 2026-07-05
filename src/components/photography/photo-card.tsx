@@ -27,7 +27,7 @@ export function PhotoImage({
   style?: CSSProperties
 }) {
   const [loaded, setLoaded] = useState(false)
-  const alt = photo.altDescription || photo.title || 'Photograph by Joao Rodrigues'
+  const alt = photo.altDescription || photo.title || 'Photograph by João Rodrigues'
 
   return (
     <div className={`${className ?? ''} relative bg-muted`} style={style}>
@@ -68,15 +68,17 @@ export function PhotoOverlay({ photo }: { photo: Photo }) {
       >
         {photo.photographer.name}
       </a>{' '}
-      <a
-        href={photo.unsplashUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="pointer-events-auto text-xs text-white/70 hover:text-white/90 hover:underline"
-      >
-        on Unsplash
-      </a>
+      {photo.unsplashUrl && (
+        <a
+          href={photo.unsplashUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto text-xs text-white/70 hover:text-white/90 hover:underline"
+        >
+          on Unsplash
+        </a>
+      )}
     </div>
   )
 }

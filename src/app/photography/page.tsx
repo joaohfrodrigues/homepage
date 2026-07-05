@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
 
-const description = 'Street, travel, and portrait photography by Joao Rodrigues.'
+const description = 'Street and travel photography.'
 
 export const metadata: Metadata = {
   title: 'Photography',

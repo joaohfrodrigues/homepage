@@ -1,11 +1,11 @@
-import type { GearItem } from '@/lib/gear'
+import type { EventItem } from '@/lib/events'
 import type { TileColor } from '@/lib/tile-colors'
 import { Tag } from '@/components/tag'
 import { CARD_ASPECT_RATIO } from '@/lib/aspect-ratio'
 import { PhotoCarousel } from './photo-carousel'
 import { TextTile } from './text-tile'
 
-export function GearCard({ item, color }: { item: GearItem; color: TileColor }) {
+export function EventCard({ item, color }: { item: EventItem; color: TileColor }) {
   return (
     <div className="group flex h-full flex-col">
       {item.photo ? (
@@ -14,7 +14,7 @@ export function GearCard({ item, color }: { item: GearItem; color: TileColor }) 
           aspectRatio={CARD_ASPECT_RATIO}
           overlay={
             <>
-              <Tag label={item.category} />
+              <Tag label={item.location} />
               <h3 className="mt-2 line-clamp-2 font-serif text-lg leading-tight tracking-tight text-white">
                 {item.name}
               </h3>
@@ -23,7 +23,7 @@ export function GearCard({ item, color }: { item: GearItem; color: TileColor }) 
           }
         />
       ) : (
-        <TextTile color={color} category={item.category} title={item.name} description={item.note} />
+        <TextTile color={color} category={item.location} title={item.name} description={item.note} />
       )}
     </div>
   )
