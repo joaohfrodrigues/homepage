@@ -81,21 +81,21 @@
     },
     {
         "id": "one-piece-2023",
-        "title": "ONE PIECE (2023)",
+        "title": "ONE PIECE",
         "type": "series",
         "watchedAt": "2026-04-12T23:12:08",
-        "year": null,
-        "posterUrl": null,
+        "year": 2023,
+        "posterUrl": "https://image.tmdb.org/t/p/w500/blWCPEqDGLBuLB9u89CxP9ORQP4.jpg",
         "rating": null,
         "note": null
     },
     {
         "id": "young-sherlock-2026",
-        "title": "Young Sherlock (2026)",
+        "title": "Young Sherlock",
         "type": "series",
         "watchedAt": "2026-03-23T23:48:21",
-        "year": null,
-        "posterUrl": null,
+        "year": 2026,
+        "posterUrl": "https://image.tmdb.org/t/p/w500/h3s0Cd2JppeWA4UjTuSRauL52P7.jpg",
         "rating": null,
         "note": null
     },

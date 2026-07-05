@@ -118,6 +118,42 @@ def test_transform_falls_back_to_slug_when_episode_grandparent_key_missing():
     assert result['id'] == 'house-of-the-dragon'
 
 
+def test_transform_pulls_trailing_year_out_of_title():
+    """Plex can bake a disambiguating year into grandparentTitle (e.g. a
+    library with both the 1999 anime and 2023 live-action "One Piece"),
+    usually alongside a missing parentYear. A literal "(2023)" in the
+    search query makes TMDB return zero results, so it needs splitting
+    out into its own year field before the TMDB fallback runs."""
+    item = FakeHistoryItem(
+        ratingKey=606,
+        type='episode',
+        title='Episode 1',
+        grandparentTitle='ONE PIECE (2023)',
+        grandparentRatingKey=None,
+    )
+
+    result = transform_history_item(item)
+
+    assert result['title'] == 'ONE PIECE'
+    assert result['year'] == 2023
+    # id keeps the raw (un-split) title so "One Piece" and "One Piece
+    # (2023)" — two distinct shows missing their native key — don't collide.
+    assert result['id'] == 'one-piece-2023'
+
+
+def test_transform_prefers_native_year_over_title_suffix():
+    item = FakeHistoryItem(
+        ratingKey=101,
+        type='movie',
+        title='Movie (2020)',
+        year=2024,
+    )
+
+    result = transform_history_item(item)
+
+    assert result['year'] == 2024
+
+
 def _series_entry(entry_id, watched_at):
     return {
         'id': entry_id,

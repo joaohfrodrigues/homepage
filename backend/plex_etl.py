@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +36,20 @@ TYPE_MAP = {
 # the show" and would otherwise clutter the grid with one-off entries.
 MIN_EPISODES_FOR_SERIES = 3
 
+# Plex sometimes bakes a disambiguating year into the title itself (e.g. a
+# library with both the 1999 anime and the 2023 live-action "One Piece"),
+# usually alongside a missing parentYear/year. A trailing "(YYYY)" in the
+# query string makes TMDB's search return zero results, so it needs pulling
+# back out into its own field before searching.
+TRAILING_YEAR_PATTERN = re.compile(r'\s*\((\d{4})\)\s*$')
+
+
+def _split_title_year(title: str) -> tuple[str, int | None]:
+    match = TRAILING_YEAR_PATTERN.search(title)
+    if not match:
+        return title, None
+    return TRAILING_YEAR_PATTERN.sub('', title), int(match.group(1))
+
 
 def _poster_path(item) -> str | None:
     """Return the bare Plex thumbnail path, with no host or token attached.
@@ -62,10 +77,14 @@ def transform_history_item(item) -> dict | None:
         return None
 
     is_episode = item.type == 'episode'
-    title = item.grandparentTitle if is_episode else item.title
+    raw_title = item.grandparentTitle if is_episode else item.title
     native_id = getattr(item, 'grandparentRatingKey', None) if is_episode else item.ratingKey
-    entry_id = str(native_id) if native_id else slugify(title)
-    year = getattr(item, 'year', None) or getattr(item, 'parentYear', None)
+    # Fall back id is derived from the raw (un-split) title so two
+    # differently-titled shows that both lack a native key (e.g. "One Piece"
+    # vs "One Piece (2023)") still get distinct ids.
+    entry_id = str(native_id) if native_id else slugify(raw_title)
+    title, inferred_year = _split_title_year(raw_title)
+    year = getattr(item, 'year', None) or getattr(item, 'parentYear', None) or inferred_year
     watched_at = getattr(item, 'viewedAt', None)
     poster_path = _poster_path(item)
 
