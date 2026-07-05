@@ -187,15 +187,17 @@ export function Lightbox({ photos, index, onClose, onNavigate }: Props) {
                 {photo.photographer.name}
               </a>
             </span>
-            <a
-              href={photo.unsplashUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-white/70 transition-colors"
-            >
-              <ExternalLink size={10} />
-              View on Unsplash
-            </a>
+            {photo.unsplashUrl && (
+              <a
+                href={photo.unsplashUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 hover:text-white/70 transition-colors"
+              >
+                <ExternalLink size={10} />
+                View on Unsplash
+              </a>
+            )}
           </div>
         </div>
       </div>

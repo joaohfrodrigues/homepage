@@ -26,7 +26,7 @@ export function Header() {
           className="group relative flex items-center gap-1.5 font-semibold text-lg tracking-tight"
         >
           <LegoBricksIllustration className="h-4 w-4 text-brand opacity-0 -translate-y-0.5 scale-75 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100" />
-          Joao Rodrigues
+          João Rodrigues
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">

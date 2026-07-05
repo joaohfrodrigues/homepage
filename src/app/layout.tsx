@@ -16,11 +16,11 @@ const legoThick = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Joao Rodrigues',
-    template: '%s | Joao Rodrigues',
+    default: 'João Rodrigues',
+    template: '%s | João Rodrigues',
   },
   description:
-    'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.',
+    'Personal site of João Rodrigues — photography, writing, film & TV, and music.',
   openGraph: {
     type: 'website',
     locale: 'en_US',

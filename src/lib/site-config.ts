@@ -1,6 +1,6 @@
 export const SITE_URL = 'https://joaohfrodrigues.com'
-export const SITE_NAME = 'Joao Rodrigues'
-export const AUTHOR_NAME = 'Joao Rodrigues'
+export const SITE_NAME = 'João Rodrigues'
+export const AUTHOR_NAME = 'João Rodrigues'
 
 export const GITHUB_URL = 'https://github.com/joaohfrodrigues'
 export const UNSPLASH_URL = 'https://unsplash.com/@joaohfrodrigues'

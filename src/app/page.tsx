@@ -11,13 +11,13 @@ import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
 
 const description =
-  'Personal site of Joao Rodrigues — photography, writing, film & TV, and music.'
+  'Personal site of João Rodrigues — photography, writing, film & TV, and music.'
 
 export const metadata: Metadata = {
   description,
   ...buildOpenGraphMetadata({
     type: 'website',
-    title: 'Joao Rodrigues',
+    title: 'João Rodrigues',
     description,
     url: '/',
   }),
@@ -32,8 +32,12 @@ export default async function HomePage() {
       <PersonJsonLd />
       {/* Hero */}
       <PageHeader
-        title="Joao Rodrigues"
-        description="Data engineer by day — photographer, writer, film watcher, and drummer otherwise."
+        title={
+          <>
+            Jo<span className="text-brand">a</span>o Rodrigues
+          </>
+        }
+        description="Tech, photography and some other stuff."
         size="hero"
         className="pt-8"
       />
@@ -63,7 +67,7 @@ export default async function HomePage() {
               >
                 <Image
                   src={photo.url}
-                  alt={photo.altDescription || photo.title || 'Photograph by Joao Rodrigues'}
+                  alt={photo.altDescription || photo.title || 'Photograph by João Rodrigues'}
                   fill
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                   className="object-cover transition-transform duration-300 group-hover:scale-105"

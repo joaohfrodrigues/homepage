@@ -2,14 +2,7 @@ title: Running
 blurb: >-
     Early mornings, longer distances than expected, and the occasional race —
     running keeps the rest of the week honest.
-dateAdded: '2026-07-02'
-coverImage: running-cover.png
+dateAdded: 2026-07-02
 order: 2
-showOnLandingPage: true
-tiles:
-    - image: running-tile-1.png
-      caption: Sunrise along the river — Lisbon, 2026
-    - image: running-tile-2.png
-      caption: Finish line at a local 10K
-    - image: running-tile-3.png
-      caption: Trail run outside the city
+showOnLandingPage: false
+tiles: []

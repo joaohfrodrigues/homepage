@@ -28,7 +28,7 @@ export function PhotoGrid({ photos, onPhotoClick }: Props) {
     src: p.url,
     width: p.width || 1080,
     height: p.height || 720,
-    alt: p.altDescription || p.title || 'Photograph by Joao Rodrigues',
+    alt: p.altDescription || p.title || 'Photograph by João Rodrigues',
     original: p,
   }))
 

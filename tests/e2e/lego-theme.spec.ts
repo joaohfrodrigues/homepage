@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 test.describe('Lego theme', () => {
   test('home page hero title uses the Lego display font', async ({ page }) => {
     await page.goto('/')
-    const h1 = page.locator('h1', { hasText: 'Joao Rodrigues' })
+    const h1 = page.locator('h1', { hasText: 'João Rodrigues' })
     await expect(h1).toHaveClass(/heading-lego/)
   })
 

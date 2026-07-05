@@ -11,7 +11,7 @@ export function Footer() {
       </div>
       <div className="container mx-auto px-4 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Joao Rodrigues
+          &copy; {new Date().getFullYear()} João Rodrigues
         </p>
         <div className="flex items-center gap-5">
           <a

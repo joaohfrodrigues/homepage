@@ -10,7 +10,7 @@ import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
 import { ArticleListItem } from '@/components/writing/article-list-item'
 
-const description = 'Articles on home servers, photography, and technology.'
+const description = "What I'm cooking.";
 
 export const metadata: Metadata = {
   title: 'Writing',

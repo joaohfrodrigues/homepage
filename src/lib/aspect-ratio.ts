@@ -1,1 +1,1 @@
-export const CARD_ASPECT_RATIO = 'aspect-[4/3]'
+export const CARD_ASPECT_RATIO = 'aspect-square'
