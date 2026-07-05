@@ -27,10 +27,17 @@ export function Footer() {
             href={UNSPLASH_URL}
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="Unsplash"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <i className="fa-brands fa-unsplash text-lg leading-none" />
+          </a>
+          <Link
+            href="/keystatic"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Unsplash
-          </a>
+            Keystatic
+          </Link>
           <Link
             href="/about"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
