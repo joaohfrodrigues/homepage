@@ -17,6 +17,7 @@ class FakeHistoryItem:
     title: str
     thumb: str | None = None
     parentThumb: str | None = None
+    grandparentThumb: str | None = None
     grandparentTitle: str | None = None
     grandparentRatingKey: int | None = None
     year: int | None = None
@@ -85,6 +86,42 @@ def test_transform_episode_uses_show_title_and_id():
     assert result['title'] == 'The Bear'
     assert result['type'] == 'series'
     assert result['year'] == 2022
+
+
+def test_transform_prefers_season_poster_over_episode_still():
+    """An episode's own `thumb` is usually a video-frame still, not
+    artwork — the season poster (`parentThumb`) should win when both are
+    present, so the card shows the poster of the season containing the
+    most recently watched episode (aggregation already keeps that one)."""
+    item = FakeHistoryItem(
+        ratingKey=202,
+        type='episode',
+        title='Nights',
+        grandparentTitle='The Bear',
+        grandparentRatingKey=200,
+        thumb='/library/metadata/202/thumb',
+        parentThumb='/library/metadata/201/thumb',
+        grandparentThumb='/library/metadata/200/thumb',
+    )
+
+    result = transform_history_item(item)
+
+    assert result['posterUrl'] == '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F201%2Fthumb'
+
+
+def test_transform_falls_back_to_show_poster_when_no_season_or_episode_thumb():
+    item = FakeHistoryItem(
+        ratingKey=202,
+        type='episode',
+        title='Nights',
+        grandparentTitle='The Bear',
+        grandparentRatingKey=200,
+        grandparentThumb='/library/metadata/200/thumb',
+    )
+
+    result = transform_history_item(item)
+
+    assert result['posterUrl'] == '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F200%2Fthumb'
 
 
 def test_transform_unsupported_type_returns_none():

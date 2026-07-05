@@ -54,12 +54,24 @@ def _split_title_year(title: str) -> tuple[str, int | None]:
 def _poster_path(item) -> str | None:
     """Return the bare Plex thumbnail path, with no host or token attached.
 
+    Prefers the season poster (`parentThumb`) over the episode's own
+    thumbnail (`thumb`, usually a video-frame still rather than artwork),
+    falling back to the show poster (`grandparentThumb`) if neither is set.
+    Movies only ever have `thumb` (their own poster), so this is a no-op
+    for them. Since `_aggregate_series` keeps the most recently watched
+    episode's entry, this naturally becomes the poster of the season
+    containing that latest episode.
+
     The frontend proxies this through /api/watch-poster, which attaches
     PLEX_URL/PLEX_TOKEN server-side at request time — the token must never
     end up written into data/watch-history.json, since that file is
     committed to git.
     """
-    return getattr(item, 'thumb', None) or getattr(item, 'parentThumb', None)
+    return (
+        getattr(item, 'parentThumb', None)
+        or getattr(item, 'thumb', None)
+        or getattr(item, 'grandparentThumb', None)
+    )
 
 
 def transform_history_item(item) -> dict | None:
