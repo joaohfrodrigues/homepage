@@ -111,6 +111,7 @@ def transform_history_item(item) -> dict | None:
         'type': media_type,
         'watchedAt': watched_at.isoformat() if watched_at else None,
         'year': year,
+        'season': getattr(item, 'parentIndex', None) if is_episode else None,
         'posterUrl': f'/api/watch-poster?path={quote(poster_path, safe="")}'
         if poster_path
         else None,
@@ -187,7 +188,9 @@ def fetch_watch_history(
 
     for entry in entries:
         if tmdb_api_key:
-            tmdb_poster = search_poster(entry['title'], entry['type'], entry['year'], tmdb_api_key)
+            tmdb_poster = search_poster(
+                entry['title'], entry['type'], entry['year'], tmdb_api_key, season=entry['season']
+            )
             if tmdb_poster is not None:
                 entry['posterUrl'] = tmdb_poster
 

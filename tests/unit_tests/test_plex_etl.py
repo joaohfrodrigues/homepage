@@ -53,6 +53,7 @@ def test_transform_movie():
         'type': 'film',
         'watchedAt': '2026-06-28T20:00:00+00:00',
         'year': 2024,
+        'season': None,
         'posterUrl': '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F101%2Fthumb',
         'rating': 8.0,
         'note': None,
