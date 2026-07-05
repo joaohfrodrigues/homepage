@@ -38,6 +38,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${lora.variable} ${lego.variable} ${legoThick.variable}`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
+      </head>
       <body className="font-sans min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">{children}</main>
