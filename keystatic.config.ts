@@ -31,6 +31,7 @@ export default config({
       slugField: 'title',
       path: 'content/projects/*',
       format: { contentField: 'body' },
+      columns: ['status', 'order'],
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
         description: fields.text({ label: 'Description', multiline: true }),
@@ -66,6 +67,7 @@ export default config({
       slugField: 'title',
       path: 'content/articles/*',
       format: { contentField: 'body' },
+      columns: ['publishedAt', 'project', 'draft'],
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
         publishedAt: fields.date({ label: 'Published at' }),
@@ -93,6 +95,7 @@ export default config({
       label: 'Gear',
       slugField: 'name',
       path: 'content/gear/*',
+      columns: ['hobby', 'category', 'dateAdded'],
       schema: {
         name: fields.slug({ name: { label: 'Name' } }),
         hobby: fields.relationship({
@@ -116,6 +119,7 @@ export default config({
       label: 'Events',
       slugField: 'name',
       path: 'content/events/*',
+      columns: ['hobby', 'location', 'date'],
       schema: {
         name: fields.slug({ name: { label: 'Name' } }),
         hobby: fields.relationship({
@@ -139,6 +143,7 @@ export default config({
       label: 'Watch Items',
       slugField: 'title',
       path: 'content/watch-items/*',
+      columns: ['type', 'year', 'rating', 'hidden'],
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
         type: fields.select({
@@ -168,6 +173,7 @@ export default config({
       label: 'Hobbies',
       slugField: 'title',
       path: 'content/hobbies/*',
+      columns: ['order', 'showOnLandingPage', 'dateAdded'],
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
         blurb: fields.text({ label: 'Blurb', multiline: true }),

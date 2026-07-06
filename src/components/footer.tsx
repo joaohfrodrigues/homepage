@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { Github } from 'lucide-react'
 import { GITHUB_URL, UNSPLASH_URL } from '@/lib/site-config'
 import { LegoBadgeIcon } from '@/components/ui/lego-badge-icon'
 
@@ -21,7 +20,7 @@ export function Footer() {
             aria-label="GitHub"
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Github size={18} />
+            <i className="fa-brands fa-github text-lg leading-none" />
           </a>
           <a
             href={UNSPLASH_URL}
