@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
+import { getHobbyFeed, getFeedEntryImage } from '@/lib/hobby-feed'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { formatDate } from '@/lib/format-date'
@@ -26,6 +27,11 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const { photos } = getPhotos({ page: 1, perPage: 6, sort: 'popular' })
   const articles = (await getPublishedArticles()).slice(0, 3)
+  const hobbyFeed = await getHobbyFeed()
+  const hobbyPreviews = hobbyFeed
+    .map((entry) => getFeedEntryImage(entry))
+    .filter((preview): preview is NonNullable<typeof preview> => preview !== null)
+    .slice(0, 6)
 
   return (
     <PageContainer className="py-16 flex flex-col gap-16">
@@ -126,19 +132,42 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Secondary */}
-      <div className="flex flex-col items-center gap-3 text-center">
-        <p className="text-sm text-muted-foreground">
-          Also:{' '}
-          <Link href="/hobbies" className="hover:text-brand transition-colors underline-offset-4 hover:underline">
+      {/* Hobbies */}
+      {hobbyPreviews.length > 0 && (
+        <section>
+          <SectionTitle
+            action={
+              <Link
+                href="/hobbies"
+                className="text-sm text-muted-foreground hover:text-brand transition-colors"
+              >
+                View all →
+              </Link>
+            }
+          >
             Hobbies
-          </Link>{' '}
-          ·{' '}
-          <Link href="/watching" className="hover:text-brand transition-colors underline-offset-4 hover:underline">
-            Watching
-          </Link>
-        </p>
-      </div>
+          </SectionTitle>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            {hobbyPreviews.map((preview) => (
+              <Link
+                key={preview.key}
+                href="/hobbies"
+                className="group relative aspect-square overflow-hidden rounded-md bg-muted"
+                aria-label="View hobbies"
+              >
+                <Image
+                  src={preview.src}
+                  alt={preview.alt}
+                  fill
+                  unoptimized={/^https?:\/\//.test(preview.src)}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </PageContainer>
   )
 }

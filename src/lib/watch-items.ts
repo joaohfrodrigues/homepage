@@ -1,9 +1,10 @@
 import { reader } from './reader'
 import type { GearItem } from './gear'
+import { HOBBY_FILTER_CATEGORIES } from './hobby-filter-categories'
 
 const CATEGORY_LABEL: Record<'film' | 'series', string> = {
-  film: 'Film',
-  series: 'Series',
+  film: HOBBY_FILTER_CATEGORIES.find((c) => c.slug === 'film')!.label,
+  series: HOBBY_FILTER_CATEGORIES.find((c) => c.slug === 'series')!.label,
 }
 
 export async function getWatchItems(): Promise<GearItem[]> {
@@ -27,8 +28,8 @@ export async function getWatchItems(): Promise<GearItem[]> {
         note,
         link: '',
         dateAdded: e.entry.watchedAt,
-        hobbySlug: 'watching',
-        hobbyTitle: 'Watching',
+        hobbySlug: e.entry.type,
+        hobbyTitle: CATEGORY_LABEL[e.entry.type],
       }
     })
 }
