@@ -8,7 +8,9 @@ import backend.database as db_module
 from backend.database import (
     get_db_connection,
     init_database,
+    insert_collection,
     insert_photo,
+    link_photo_to_collection,
 )
 
 
@@ -215,8 +217,6 @@ def test_upsert_preserves_links(test_db):
 
     with get_db_connection() as conn:
         # Insert collection and photo, link them
-        from backend.database import insert_collection, link_photo_to_collection
-
         insert_collection(conn, collection)
         insert_photo(conn, photo)
         link_photo_to_collection(conn, photo['id'], collection['id'], '2024-01-01T00:00:00Z')

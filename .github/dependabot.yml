@@ -1,0 +1,31 @@
+version: 2
+updates:
+    # JS/TS app dependencies (package.json / bun.lock)
+    - package-ecosystem: 'bun'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+      groups:
+          minor-and-patch:
+              update-types: ['minor', 'patch']
+
+    # Python data pipeline dependencies (pyproject.toml)
+    - package-ecosystem: 'pip'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+      groups:
+          minor-and-patch:
+              update-types: ['minor', 'patch']
+
+    # Pre-commit hook revisions (.pre-commit-config.yaml)
+    - package-ecosystem: 'pre-commit'
+      directory: '/'
+      schedule:
+          interval: 'weekly'
+
+    # GitHub Actions used in .github/workflows
+    - package-ecosystem: 'github-actions'
+      directory: '/'
+      schedule:
+          interval: 'weekly'

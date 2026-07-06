@@ -11,11 +11,9 @@ const nextConfig: NextConfig = {
     // every hobby card comes back empty in production.
     '/**': ['./data/photos.db', './content/**'],
   },
-  // Tell webpack to require better-sqlite3 at runtime (native module, not bundled)
-  webpack(config) {
-    config.externals = [...(config.externals ?? []), { 'better-sqlite3': 'commonjs better-sqlite3' }]
-    return config
-  },
+  // Require better-sqlite3 at runtime (native module, not bundled) under both
+  // Turbopack and webpack.
+  serverExternalPackages: ['better-sqlite3'],
   images: {
     remotePatterns: [
       {

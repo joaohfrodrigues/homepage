@@ -1,6 +1,52 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Maps CSS custom properties (some set by next/font, some below) to Tailwind
+   theme tokens. Must be `inline` — a plain @theme would re-declare
+   `--font-serif` etc. at :root in terms of themselves, since next/font's
+   `variable` option uses the same names as Tailwind's font-family namespace. */
+@theme inline {
+    --color-border: hsl(var(--border));
+    --color-input: hsl(var(--input));
+    --color-ring: hsl(var(--ring));
+    --color-background: hsl(var(--background));
+    --color-foreground: hsl(var(--foreground));
+    --color-primary: hsl(var(--primary));
+    --color-primary-foreground: hsl(var(--primary-foreground));
+    --color-secondary: hsl(var(--secondary));
+    --color-secondary-foreground: hsl(var(--secondary-foreground));
+    --color-destructive: hsl(var(--destructive));
+    --color-destructive-foreground: hsl(var(--destructive-foreground));
+    --color-muted: hsl(var(--muted));
+    --color-muted-foreground: hsl(var(--muted-foreground));
+    --color-accent: hsl(var(--accent));
+    --color-accent-foreground: hsl(var(--accent-foreground));
+    --color-brand: hsl(var(--brand));
+    --color-brand-foreground: hsl(var(--brand-foreground));
+    --color-popover: hsl(var(--popover));
+    --color-popover-foreground: hsl(var(--popover-foreground));
+    --color-card: hsl(var(--card));
+    --color-card-foreground: hsl(var(--card-foreground));
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+    --font-lego: var(--font-lego), ui-sans-serif, sans-serif;
+    --font-lego-thick: var(--font-lego-thick), ui-sans-serif, sans-serif;
+}
+
+@utility container {
+    margin-inline: auto;
+    padding-inline: 2rem;
+
+    @media (width >= theme(--breakpoint-2xl)) {
+        max-width: 1400px;
+    }
+}
 
 @layer base {
     :root {

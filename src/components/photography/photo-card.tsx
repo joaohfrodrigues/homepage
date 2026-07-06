@@ -30,7 +30,11 @@ export function PhotoImage({
   const alt = photo.altDescription || photo.title || 'Photograph by João Rodrigues'
 
   return (
-    <div className={`${className ?? ''} relative bg-muted`} style={style}>
+    <div
+      data-testid="photo-card"
+      className={`${className ?? ''} relative bg-muted`}
+      style={style}
+    >
       {photo.blurDataURL && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
