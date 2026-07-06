@@ -40,8 +40,3 @@ export async function getHobbies(): Promise<HobbySummary[]> {
     }))
     .sort((a, b) => a.order - b.order)
 }
-
-export async function getLandingHobbies(): Promise<HobbySummary[]> {
-  const hobbies = await getHobbies()
-  return hobbies.filter((hobby) => hobby.showOnLandingPage)
-}

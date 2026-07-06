@@ -1,52 +1,29 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('/hobbies', () => {
-  test('renders a card for each landing hobby', async ({ page }) => {
+  test('renders the page heading', async ({ page }) => {
     await page.goto('/hobbies')
     await expect(page.getByRole('heading', { name: 'Hobbies', level: 1 })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Music', level: 2 })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Running', level: 2 })).toBeVisible()
   })
 
-  test('does not render a hobby card for Photography', async ({ page }) => {
+  // Every hobby entry has showOnLandingPage: false — they exist only so
+  // gear/events/watch items can reference them, and never render their own card.
+  test('never renders a hobby-level card for any category', async ({ page }) => {
     await page.goto('/hobbies')
-    await expect(page.getByRole('heading', { name: 'Photography', level: 2 })).toHaveCount(0)
-  })
-
-  test('hobby cards are not links', async ({ page }) => {
-    await page.goto('/hobbies')
-    const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    await expect(musicCard.getByRole('link')).toHaveCount(0)
-  })
-
-  test("a hobby card's blurb is visible without any interaction", async ({ page }) => {
-    await page.goto('/hobbies')
-    const musicCard = page.getByRole('heading', { name: 'Music', level: 2 }).locator('..')
-    await expect(musicCard.getByText(/Drumming in 404s/)).toBeVisible()
-  })
-
-  test("shows a known gear item's hobby eyebrow", async ({ page }) => {
-    await page.goto('/hobbies')
-    const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')
-    await expect(drumKit.getByText(/Hobbies · Music/)).toBeVisible()
+    for (const hobby of ['Film', 'Series', 'Running', 'Music', 'Photography']) {
+      await expect(page.getByRole('heading', { name: hobby, level: 2 })).toHaveCount(0)
+    }
   })
 
   test("a gear item's note is visible without any interaction", async ({ page }) => {
     await page.goto('/hobbies')
-    const drumKit = page.getByRole('heading', { name: '5-Piece Drum Kit' }).locator('..')
-    await expect(drumKit.getByText(/Set up in the garage/)).toBeVisible()
-  })
-
-  test('a gear item with a link renders a working link', async ({ page }) => {
-    await page.goto('/hobbies')
-    const link = page.getByRole('link', { name: 'View product' }).first()
-    await expect(link).toBeVisible()
-    await expect(link).toHaveAttribute('href', /example\.com/)
+    const drumKit = page.getByText('Roland TD-02KV', { exact: true }).locator('..')
+    await expect(drumKit.getByText(/Electronic drum set/)).toBeVisible()
   })
 
   test('a gear item without a link does not render a link element', async ({ page }) => {
     await page.goto('/hobbies')
-    const camera = page.getByRole('heading', { name: 'Mirrorless Body' }).locator('..')
+    const camera = page.getByText('Sony A6600', { exact: true }).locator('..')
     await expect(camera.getByRole('link')).toHaveCount(0)
   })
 
@@ -54,9 +31,7 @@ test.describe('/hobbies', () => {
     page,
   }) => {
     await page.goto('/hobbies')
-    await expect(page.getByRole('heading', { name: 'Mirrorless Body' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: '50mm Prime Lens' })).toBeVisible()
-    const lens = page.getByRole('heading', { name: '50mm Prime Lens' }).locator('..')
-    await expect(lens.getByText(/Hobbies · Photography/)).toBeVisible()
+    await expect(page.getByText('Sony A6600', { exact: true })).toBeVisible()
+    await expect(page.getByText('Sony SEL50F18F 50mm f1.8', { exact: true })).toBeVisible()
   })
 })
