@@ -1,17 +1,53 @@
 ---
 title: 'Part 4: The Secure Tunnel – Remote Access Anywhere'
-publishedAt: '2024-02-06'
-description: Access your server safely without opening dangerous ports.
+publishedAt: '2026-02-03'
+description: Ditching port forwarding for Tailscale's zero-config mesh VPN to reach the server from anywhere.
 project: raspberry-pi
-draft: true
+draft: false
 ---
 
-Part 4: The Secure Tunnel – Remote Access Anywhere. Theme: Access your server safely without opening dangerous ports.
+By now the server does real work: RunTipi runs the dashboard, Plex streams the library, and WireGuard split-tunneling keeps the Smart TV's traffic routed correctly. One piece is still missing — **remote access**. How do you check the RunTipi dashboard, add a movie to Radarr, or SSH in from a coffee shop halfway across the world?
 
-**The Problem:** Why Port Forwarding is a security risk.
+## Why not just forward a port
 
-**The Solution:** Tailscale.
+The old-school answer is port forwarding: punch a hole in the router's firewall so the internet can reach the server directly. Don't do this. The moment a service is exposed to the public internet, it starts getting scanned by bots looking for exactly that kind of opening — it's not a matter of if, only when.
 
-**Subnet Routing:** How to access your Dashboard and Plex management from 5G as if you were on your couch.
+The modern, zero-trust answer is **Tailscale**.
 
-**Exit Node:** Using your Pi as a privacy shield when you connect to public WiFi.
+## What Tailscale actually does
+
+Tailscale is a zero-config mesh VPN built on top of the WireGuard protocol — the same protocol from Part 3, used very differently here. Instead of routing all traffic through a central server to mask an IP address (the ProtonVPN/NordVPN model), Tailscale connects your own devices directly to each other, wherever they are, over a private encrypted network layered on top of the regular internet.
+
+A few things make it a good fit for a home server specifically:
+
+- **No port forwarding, ever.** Tailscale uses NAT traversal to punch through the home router from the inside. The server stays completely invisible to the public internet, but instantly reachable by devices you've authenticated.
+- **MagicDNS.** No more memorizing IPs — Tailscale registers a hostname for every device on the tailnet. From anywhere, `http://runtipi` just resolves straight to the Pi at home.
+- **Free for homelab scale.** The personal tier covers up to 100 devices, which is far more than a single home server setup needs.
+
+## Setting it up
+
+Getting it running alongside everything else takes three steps.
+
+Install the client on the Pi:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+```
+
+Bring the interface up and authenticate:
+
+```bash
+sudo tailscale up
+```
+
+This prints a login URL — open it once on any browser to link the Pi to your Tailscale account.
+
+Then install the Tailscale app on whatever you'll be connecting from (iPhone, Android, laptop) and sign in with the same account. That's it — no router configuration, no static IP, no dynamic DNS to babysit.
+
+## The result
+
+The moment Tailscale is on, any authenticated device is effectively sitting on the home network. SSH sessions, the RunTipi dashboard, Plex — all reachable from anywhere, all still invisible to everyone else on the internet. It's the piece that turns a home server from "works when I'm home" into genuinely accessible infrastructure.
+
+## Next steps
+
+That closes out the core build: storage, a media center, split-tunneled VPN routing, and remote access — all running on a single Raspberry Pi. The next thing on the list isn't software, it's storage capacity: I'm planning a move to a proper multi-bay DAS to handle a growing UHD library, one that can double as a personal cloud for photography backups too. More on that in **Part 5**.

@@ -1,15 +1,66 @@
 ---
 title: 'Part 2: The Media Center (Your Personal Netflix)'
-publishedAt: '2024-01-16'
-description: Streaming your own content (Movies, Rips, Photos).
+publishedAt: '2026-01-20'
+description: Turning the Pi into a self-hosted streaming service with Plex, RunTipi, and the *Arr automation stack.
 project: raspberry-pi
-draft: true
+draft: false
 ---
 
-Part 2: The Media Center (Your Personal Netflix). Theme: Streaming your own content (Home Movies, Rips, Photos).
+If you're tired of juggling five different streaming subscriptions just to find something to watch, it might be time to build your own. **Part 1** got the hardware and storage foundation right. Now it's time to make it useful: a self-hosted media center that finds, downloads, and organizes your library automatically — no subscriptions required.
 
-**The App:** Installing Plex (or Jellyfin) on RunTipi.
+## The software stack: RunTipi
 
-**The Configuration:**
+Managing a dozen interconnected Docker containers by hand — networking, volumes, environment variables — gets old fast. That's exactly why Part 1 installed **RunTipi**: a self-hosted app store that gives you a one-click dashboard for this kind of Docker sprawl instead of a pile of `docker-compose.yml` files to maintain.
 
-Mapping the Docker volumes to your NVMe drive. Enabling Hardware Transcoding on the Pi 5. Setting up the Plex Client on the TV.
+From the RunTipi dashboard, I installed three pieces:
+
+- **Plex** — the front-end that streams everything to the TV, phone, or laptop.
+- **qBittorrent** — the downloader.
+- **The *Arr suite (Sonarr & Radarr)** — automation. They watch for new episodes and movies and grab them the moment they're available, so nothing has to be searched for manually.
+
+## Keep everything on the NVMe drive, not the SD card
+
+The single most important setting in this whole stack: every app's data — downloads, library, metadata cache — has to live on the NVMe SSD mounted at `/media/storage` in Part 1, not on the Pi's boot SD card. A month of Sonarr/Radarr activity plus Plex's metadata cache will happily fill, and eventually kill, a small SD card.
+
+When configuring each app in RunTipi, map its data and download paths explicitly onto that drive:
+
+```yaml
+# Example volume mapping for qBittorrent
+volumes:
+  - /media/storage/downloads:/downloads
+  - /media/storage/config/qbittorrent:/config
+```
+
+Sonarr and Radarr watch that same `/media/storage/downloads` folder and move completed files into a media library structure like:
+
+```
+/media/storage/media/
+├── movies/
+│   └── Movie Name (2024)/
+│       └── Movie Name (2024).mkv
+└── tv/
+    └── Show Name/
+        └── Season 01/
+            └── Show Name - S01E01.mkv
+```
+
+Plex just points at `/media/storage/media`, and everything else — posters, episode titles, "next episode" prompts — happens automatically from there.
+
+## Turning on hardware transcoding
+
+The Pi 5's GPU can decode and transcode H.264/H.265 video without pegging the CPU, which matters the moment you stream to a device or network link that can't handle the original file directly. Before flipping the switch in Plex, confirm the video device is actually exposed:
+
+```bash
+ls /dev/dri
+# Expect to see renderD128 (and possibly card0/card1)
+```
+
+If it's there, enable **Hardware Acceleration** under Plex's transcoder settings and make sure `/dev/dri` is passed through to the Plex container (RunTipi exposes this as a config option on the app). Skip this and a single simultaneous 4K transcode can max out all four cores of the Pi.
+
+## A pro-tip that will save your drive
+
+If your server lives anywhere near speakers: mechanical or enclosure-mounted drives do not like vibration. Sustained bass from a subwoofer on the same shelf can misalign a spinning drive's read/write head and cause slow, silent corruption over time. Keep the server on its own shelf, away from anything that thumps.
+
+## Next steps
+
+With Plex, qBittorrent, and the *Arr suite running, the media center is alive — new episodes show up in the library without anyone lifting a finger. But there's an obvious problem next: how do you stream geo-blocked content to a Smart TV that doesn't support VPN apps, without routing the *entire* home network through a VPN? That's **Part 3**.
