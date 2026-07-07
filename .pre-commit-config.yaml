@@ -75,7 +75,7 @@ repos:
       # `npm install --include=dev` of the hook repo, so that devDependency
       # breaks local hook installs on Node 23. v0.45.0 is the latest release
       # still on xo's 0.x line (ESLint 8, no such constraint).
-      rev: v0.45.0
+      rev: v0.49.0
       hooks:
           - id: markdownlint
             args: [--fix, --config, .markdownlintrc.json]
