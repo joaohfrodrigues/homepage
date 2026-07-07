@@ -1,0 +1,82 @@
+---
+title: 'Ingestion & Website Architecture'
+publishedAt: '2026-07-07'
+description: How Acultura-te aggregates cultural events from Lisbon, enriches them with AI, and serves them through a Next.js app with hybrid semantic search.
+project: acultura-te
+draft: false
+---
+
+Acultura-te is my take on a "Letterboxd for culture" — a place to discover cultural events in Portugal and keep a personal history of what you've seen, want to see, and are going to. Under the hood it's two systems working together: a Next.js website that people actually use, and a Python ingestion pipeline that keeps it stocked with fresh, enriched, searchable events. This article covers both.
+
+## The shape of it
+
+At a high level, data flows in one direction: source APIs and manual submissions get pulled in by the ingestion pipeline, processed and enriched, written to Supabase, and served up by the website.
+
+- **Sources** — the AgendaCultural Lisboa WordPress REST API, plus manually submitted venue events (JSON/CSV).
+- **Ingestion** (Python, `uv`-managed) — fetches, normalizes, deduplicates, enriches, and embeds events.
+- **Orchestration** — a Dagster asset pipeline runs the above daily, triggered remotely and executed on a Raspberry Pi at home.
+- **Database** — Supabase (Postgres + PostgREST + Auth + RLS + pgvector).
+- **Website** — Next.js 16 on Vercel, with hybrid keyword/semantic search, i18n, notifications, and a PWA shell.
+
+## The website
+
+The frontend is Next.js 16 (App Router) with TypeScript and Tailwind 4, deployed on Vercel. A few decisions stand out:
+
+**i18n is load-bearing, not bolted on.** Portuguese is the default locale with no URL prefix (better for SEO in the target market), English lives under `/en/...`. It's handled by `next-intl`, and content itself — descriptions, tags, venue names — is stored bilingually in the database (`description` / `description_en`, `name_pt` / `name_en`), backfilled by the enrichment step in the ingestion pipeline.
+
+**Hybrid search.** A natural-language query first goes through a normalization pass: typo correction against canonical PT/EN keyword phrases, and extraction of structured signals — dates like "this weekend" / "este fim de semana", free/outdoor flags, category and tag keywords. Those get stripped out and pushed into SQL filters, so only the "pure" semantic remainder is embedded and matched via pgvector. There's a second path too: an LLM (Gemini) can extract structured filters directly from a vague query and flag "discovery" intent for browsing rather than searching. Structured filters and vector similarity work together instead of the vector search having to carry the whole query.
+
+**Auth boundary.** Three separate Supabase clients — browser, server/RSC, and an admin client with the service-role key used only in cron routes and API handlers that need to bypass Row-Level Security. Every table has RLS enabled, and fields like `duplicate_of` / `duplicate_status` are pipeline-managed only — never settable from the frontend. The privilege boundary between "ingestion writes" and "user writes" is enforced at the database layer, not just in application code.
+
+**Notifications run on Vercel Cron**, four routes secured with a bearer secret, combining transactional email (Resend) and Web Push:
+
+```json
+"crons": [
+  { "path": "/api/cron/pre-event",       "schedule": "0 9 * * *" },
+  { "path": "/api/cron/post-attendance", "schedule": "0 10 * * *" },
+  { "path": "/api/cron/category-digest", "schedule": "0 8 * * 1" },
+  { "path": "/api/cron/wishlist-ending", "schedule": "0 11 * * *" }
+]
+```
+
+**A couple of framework workarounds worth calling out.** Next 16 defaults to Turbopack, which silently skips the `next-pwa` webpack plugin — so the service worker is hand-written and registered manually instead. And adding an event to a phone's calendar on Android doesn't play nicely with client-side `.ics` blob downloads, so that flow is served through a dedicated API route that triggers the native calendar intent server-side.
+
+## The ingestion pipeline
+
+The Python side (`ingestion/`) pulls events from each source, normalizes them into a canonical `EventFields` shape, and upserts straight into the `events` table — deliberately **no staging table**. The original raw payload is kept in a `raw_data` JSONB column instead, so reprocessing after a bug fix in the extraction logic just means replaying the processor over what's already stored, no re-fetching required.
+
+A few things make this pipeline hold up at zero cost on a Raspberry Pi:
+
+- **Hash-based change detection.** Each event's raw JSON gets an MD5 hash; unchanged events are skipped entirely before they cost a single DB write or LLM call.
+- **Bulk everything.** Venue resolution and event upserts are batched to a handful of round-trips regardless of page size, rather than one write per row.
+- **Fuzzy tag matching.** New tags are matched against the existing catalog with `rapidfuzz` (threshold 85) before creating a new one — cutting down on near-duplicate tags across languages. Anything left over gets translated in a single batched LLM call.
+- **Schema validation that doesn't block the batch.** Pandera validates both the raw payload and the extracted fields with `lazy=True`, so one malformed row gets logged and counted, not allowed to abort the run.
+
+### Enrichment and embeddings
+
+Once an event is normalized, three more steps make it useful:
+
+1. **Translation & enrichment** (`enrichment.py`) — PT→EN translation, tag translation, using Gemini 3.5 Flash as the primary model with Groq (`llama-4-scout`, falling back to `llama-3.3-70b`) as backup. Ollama was the original backend for this but was fully removed once cloud inference proved fast and cheap enough.
+2. **Page scraping** (`enrichment_firecrawl.py`) — Firecrawl renders and scrapes event pages for details the source API doesn't provide (price range, whether it's free, language, ticket URL), using Firecrawl's structured-output extraction with a PT-language schema.
+3. **Embeddings** (`embeddings.py`) — Gemini Embedding 2 generates 3072-dimensional vectors from a concatenation of title, description, tags, venue, and a few hint phrases (free/outdoor). Those get stored in a pgvector `halfvec(3072)` column — `halfvec` specifically because the plain `vector` type caps out at 2000 dimensions, and this model doesn't fit. An HNSW cosine-distance index (`m=16, ef_construction=64`) makes the similarity search fast. The `search_events_semantic` RPC that the website calls grew incrementally across several migrations — city filter, date range, free/outdoor flags, category/tag filters, minimum similarity threshold — each one a small, reviewable schema change rather than a rewrite.
+
+### Orchestration: Dagster on a Raspberry Pi, triggered from GitHub Actions
+
+The pipeline used to be a plain async script; it's now five Dagster assets forming a DAG — `agenda_lx_raw_events` → `processed_events` → `enriched_descriptions` → `event_embeddings` → `pipeline_run_summary` — each independently retryable and observable in the Dagster UI.
+
+The interesting part is how it's triggered. A GitHub Actions workflow runs daily, but instead of executing the pipeline on the runner, it:
+
+1. Joins the home network's Tailscale tailnet (`tailscale/github-action`).
+2. Sends a GraphQL `launchRun` mutation to the Dagster webserver running on the Pi, over the private tailnet address.
+3. Polls the run status every 30 seconds, up to a 45-minute timeout, and fails the workflow if the run fails.
+
+```bash
+# GitHub Actions runner, after joining the tailnet:
+python scripts/trigger_dagster_run.py  # POSTs launchRun, polls until done
+```
+
+So GitHub Actions is only a scheduler and a poller — the actual scraping, LLM calls, and embedding generation run for free on hardware I already own, and the Dagster port is never exposed to the public internet, only reachable over the tailnet. It's a split I like: managed control-plane (GitHub's cron, Vercel's edge network, Supabase's Postgres), self-hosted compute for the expensive, bursty work.
+
+## What's next
+
+The ingestion pipeline writes a `pipeline_runs` summary after every run — categorized counts via an in-process DuckDB query — specifically so that another system can report on it without touching the pipeline itself. That system is a Telegram-driven agent swarm that also handles data-quality clean-up and natural-language queries against the same database. That's the subject of the next article.

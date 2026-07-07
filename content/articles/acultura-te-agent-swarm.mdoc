@@ -1,0 +1,66 @@
+---
+title: 'The Agent Swarm: An Operational Copilot on Telegram'
+publishedAt: '2026-07-08'
+description: A LangGraph multi-agent swarm that catches data-quality issues, answers natural-language questions, and never mutates the database without a human confirming first.
+project: acultura-te
+draft: false
+---
+
+Alongside the [ingestion pipeline and website](/writing/projects/acultura-te/acultura-te-ingestion-and-website-architecture), Acultura-te has a second, smaller system: a Telegram bot backed by a LangGraph multi-agent swarm that acts as the operational back-office a small team would otherwise staff by hand. It catches duplicate events and duplicate tags, answers questions about the platform in plain language, and pushes reports — all from a chat interface, all running on the same home server as the ingestion pipeline.
+
+## It didn't start this way
+
+The swarm's first version wasn't operational at all — it was a **ticket-generation pipeline**. You'd type a raw feature idea into Telegram, and four agents would turn it into a structured backlog ticket:
+
+- **Strategist** framed the idea as a user story.
+- **Architect** added a Definition of Done.
+- **Critic** evaluated it against GDPR, security, and logic concerns, returning a strict `{"approved": bool, "reason": str}` verdict.
+- **Publisher** — the only node allowed a database side-effect — wrote the approved ticket to a `private_backlog` table.
+
+The Critic's verdict drove a conditional edge: approved tickets went to the Publisher, rejected ones looped back to the Strategist, capped at two retries. It's a clean generator/critic pattern, and it worked. But after two weeks of living with it, I concluded the more valuable use of the same infrastructure wasn't writing tickets — it was the tedious, ongoing work of keeping the platform's data clean and answerable. So I deleted the entire flow — `graph.py`, `state.py`, and all four agent modules — and rebuilt the swarm as a purely operational system. (The old README and Copilot instructions still describe that first version; I haven't gotten around to updating them, which is its own small lesson about solo projects moving faster than their docs.)
+
+## What it does now
+
+The current swarm is four small, independent LangGraph pipelines plus a lightweight intent router, all triggered from Telegram commands or free text:
+
+| Graph | Pipeline | Purpose |
+|---|---|---|
+| Duplicate check | `fetch → classify → report` | Finds events flagged as possible duplicates, has an LLM judge each candidate pair, stages verdicts for review |
+| Tag review | `fetch → classify → stage → report` | Finds near-duplicate tags (string similarity ≥ 0.85 as a cheap pre-filter), asks an LLM merge / keep-separate, stages merges |
+| Digest | `fetch → format` | Formats the next 7 days of events for a city into a Telegram-HTML message |
+| Data query | `parse → execute → answer` | Turns a natural-language question into a validated query against Supabase and answers in plain language |
+
+There's no supervisor or planner agent routing between these — each graph is a static, hand-authored DAG, and a single LLM call (`classify_intent()`) decides whether free text should go to the query graph or fall back to plain chat. Simple, and easy to reason about when something goes wrong.
+
+## The pattern that matters most: propose, then confirm
+
+None of the graphs write to production tables directly. A duplicate or tag-merge candidate gets staged as a row in an `agent_tasks` queue table with `status='pending'`, and the bot reports what it found. Nothing changes until a human runs a separate confirmation command:
+
+```
+/duplicates          → stages candidate duplicate pairs, reports them
+/confirm_duplicates   → applies the staged verdicts, marks tasks done/failed
+```
+
+The same shape applies to tag merges. It's an outbox pattern with a human approval gate instead of autonomous mutation — every change is staged, reviewable, and auditable before it touches real data, and partial failures are visible instead of silent. Both staging graphs also check for already-pending tasks before queuing new ones, so re-running a command doesn't pile up duplicate work. Given that this bot has write access to the same database the public website reads from, this gate is the actual security boundary — not a nice-to-have.
+
+## Letting an LLM query the database, safely
+
+The data-query graph is the one place an LLM effectively writes the shape of a database query from free text — "what events are happening in Porto this weekend" typed into Telegram. Rather than letting it generate SQL, the LLM only ever produces a constrained JSON descriptor: table, filters, columns, aggregation. That descriptor is validated against an explicit allowlist of tables, columns, and operators (`eq`, `neq`, `gte`, `lte`, `ilike`, `in`) before it's turned into a `supabase-py` query — no raw SQL, no `eval`. Columns that could carry PII are excluded from the allowlist entirely, regardless of what the LLM asks for. If parsing fails, the graph still flows through to the answer node so the user gets a friendly message instead of a stack trace.
+
+## Tying it back to ingestion
+
+The swarm doesn't run ingestion — that's the Dagster pipeline described in the previous article — but it reports on it. The ingestion pipeline writes a `pipeline_runs` summary row after every run; the swarm reads it and exposes it via `/pipeline`, plus a daily push at 08:00 UTC. A few other scheduled jobs run on Telegram's own job queue: hourly new-user alerts, a 6-hourly venue-leads check, a weekly stats digest — all push-only, read-only, no autonomous mutation scheduled. The only things that ever change the database are the explicit confirm commands.
+
+Both the swarm and the Dagster orchestrator run as systemd services on the same Raspberry Pi, and both talk to the same Supabase project — the swarm with a service-role key, reading most tables and writing only to `agent_tasks` and, after confirmation, to `events.duplicate_status` and the `tags` / `event_tags` merge.
+
+## Stack and a few decisions
+
+- **LangGraph** for orchestration — plain `TypedDict` state and async node functions, compiled once at import time.
+- **Gemini 3.5 Flash primary, Groq (`llama-4-scout`) fallback** — the same dual-provider pattern as the ingestion pipeline's enrichment step, chosen dynamically based on which API key is configured. Ollama was the original, fully local backend and was dropped once cloud inference proved worth the tradeoff.
+- **`python-telegram-bot`** for the interface and the scheduled job queue — trigger surface and output channel in one.
+- Response parsing has a small but real gotcha: Gemini returns a list of content-part dicts while Groq returns a plain string. A shared `extract_text()` helper normalizes both — added after a bug shipped raw Python `repr()` output to a Telegram chat.
+- Cost control is deliberate rather than accidental: a hard cap of 30 LLM-judged pairs per tag-review run, 20 flagged events per duplicate-check run, and count-only PostgREST requests (`head=True`) wherever a number is all that's needed.
+
+## Where it stands
+
+This is a young, fast-moving solo project — about two weeks of concentrated work, all through Telegram commands rather than an admin dashboard, no CI configured yet, and a smoke test that still imports the deleted ticket-generation graph. What I'd take from it: the propose/confirm queue pattern is worth using anywhere an LLM has write access to something that matters, and a multi-agent system built for one purpose can pivot to a completely different one without throwing away the surrounding infrastructure — the Telegram bot, the Supabase tooling, and the LLM provider fallback all carried over untouched from the version this replaced.
