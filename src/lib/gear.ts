@@ -1,12 +1,6 @@
 import { reader } from './reader'
 import { getHobbies } from './hobbies'
 
-const GEAR_IMAGE_PUBLIC_PATH = '/images/gear/'
-
-function resolveImage(filename: string | null | undefined): string | null {
-  return filename ? `${GEAR_IMAGE_PUBLIC_PATH}${filename}` : null
-}
-
 export type GearItem = {
   slug: string
   name: string
@@ -41,7 +35,7 @@ export async function getGearItems(): Promise<GearItem[]> {
       slug: entry.slug,
       name: entry.entry.name,
       category: entry.entry.category,
-      photo: resolveImage(entry.entry.photo),
+      photo: entry.entry.photo ?? null,
       note: entry.entry.note,
       link: entry.entry.link ?? '',
       dateAdded: entry.entry.dateAdded ?? '',

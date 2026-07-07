@@ -5,10 +5,10 @@ import { PhotoCarousel } from './photo-carousel'
 import { TextTile } from './text-tile'
 
 export function EventCard({ item }: { item: EventItem }) {
-  return (
-    <div className="group relative flex h-full flex-col">
+  const content = (
+    <>
       <div className="absolute left-3 top-3 z-10">
-        <Tag label={item.location} />
+        <Tag label={item.hobbyTitle} />
       </div>
 
       {item.photo ? (
@@ -20,13 +20,35 @@ export function EventCard({ item }: { item: EventItem }) {
               <h3 className="line-clamp-2 font-serif text-2xl leading-tight tracking-tight text-white">
                 {item.name}
               </h3>
+              {item.location && (
+                <p className="mt-1 text-xs font-medium uppercase tracking-wide text-white/60">
+                  {item.location}
+                </p>
+              )}
               {item.note && <p className="mt-2 line-clamp-1 text-sm text-white/80">{item.note}</p>}
             </>
           }
         />
       ) : (
-        <TextTile title={item.name} description={item.note} />
+        <TextTile
+          title={item.name}
+          meta={item.location}
+          description={item.note}
+          clickToReveal={!item.link}
+        />
       )}
-    </div>
+    </>
   )
+
+  const className = 'group relative flex h-full flex-col'
+
+  if (item.link) {
+    return (
+      <a href={item.link} target="_blank" rel="noopener noreferrer" className={className}>
+        {content}
+      </a>
+    )
+  }
+
+  return <div className={className}>{content}</div>
 }
