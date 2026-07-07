@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
-import { getStandaloneArticles } from '@/lib/articles'
+import { getPublishedArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import type { Metadata } from 'next'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
@@ -24,77 +23,64 @@ export const metadata: Metadata = {
 }
 
 export default async function WritingPage() {
-  const [projects, standaloneArticles] = await Promise.all([
-    getProjects(),
-    getStandaloneArticles(),
-  ])
+  const [articles, projects] = await Promise.all([getPublishedArticles(), getProjects()])
+  const projectTitles = new Map(projects.map((project) => [project.slug, project.title]))
 
   return (
     <PageContainer as="main" width="narrow" className="py-12">
       <PageHeader title="Writing" description={description} className="mb-12" />
 
+      {articles.length > 0 ? (
+        <section>
+          <ul className="space-y-10">
+            {articles.map((article) => (
+              <ArticleListItem
+                key={article.slug}
+                href={
+                  article.project
+                    ? `/writing/projects/${article.project}/${article.slug}`
+                    : `/writing/${article.slug}`
+                }
+                title={article.title}
+                publishedAt={article.publishedAt}
+                description={article.description}
+                project={
+                  article.project
+                    ? {
+                        slug: article.project,
+                        title: projectTitles.get(article.project) ?? article.project,
+                      }
+                    : null
+                }
+              />
+            ))}
+          </ul>
+        </section>
+      ) : (
+        <EmptyState message="No articles yet." />
+      )}
+
       {projects.length > 0 && (
-        <section className="mb-16">
+        <section className="mt-16 pt-8 border-t border-border">
           <SectionTitle>Projects</SectionTitle>
-          <ul className="space-y-6">
+          <ul className="flex flex-wrap gap-3">
             {projects.map((project) => (
               <li key={project.slug}>
                 <Link
                   href={`/writing/projects/${project.slug}`}
-                  className="group flex gap-5 items-start"
+                  className="group inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 hover:border-brand transition-colors"
                 >
-                  {project.coverImage && (
-                    <div className="relative w-20 h-20 shrink-0 rounded overflow-hidden bg-muted">
-                      <Image
-                        src={project.coverImage}
-                        alt={project.title}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
+                  <span className="text-sm font-medium group-hover:underline underline-offset-4">
+                    {project.title}
+                  </span>
+                  {project.status === 'archived' && (
+                    <span className="text-xs text-muted-foreground">Archived</span>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold group-hover:underline underline-offset-4">
-                        {project.title}
-                      </h3>
-                      {project.status === 'archived' && (
-                        <span className="text-xs px-2 py-0.5 rounded border border-border text-muted-foreground">
-                          Archived
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {project.description}
-                    </p>
-                  </div>
                 </Link>
               </li>
             ))}
           </ul>
         </section>
-      )}
-
-      {standaloneArticles.length > 0 && (
-        <section>
-          <SectionTitle>Standalone Articles</SectionTitle>
-          <ul className="space-y-10">
-            {standaloneArticles.map((article) => (
-              <ArticleListItem
-                key={article.slug}
-                href={`/writing/${article.slug}`}
-                title={article.title}
-                publishedAt={article.publishedAt}
-                description={article.description}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {projects.length === 0 && standaloneArticles.length === 0 && (
-        <EmptyState message="No articles yet." />
       )}
     </PageContainer>
   )
