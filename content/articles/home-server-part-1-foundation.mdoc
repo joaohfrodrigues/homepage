@@ -1,11 +1,10 @@
 ---
 title: 'Part 1: The Foundation – Hardware & OS Setup'
-publishedAt: '2026-01-13'
+publishedAt: 2026-01-13
 description: Setting up the hardware and foundation for your home media server
 project: raspberry-pi
 draft: false
 ---
-
 Building a home server used to mean bulky towers and high electricity bills. Today, NAS Servers and mini PCs are very competitive, can be found for a couple hundred bucks and are easy to setup. Alongside them and as an possibly even cheaper alternative, there's the Raspberry Pi 5. It's powerful enough to run a media center and stream at 4k, a VPN gateway, and home automation, all while sipping less power than a lightbulb.
 
 In this series, we are going to build a **"Set and Forget"** home server. We will cover everything from handling high-speed storage to creating a "Teleportation Gateway" for your Smart TV.
@@ -69,11 +68,11 @@ sudo mount -a
 
 If you get no errors, you are safe. Below you find a screenshot of my mounted drives.
 
-![Mounted drives](/images/articles/part-1-mounted-drives.png)
+Missing image
 
-## Step 3: The Common Blindspot (Permissions)
+## Step 3: Permissions
 
-This is where 90% of home server projects fail. By default, the folder `/media/storage` is owned by `root`. But your apps (RunTipi, Plex, etc.) usually run as the user `pi` (UID 1000).
+By default, the folder `/media/storage` is owned by `root`. But your apps (RunTipi, Plex, etc.) usually run as the user `pi` (UID 1000).
 
 **The Fix:**
 
@@ -92,7 +91,7 @@ curl -L https://runtipi.io/install | bash
 
 Once finished, open your browser and go to `http://homeserver.local`. You will be greeted by your new dashboard.
 
-![Runtipi Dashboard](/images/articles/part-1-runtipi.png)
+Missing image
 
 ## Next Steps
 
