@@ -1,11 +1,5 @@
 import { reader } from './reader'
 
-const PROJECTS_IMAGE_PUBLIC_PATH = '/images/projects/'
-
-function resolveImage(filename: string | null | undefined): string | null {
-  return filename ? `${PROJECTS_IMAGE_PUBLIC_PATH}${filename}` : null
-}
-
 export type ProjectSummary = {
   slug: string
   title: string
@@ -33,7 +27,7 @@ export async function getProjects(): Promise<ProjectSummary[]> {
       slug: e.slug,
       title: entryTitle(e.entry.title),
       description: e.entry.description,
-      coverImage: resolveImage(e.entry.coverImage),
+      coverImage: e.entry.coverImage ?? null,
       status: (e.entry.status ?? 'active') as 'active' | 'archived',
       order: e.entry.order ?? 99,
     }))
@@ -48,7 +42,7 @@ export async function getProject(slug: string): Promise<ProjectDetail | null> {
     slug,
     title: entryTitle(entry.title),
     description: entry.description,
-    coverImage: resolveImage(entry.coverImage),
+    coverImage: entry.coverImage ?? null,
     status: (entry.status ?? 'active') as 'active' | 'archived',
     order: entry.order ?? 99,
     body: entry.body as unknown[],

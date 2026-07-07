@@ -1,12 +1,6 @@
 import { reader } from './reader'
 import { getHobbies } from './hobbies'
 
-const EVENTS_IMAGE_PUBLIC_PATH = '/images/events/'
-
-function resolveImage(filename: string | null | undefined): string | null {
-  return filename ? `${EVENTS_IMAGE_PUBLIC_PATH}${filename}` : null
-}
-
 export type EventItem = {
   slug: string
   name: string
@@ -41,7 +35,7 @@ export async function getEventItems(): Promise<EventItem[]> {
       slug: entry.slug,
       name: entry.entry.name,
       location: entry.entry.location,
-      photo: resolveImage(entry.entry.photo),
+      photo: entry.entry.photo ?? null,
       note: entry.entry.note,
       link: entry.entry.link ?? '',
       dateAdded: entry.entry.date ?? '',

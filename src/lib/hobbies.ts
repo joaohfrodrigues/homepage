@@ -1,11 +1,5 @@
 import { reader } from './reader'
 
-const HOBBIES_IMAGE_PUBLIC_PATH = '/images/hobbies/'
-
-function resolveImage(filename: string | null | undefined): string | null {
-  return filename ? `${HOBBIES_IMAGE_PUBLIC_PATH}${filename}` : null
-}
-
 export type HobbyTile = {
   image: string | null
   caption: string
@@ -29,12 +23,12 @@ export async function getHobbies(): Promise<HobbySummary[]> {
       slug: e.slug,
       title: e.entry.title,
       blurb: e.entry.blurb,
-      coverImage: resolveImage(e.entry.coverImage),
+      coverImage: e.entry.coverImage ?? null,
       order: e.entry.order ?? 99,
       showOnLandingPage: e.entry.showOnLandingPage,
       dateAdded: e.entry.dateAdded ?? '',
       tiles: e.entry.tiles.map((tile) => ({
-        image: resolveImage(tile.image),
+        image: tile.image ?? null,
         caption: tile.caption,
       })),
     }))
