@@ -38,8 +38,21 @@ jobs:
                   python -m pip install --upgrade pip build
                   pip install '.[dev]'
 
+            - name: Cache pre-commit environments
+              # Replaces pre-commit/action@v3.0.1: that action is a composite
+              # that still uses actions/cache@v4 internally (node20, now
+              # deprecated) and hasn't cut a release updating it. Running the
+              # same steps ourselves with actions/cache@v6 avoids the warning
+              # without depending on an upstream release. Cache key/path
+              # match pre-commit/action's exactly, so existing caches stay
+              # valid.
+              uses: actions/cache@v6
+              with:
+                  path: ~/.cache/pre-commit
+                  key: pre-commit-3|${{ env.pythonLocation }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
             - name: Run pre-commit checks
-              uses: pre-commit/action@v3.0.1
+              run: pre-commit run --show-diff-on-failure --color=always --all-files
 
             - name: Run pytest
               run: pytest -q
