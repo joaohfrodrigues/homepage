@@ -68,13 +68,6 @@ repos:
 
     # Markdown linting
     - repo: https://github.com/igorshubovych/markdownlint-cli
-      # Pinned below latest (v0.49.0): from v0.46.0 on, its devDependency `xo`
-      # jumps to a major version whose ESLint 9 toolchain requires
-      # @eslint/compat, which has engines "^20.19.0 || ^22.13.0 || >=24" -
-      # excluding Node 23 (a non-LTS release). pre-commit does a full
-      # `npm install --include=dev` of the hook repo, so that devDependency
-      # breaks local hook installs on Node 23. v0.45.0 is the latest release
-      # still on xo's 0.x line (ESLint 8, no such constraint).
       rev: v0.49.0
       hooks:
           - id: markdownlint
