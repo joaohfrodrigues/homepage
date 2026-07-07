@@ -1,0 +1,10 @@
+---
+title: Acultura-te
+description: A "Letterboxd for culture" — discovering, tracking, and getting AI-curated recommendations for cultural events in Portugal.
+status: active
+order: 2
+---
+
+Acultura-te (aculturate.pt) is a platform for discovering cultural events in Portugal and building a personal cultural history — wishlist, going, attended, diary entries, and social features like following other users. It aggregates events from municipal agendas, theaters, and independent venues, enriches them with AI, and makes them searchable in natural language.
+
+The project has two halves that I'm documenting separately. The website and ingestion pipeline — a Next.js app on Vercel backed by Supabase, fed by a Python/Dagster pipeline that scrapes, translates, and embeds events, all running on a Raspberry Pi at home and triggered remotely over Tailscale. And an agent swarm — a Telegram-driven LangGraph system that acts as the operational back-office, catching data-quality issues and answering questions about the platform in natural language, with every mutation gated behind human confirmation.

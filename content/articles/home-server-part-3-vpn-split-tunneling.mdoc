@@ -1,15 +1,92 @@
 ---
 title: 'Part 3: The "Smart" Gateway – VPN Split-Tunneling'
-publishedAt: '2024-01-23'
-description: Using the Pi to teleport your TV to another country.
+publishedAt: '2026-01-27'
+description: How WireGuard split-tunneling lets one device route through a VPN while the rest of the home network stays local.
 project: raspberry-pi
-draft: true
+draft: false
 ---
 
-Part 3: The "Smart" Gateway – VPN Split-Tunneling. Theme: Using the Pi to teleport your TV to another country.
+A standard, system-wide VPN is a disaster on a home media server. Turn one on for the whole Pi and it securely encrypts all your traffic — but it also locks you out of your own local network. Suddenly Plex is unreachable from the living room, and every SSH session drops.
 
-**The Goal:** Unblocking geo-restricted content on a Smart TV that doesn't support VPN apps.
+What I actually wanted was much narrower: route *just* the Smart TV (to unblock geo-restricted content) or *just* the torrent client through a VPN, while the rest of the Pi — RunTipi, Plex, SSH — stays exactly where it is, on the local network. That's a **split tunnel**, and WireGuard makes it possible with a bit of policy-based routing.
 
-**The Setup:** Installing WireGuard. Policy-Based Routing with `ip rule` so that only the TV's traffic goes through the VPN.
+## The WireGuard configuration
 
-**The Result:** Your TV thinks it's in New York, but your Pi stays in Portugal.
+The trick is telling WireGuard not to override the system's default routing table. Instead, we create a custom routing table (`51820`) and use Linux's `ip rule` and `iptables` to push only specific traffic into it.
+
+Here's what a split-tunnel `wg0.conf` looks like:
+
+```ini
+[Interface]
+PrivateKey = YOUR_PRIVATE_KEY
+Address = 10.2.0.2/32
+DNS = 10.2.0.1
+Table = 51820
+
+# 1. Route the Smart TV's traffic into the VPN table
+PostUp = ip rule add from 192.168.1.66 table 51820
+PostDown = ip rule del from 192.168.1.66 table 51820
+
+# 2. Let that traffic out through the firewall
+PostUp = iptables -t nat -A POSTROUTING -o %i -j MASQUERADE
+PostDown = iptables -t nat -D POSTROUTING -o %i -j MASQUERADE
+
+[Peer]
+PublicKey = SERVER_PUBLIC_KEY
+Endpoint = vpn.server.address:51820
+AllowedIPs = 0.0.0.0/0
+```
+
+`Table = 51820` keeps WireGuard's routes out of the main table entirely. The `PostUp`/`PostDown` hooks are what actually decide *which* traffic ends up in that table — in this case, anything sourced from the TV's IP (`192.168.1.66`). Everything else on the network keeps using the default route, completely untouched.
+
+## The "ghost rule" problem
+
+While testing different VPN endpoints (US, Canada, Norway), I kept running into a connection that would fail to come up, throwing a `File exists` error or quietly tanking download speeds.
+
+The cause: **ghost rules**. When a WireGuard interface crashes or gets killed mid-startup, it can leave behind duplicate `ip rule` entries and stale `iptables` chains. The kernel ends up with several near-identical rules pointing at the same table, and packet routing gets confused enough to start dropping traffic.
+
+You can check for these yourself:
+
+```bash
+ip rule show table 51820
+# More than one identical-looking rule here is the smoking gun
+```
+
+## The fix: a clean teardown script
+
+Rather than manually running `wg-quick up` and hoping for the best, I wrote a small script that guarantees a clean slate before every switch:
+
+```bash
+#!/bin/bash
+# swap-vpn.sh — switch WireGuard servers without leaving ghost rules behind
+set -e
+
+NEW_INTERFACE="$1"
+if [ -z "$NEW_INTERFACE" ]; then
+  echo "Usage: ./swap-vpn.sh <interface-name>"
+  exit 1
+fi
+
+echo "Tearing down active WireGuard interfaces..."
+for iface in $(wg show interfaces); do
+  wg-quick down "$iface"
+done
+
+echo "Flushing routing table 51820..."
+ip route flush table 51820 2>/dev/null || true
+
+echo "Bringing up $NEW_INTERFACE..."
+wg-quick up "$NEW_INTERFACE"
+
+wg show
+```
+
+Three steps, in strict order: force every active WireGuard interface down, flush the custom table so nothing lingers, then bring the newly requested server up. By controlling the teardown instead of layering a new connection on top of a possibly-broken one, the routing stays consistent every time.
+
+## The result
+
+The TV securely streams geo-blocked content through whichever VPN endpoint I choose, while the RunTipi dashboard, Plex, and SSH stay instantly reachable on the local network — no split-brain, no dropped sessions, no manual `ip rule` cleanup after a crashed connection.
+
+## Next steps
+
+Split tunneling solves outbound access for specific devices. The next problem is the opposite direction: how do *you* reach the Pi's dashboard from outside the house, without opening a single port on the router? That's **Part 4**.

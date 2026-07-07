@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getPhotos } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
+import { getProjects } from '@/lib/projects'
 import { getHobbyFeed, getFeedEntryImage } from '@/lib/hobby-feed'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
@@ -10,6 +11,7 @@ import { formatDate } from '@/lib/format-date'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
+import { ProjectPill } from '@/components/writing/project-pill'
 
 const description =
   'Personal site of João Rodrigues — photography, writing, film & TV, and music.'
@@ -26,7 +28,9 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const { photos } = getPhotos({ page: 1, perPage: 6, sort: 'popular' })
-  const articles = (await getPublishedArticles()).slice(0, 3)
+  const [allArticles, projects] = await Promise.all([getPublishedArticles(), getProjects()])
+  const articles = allArticles.slice(0, 3)
+  const projectTitles = new Map(projects.map((project) => [project.slug, project.title]))
   const hobbyFeed = await getHobbyFeed()
   const hobbyPreviews = hobbyFeed
     .map((entry) => getFeedEntryImage(entry))
@@ -103,25 +107,33 @@ export default async function HomePage() {
           </SectionTitle>
           <ul className="flex flex-col divide-y divide-border">
             {articles.map((article) => (
-              <li key={article.slug}>
+              <li key={article.slug} className="py-4">
+                <div className="flex items-center gap-2 mb-1">
+                  {article.publishedAt && (
+                    <time className="text-xs text-muted-foreground">
+                      {formatDate(article.publishedAt)}
+                    </time>
+                  )}
+                  {article.project && projectTitles.has(article.project) && (
+                    <ProjectPill
+                      slug={article.project}
+                      title={projectTitles.get(article.project)!}
+                    />
+                  )}
+                </div>
                 <Link
                   href={
                     article.project
                       ? `/writing/projects/${article.project}/${article.slug}`
                       : `/writing/${article.slug}`
                   }
-                  className="group flex flex-col gap-1 py-4"
+                  className="group block"
                 >
-                  {article.publishedAt && (
-                    <time className="text-xs text-muted-foreground">
-                      {formatDate(article.publishedAt)}
-                    </time>
-                  )}
                   <h3 className="font-medium group-hover:underline underline-offset-4">
                     {article.title}
                   </h3>
                   {article.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                       {article.description}
                     </p>
                   )}

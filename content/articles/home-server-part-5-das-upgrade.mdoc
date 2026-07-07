@@ -1,0 +1,29 @@
+---
+title: 'Part 5: What''s Next – Scaling Up with a DAS'
+publishedAt: '2026-02-10'
+description: Why a single NVMe SSD is running out of room, and the plan to add a multi-bay DAS for UHD storage and a personal photography cloud.
+project: raspberry-pi
+draft: false
+---
+
+The first four parts of this series covered the whole loop: mount storage, get RunTipi running, automate the media library with Plex and the *Arr suite, route specific devices through a VPN, and reach all of it remotely with Tailscale. It works, and it's been rock solid. But one constraint from Part 1 is starting to show: a single NVMe SSD, however fast, has a ceiling — and UHD/4K remuxes eat through it fast. A handful of 4K movies alone can chew through 100GB+.
+
+## The plan: a multi-bay DAS
+
+The next upgrade isn't more compute, it's storage capacity: a **Direct Attached Storage (DAS)** enclosure connected to the Pi over USB 3.0, populated with multiple CMR NAS-grade hard drives (think Seagate IronWolf or WD Red, in the 4–6TB range per bay). The Pi keeps doing what it's good at — running the OS and every Docker container off the fast NVMe drive — while the DAS becomes the actual media vault.
+
+That split matters for a reason covered back in Part 2: apps like Plex hammer storage with small, constant metadata reads and writes. Keeping the OS and app configs on NVMe and offloading only the large sequential media files to spinning disk means the "brain" of the server stays fast regardless of how much video is parked on the DAS.
+
+A few things I'll need to get right when this actually goes in:
+
+- **RAID or no RAID.** A multi-bay enclosure opens the door to mirroring or parity, trading some capacity for protection against a single drive failure — worth it for anything that isn't easily re-downloaded.
+- **Cooling and placement.** Mechanical drives spinning at 7200 RPM generate real heat, and — as noted in Part 2 — hate vibration. The DAS needs its own well-ventilated spot, away from speakers.
+- **Migrating without downtime.** Sonarr/Radarr's library paths, Plex's library roots, and the *Arr apps' download-to-media move logic all need to point at the new mount without re-scanning (and re-fetching metadata for) the entire existing library.
+
+## The second use case: a personal cloud for photography
+
+Once there's a multi-bay enclosure with real redundancy sitting on the network, using it purely for movies and TV feels like leaving capability on the table. The same DAS, connected to the same always-on Pi, is a natural fit as a **personal cloud for photography** — a private, self-hosted alternative to paying for cloud storage tiers just to keep RAW files and exports safe.
+
+That likely means running something like Immich or a similar self-hosted photo library alongside the existing RunTipi stack — same pattern as Plex: point it at a folder on the DAS, let it index and generate thumbnails, and get mobile backup for free without a subscription.
+
+I'll cover the actual DAS selection, drive setup, and RAID configuration once it's in — for now, this is the roadmap.
