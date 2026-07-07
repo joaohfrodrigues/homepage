@@ -25,10 +25,17 @@ function entryTitle(raw: unknown): string {
   return ''
 }
 
+/** True once publishedAt (YYYY-MM-DD) has arrived — keeps future-dated entries hidden until then. */
+function isPublished(publishedAt: string | null | undefined): boolean {
+  if (!publishedAt) return false
+  const today = new Date().toISOString().slice(0, 10)
+  return publishedAt <= today
+}
+
 export async function getPublishedArticles(): Promise<ArticleSummary[]> {
   const entries = await getAllEntries()
   return entries
-    .filter((e) => !e.entry.draft)
+    .filter((e) => !e.entry.draft && isPublished(e.entry.publishedAt))
     .sort((a, b) =>
       (b.entry.publishedAt ?? '').localeCompare(a.entry.publishedAt ?? '')
     )
@@ -84,7 +91,7 @@ async function getArticle(slug: string): Promise<ArticleDetail | null> {
 /** A standalone article page: published, and not owned by a project. */
 export async function getStandaloneArticle(slug: string): Promise<ArticleDetail | null> {
   const article = await getArticle(slug)
-  if (!article || article.draft || article.project) return null
+  if (!article || article.draft || article.project || !isPublished(article.publishedAt)) return null
   return article
 }
 
@@ -94,7 +101,13 @@ export async function getProjectArticle(
   slug: string
 ): Promise<ArticleDetail | null> {
   const article = await getArticle(slug)
-  if (!article || article.draft || article.project !== projectSlug) return null
+  if (
+    !article ||
+    article.draft ||
+    article.project !== projectSlug ||
+    !isPublished(article.publishedAt)
+  )
+    return null
   return article
 }
 
