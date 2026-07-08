@@ -36,7 +36,6 @@ class FakeHistoryItem:
     year: int | None = None
     parentYear: int | None = None
     viewedAt: datetime | None = None
-    originallyAvailableAt: datetime | None = None
     show_rating: float | None = None
     source_rating: float | None = None
 
@@ -64,7 +63,6 @@ def test_transform_movie():
         'title': 'Dune: Part Two',
         'type': 'film',
         'watchedAt': '2026-06-28T20:00:00+00:00',
-        'airedAt': None,
         'year': 2024,
         'season': None,
         'posterUrl': '/api/watch-poster?path=%2Flibrary%2Fmetadata%2F101%2Fthumb',
@@ -419,11 +417,11 @@ def test_write_watch_item_files_hides_new_entry_on_rating_fetch_failure(tmp_path
     assert written['hidden'] is True
 
 
-def test_write_watch_item_files_freezes_watched_at_when_not_near_release(tmp_path, monkeypatch):
-    """A rewatch/historical rating of something released long ago (or an
-    entry with no `airedAt` signal at all) must not jump `watchedAt` to
-    today — a manually-corrected date (e.g. backdating an old favourite
-    you're only rating today) survives future syncs."""
+def test_write_watch_item_files_always_syncs_watched_at_from_plex(tmp_path, monkeypatch):
+    """`watchedAt` always mirrors Plex, even if it differs from what's on
+    disk — correct the date in Plex itself (Plex supports editing it
+    directly) rather than in Keystatic, since the next sync overwrites it
+    either way."""
     monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
     path = tmp_path / 'dune-part-two.yaml'
     path.write_text(
@@ -435,45 +433,7 @@ def test_write_watch_item_files_freezes_watched_at_when_not_near_release(tmp_pat
     write_watch_item_files([_film_entry('dune-part-two')])
 
     written = yaml.safe_load(path.read_text())
-    assert written['watchedAt'] == '2015-01-01T00:00:00+00:00'
-
-
-def test_write_watch_item_files_advances_watched_at_when_near_release(tmp_path, monkeypatch):
-    """Watching a new episode close to its air date is genuinely current
-    viewing of an ongoing series — the on-file date should keep advancing
-    so the series keeps climbing the feed as you watch it."""
-    monkeypatch.setattr(plex_etl, 'WATCH_ITEMS_DIR', tmp_path)
-    path = tmp_path / 'the-bear.yaml'
-    path.write_text(
-        yaml.safe_dump(
-            {'title': 'The Bear', 'watchedAt': '2026-06-01T00:00:00+00:00', 'hidden': False}
-        )
-    )
-    entry = {
-        **_series_entry('the-bear', '2026-07-05T20:00:00+00:00'),
-        'airedAt': '2026-07-03T00:00:00+00:00',
-    }
-
-    write_watch_item_files([entry])
-
-    written = yaml.safe_load(path.read_text())
-    assert written['watchedAt'] == '2026-07-05T20:00:00+00:00'
-
-
-def test_watched_near_release_true_within_window():
-    assert plex_etl._watched_near_release('2026-07-03T00:00:00', '2026-07-05T20:00:00') is True
-
-
-def test_watched_near_release_false_outside_window():
-    assert plex_etl._watched_near_release('1997-06-27T00:00:00', '2026-06-15T23:46:31') is False
-
-
-def test_watched_near_release_false_when_aired_at_missing():
-    assert plex_etl._watched_near_release(None, '2026-07-05T20:00:00') is False
-
-
-def test_watched_near_release_false_on_unparseable_date():
-    assert plex_etl._watched_near_release('not-a-date', '2026-07-05T20:00:00') is False
+    assert written['watchedAt'] == '2026-06-28T20:00:00+00:00'
 
 
 def test_write_watch_item_files_does_not_remove_stale_entries(tmp_path, monkeypatch):

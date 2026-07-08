@@ -2,9 +2,11 @@
 
 Each watched film/show becomes its own Keystatic content file (like Gear and
 Events), so entries can be manually edited or hidden through the CMS. Every
-sync overwrites all fields except `hidden` and `watchedAt`, which default to
-automatic behaviour but yield to a manual edit once one is made (see
-`write_watch_item_files`).
+sync overwrites all fields except `hidden`, which defaults to an automatic
+rating-based value but yields to a manual edit once one is made (see
+`write_watch_item_files`). `watchedAt` always mirrors Plex — correct it in
+Plex itself (Plex lets you edit an item's watched date) rather than in
+Keystatic, since the next sync will overwrite it either way.
 """
 
 import argparse
@@ -55,13 +57,6 @@ MIN_RATING_TO_SHOW = 8.0
 # still `hidden` at cleanup time — one manually un-hidden is never
 # swept up, the same way it's protected from being auto-re-hidden.
 CLEANUP_MAX_AGE_DAYS = 365
-
-# A watch was "close to release" — and therefore treated as genuinely
-# current viewing, not a rewatch/historical catch-up — if it happened
-# within this many days of the episode/movie's original air date. Used
-# to decide whether `watchedAt` is allowed to advance on resync; see
-# `_watched_near_release`.
-RECENT_AIR_WINDOW_DAYS = 45
 
 # Plex sometimes bakes a disambiguating year into the title itself (e.g. a
 # library with both the 1999 anime and the 2023 live-action "One Piece"),
@@ -125,7 +120,6 @@ def transform_history_item(item) -> dict | None:
     title, inferred_year = _split_title_year(raw_title)
     year = getattr(item, 'year', None) or getattr(item, 'parentYear', None) or inferred_year
     watched_at = getattr(item, 'viewedAt', None)
-    aired_at = getattr(item, 'originallyAvailableAt', None)
     poster_path = _poster_path(item)
 
     return {
@@ -133,10 +127,6 @@ def transform_history_item(item) -> dict | None:
         'title': title,
         'type': media_type,
         'watchedAt': watched_at.isoformat() if watched_at else None,
-        # Internal signal only, never written to the YAML file — see
-        # `_watched_near_release`. Plex provides this on history items
-        # directly, no extra lookup needed.
-        'airedAt': aired_at.isoformat() if aired_at else None,
         'year': year,
         'season': getattr(item, 'parentIndex', None) if is_episode else None,
         'posterUrl': f'/api/watch-poster?path={quote(poster_path, safe="")}'
@@ -288,26 +278,6 @@ def _read_existing(path: Path) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def _watched_near_release(aired_at: str | None, watched_at: str | None) -> bool:
-    """Whether `watched_at` falls within RECENT_AIR_WINDOW_DAYS of `aired_at`.
-
-    Distinguishes "watching current, still-airing content" — where the
-    stored `watchedAt` should keep advancing to the latest episode as you
-    watch it — from a rewatch or historical catch-up of something
-    released long ago, where it shouldn't jump to today (see
-    `write_watch_item_files`). Missing/unparseable dates are treated
-    conservatively as *not* recent, since freezing is the safer default.
-    """
-    if not aired_at or not watched_at:
-        return False
-    try:
-        aired = datetime.fromisoformat(aired_at).replace(tzinfo=None)
-        watched = datetime.fromisoformat(watched_at).replace(tzinfo=None)
-    except ValueError:
-        return False
-    return abs((watched - aired).days) <= RECENT_AIR_WINDOW_DAYS
-
-
 def write_watch_item_files(entries: list[dict]) -> None:
     """Write one Keystatic content file per entry to content/watch-items/.
 
@@ -315,20 +285,17 @@ def write_watch_item_files(entries: list[dict]) -> None:
     that dropped back below MIN_EPISODES_FOR_SERIES) are left untouched
     rather than deleted, so manual edits/hides are never lost.
 
-    Two fields are only ever set automatically; a manual edit through
-    Keystatic otherwise sticks:
-    - `hidden` is recomputed from `rating` only when `rating` has
-      genuinely changed since the last sync; otherwise the existing value
-      (which may be a manual override) is preserved. A *failed* rating
-      lookup (`RATING_FETCH_FAILED`) never counts as a change — it falls
-      back to whatever was last known, so a transient Plex error can't
-      masquerade as a real rating change and silently re-hide something.
-    - `watchedAt` only advances when the new watch happened close to the
-      title's release (`_watched_near_release`) — i.e. genuinely current
-      viewing of an ongoing series. Otherwise (a rewatch, or rating an
-      old favourite long after the fact) it's left exactly as last
-      written, so it doesn't jump to today and so a manual correction
-      made through Keystatic survives future syncs.
+    `hidden` is recomputed from `rating` only when `rating` has genuinely
+    changed since the last sync; otherwise the existing value (which may
+    be a manual override) is preserved. A *failed* rating lookup
+    (`RATING_FETCH_FAILED`) never counts as a change — it falls back to
+    whatever was last known, so a transient Plex error can't masquerade
+    as a real rating change and silently re-hide something.
+
+    Every other field, including `watchedAt`, is always overwritten from
+    the freshly-synced Plex data — correct a watched date in Plex itself
+    (Plex supports editing it directly) rather than in Keystatic, since
+    the next sync would overwrite a Keystatic edit anyway.
     """
     WATCH_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     for entry in entries:
@@ -336,7 +303,6 @@ def write_watch_item_files(entries: list[dict]) -> None:
         existing = _read_existing(path)
         existing_rating = existing.get('rating')
         existing_hidden = bool(existing.get('hidden', False))
-        existing_watched_at = existing.get('watchedAt')
 
         if entry['rating'] is RATING_FETCH_FAILED:
             rating = existing_rating if path.exists() else None
@@ -348,17 +314,10 @@ def write_watch_item_files(entries: list[dict]) -> None:
             rating = entry['rating']
             hidden = _compute_hidden(rating)
 
-        if existing_watched_at and not _watched_near_release(
-            entry.get('airedAt'), entry['watchedAt']
-        ):
-            watched_at = existing_watched_at
-        else:
-            watched_at = entry['watchedAt']
-
         content = {
             'title': entry['title'],
             'type': entry['type'],
-            'watchedAt': watched_at,
+            'watchedAt': entry['watchedAt'],
             'year': entry['year'],
             'posterUrl': entry['posterUrl'],
             'rating': rating,
