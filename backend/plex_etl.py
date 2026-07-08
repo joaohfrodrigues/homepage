@@ -2,7 +2,11 @@
 
 Each watched film/show becomes its own Keystatic content file (like Gear and
 Events), so entries can be manually edited or hidden through the CMS. Every
-sync overwrites all fields except `hidden`, which is only ever set by hand.
+sync overwrites all fields except `hidden`, which defaults to an automatic
+rating-based value but yields to a manual edit once one is made (see
+`write_watch_item_files`). `watchedAt` always mirrors Plex — correct it in
+Plex itself (Plex lets you edit an item's watched date) rather than in
+Keystatic, since the next sync will overwrite it either way.
 """
 
 import argparse
@@ -10,7 +14,7 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
@@ -40,6 +44,19 @@ TYPE_MAP = {
 # episodes have been watched — a couple of stray episodes isn't "watching
 # the show" and would otherwise clutter the grid with one-off entries.
 MIN_EPISODES_FOR_SERIES = 3
+
+# Only ratings at or above this bar (Plex's userRating is a 0-10 scale, so
+# 8.0 = 80% = 4/5 stars) default to visible on the site. Unrated and
+# lower-rated items default to hidden rather than discarded outright, so
+# they can still be found/edited in Keystatic and are only actually
+# deleted once stale — see `cleanup_stale_hidden_items`.
+MIN_RATING_TO_SHOW = 8.0
+
+# How long a hidden, low-rated entry is kept around before the cleanup
+# step deletes its file outright. Only ever applies to entries that are
+# still `hidden` at cleanup time — one manually un-hidden is never
+# swept up, the same way it's protected from being auto-re-hidden.
+CLEANUP_MAX_AGE_DAYS = 365
 
 # Plex sometimes bakes a disambiguating year into the title itself (e.g. a
 # library with both the 1999 anime and the 2023 live-action "One Piece"),
@@ -115,9 +132,44 @@ def transform_history_item(item) -> dict | None:
         'posterUrl': f'/api/watch-poster?path={quote(poster_path, safe="")}'
         if poster_path
         else None,
-        'rating': getattr(item, 'userRating', None),
+        # Resolved after aggregation, once per surviving entry — see
+        # `_fetch_rating`. Plex's history endpoint never includes
+        # `userRating` in its response, regardless of whether the title
+        # has actually been rated.
+        'rating': None,
         'note': None,
+        '_plex_item': item,
     }
+
+
+class _RatingFetchFailed:
+    """Sentinel distinguishing a failed rating lookup from a confirmed
+    'genuinely unrated' result (`None`) — see `_fetch_rating`."""
+
+
+RATING_FETCH_FAILED = _RatingFetchFailed()
+
+
+def _fetch_rating(item) -> float | None | _RatingFetchFailed:
+    """Look up an entry's true rating from the real Plex library item.
+
+    `plex.history()` entries never carry `userRating` — it's simply not
+    part of that endpoint's response — so it has to be fetched from the
+    actual show/movie instead. Episodes are rated at the show level, not
+    per-episode, so an episode history entry resolves to its parent show.
+
+    Returns `RATING_FETCH_FAILED` (not `None`) on lookup failure (e.g. the
+    title was removed from the library since being watched), so a
+    transient error can never be mistaken for a confirmed "no rating" —
+    see `write_watch_item_files`, where that distinction is what stops a
+    flaky lookup from silently re-hiding an already-visible entry.
+    """
+    try:
+        source = item.show() if item.type == 'episode' else item.source()
+    except Exception:
+        logger.warning('Could not resolve rating for %r', getattr(item, 'title', None))
+        return RATING_FETCH_FAILED
+    return getattr(source, 'userRating', None)
 
 
 def _aggregate_series(entries: list[dict]) -> list[dict]:
@@ -187,6 +239,7 @@ def fetch_watch_history(
     _assign_readable_slugs(entries)
 
     for entry in entries:
+        entry['rating'] = _fetch_rating(entry.pop('_plex_item'))
         if tmdb_api_key:
             tmdb_poster = search_poster(
                 entry['title'], entry['type'], entry['year'], tmdb_api_key, season=entry['season']
@@ -198,20 +251,31 @@ def fetch_watch_history(
     return entries
 
 
-def _existing_hidden(path: Path) -> bool:
-    """Read back a previously-synced entry's `hidden` flag, if any.
+def _compute_hidden(rating: float | None) -> bool:
+    """Whether an entry should default to hidden, based on its rating.
 
-    Every other field is overwritten wholesale on each sync, but `hidden`
-    is a manual curation flag set through Keystatic — the ETL must never
-    silently un-hide something someone hid.
+    Unrated items and anything below MIN_RATING_TO_SHOW default to
+    hidden — only ratings you've actively given at or above the bar
+    surface on the site by default.
+    """
+    return rating is None or rating < MIN_RATING_TO_SHOW
+
+
+def _read_existing(path: Path) -> dict:
+    """Read back a previously-synced entry's file, if any.
+
+    Returns `{}` for a missing, unparseable, or unexpectedly-shaped file
+    (e.g. hand-edited into a YAML list) — every caller treats that the
+    same as "nothing on disk yet" rather than crashing on a malformed one
+    file out of the whole directory.
     """
     if not path.exists():
-        return False
+        return {}
     try:
-        data = yaml.safe_load(path.read_text()) or {}
+        data = yaml.safe_load(path.read_text())
     except yaml.YAMLError:
-        return False
-    return bool(data.get('hidden', False))
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def write_watch_item_files(entries: list[dict]) -> None:
@@ -220,21 +284,91 @@ def write_watch_item_files(entries: list[dict]) -> None:
     Existing files for ids no longer present in `entries` (e.g. a series
     that dropped back below MIN_EPISODES_FOR_SERIES) are left untouched
     rather than deleted, so manual edits/hides are never lost.
+
+    `hidden` is recomputed from `rating` only when `rating` has genuinely
+    changed since the last sync; otherwise the existing value (which may
+    be a manual override) is preserved. A *failed* rating lookup
+    (`RATING_FETCH_FAILED`) never counts as a change — it falls back to
+    whatever was last known, so a transient Plex error can't masquerade
+    as a real rating change and silently re-hide something.
+
+    Every other field, including `watchedAt`, is always overwritten from
+    the freshly-synced Plex data — correct a watched date in Plex itself
+    (Plex supports editing it directly) rather than in Keystatic, since
+    the next sync would overwrite a Keystatic edit anyway.
     """
     WATCH_ITEMS_DIR.mkdir(parents=True, exist_ok=True)
     for entry in entries:
         path = WATCH_ITEMS_DIR / f'{entry["id"]}.yaml'
+        existing = _read_existing(path)
+        existing_rating = existing.get('rating')
+        existing_hidden = bool(existing.get('hidden', False))
+
+        if entry['rating'] is RATING_FETCH_FAILED:
+            rating = existing_rating if path.exists() else None
+            hidden = existing_hidden if path.exists() else _compute_hidden(None)
+        elif path.exists() and existing_rating == entry['rating']:
+            rating = entry['rating']
+            hidden = existing_hidden
+        else:
+            rating = entry['rating']
+            hidden = _compute_hidden(rating)
+
         content = {
             'title': entry['title'],
             'type': entry['type'],
             'watchedAt': entry['watchedAt'],
             'year': entry['year'],
             'posterUrl': entry['posterUrl'],
-            'rating': entry['rating'],
+            'rating': rating,
             'note': entry['note'],
-            'hidden': _existing_hidden(path),
+            'hidden': hidden,
         }
         path.write_text(yaml.safe_dump(content, sort_keys=False, allow_unicode=True))
+
+
+def cleanup_stale_hidden_items(
+    directory: Path | None = None,
+    max_age_days: int = CLEANUP_MAX_AGE_DAYS,
+    now: datetime | None = None,
+) -> list[Path]:
+    """Delete hidden watch items whose `watchedAt` is older than `max_age_days`.
+
+    Only ever deletes entries that are still `hidden` at cleanup time — an
+    item manually un-hidden despite a low rating is protected from
+    deletion, the same way it's protected from being auto-re-hidden by a
+    routine resync (see `write_watch_item_files`).
+    """
+    directory = directory or WATCH_ITEMS_DIR
+    now = now or datetime.now(timezone.utc)
+    deleted = []
+    for path in sorted(directory.glob('*.yaml')):
+        data = _read_existing(path)
+        if not data.get('hidden', False):
+            continue
+
+        watched_at = data.get('watchedAt')
+        if not watched_at:
+            continue
+        try:
+            watched_dt = datetime.fromisoformat(watched_at)
+        except ValueError:
+            continue
+        if watched_dt.tzinfo is None:
+            watched_dt = watched_dt.replace(tzinfo=timezone.utc)
+
+        if (now - watched_dt).days > max_age_days:
+            try:
+                path.unlink()
+            except OSError:
+                # A stray permissions/filesystem error here must not
+                # abort the whole sync — write_watch_item_files already
+                # succeeded, and losing that on a cleanup-only failure
+                # would be worse than just retrying cleanup tomorrow.
+                logger.warning('Could not delete stale watch item %s', path)
+                continue
+            deleted.append(path)
+    return deleted
 
 
 def sync_data(
@@ -246,6 +380,14 @@ def sync_data(
     entries = fetch_watch_history(plex_url, plex_token, tmdb_api_key, since)
     write_watch_item_files(entries)
     logger.info('Wrote %d watch item files to %s', len(entries), WATCH_ITEMS_DIR)
+
+    deleted = cleanup_stale_hidden_items()
+    if deleted:
+        logger.info(
+            'Deleted %d stale hidden watch item(s) older than %d days',
+            len(deleted),
+            CLEANUP_MAX_AGE_DAYS,
+        )
     return entries
 
 

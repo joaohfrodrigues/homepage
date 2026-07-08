@@ -3,6 +3,6 @@ type: series
 watchedAt: '2026-01-10T20:06:49'
 year: null
 posterUrl: https://image.tmdb.org/t/p/w500/nrM2xFUfKJJEmZzd5d7kohT2G0C.jpg
-rating: null
+rating: 7.0
 note: null
-hidden: false
+hidden: true
