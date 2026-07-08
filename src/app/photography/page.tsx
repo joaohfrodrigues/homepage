@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
-import Link from 'next/link'
-import { getPhotos, getAllCollections } from '@/lib/photos'
+import { getPhotos, getAllCollections, computeAlbumBadges } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
+import { AlbumCard } from '@/components/photography/album-card'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
@@ -26,6 +25,7 @@ export default async function PhotographyPage() {
     getPhotos({ page: 1, perPage: 30, sort: 'popular' }),
     getAllCollections(),
   ])
+  const badges = computeAlbumBadges(collections)
 
   return (
     <PageContainer as="main" className="py-16">
@@ -37,28 +37,7 @@ export default async function PhotographyPage() {
           <SectionTitle>Collections</SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {collections.map((col) => (
-              <Link
-                key={col.id}
-                href={`/photography/${col.slug}`}
-                className="group flex flex-col gap-2"
-              >
-                <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted">
-                  {col.coverPhotoUrl && (
-                    <Image
-                      src={col.coverPhotoUrl}
-                      alt={col.title}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-                </div>
-                <div>
-                  <p className="font-medium leading-snug group-hover:underline">{col.title}</p>
-                  <p className="text-sm text-muted-foreground">{col.totalPhotos} photos</p>
-                </div>
-              </Link>
+              <AlbumCard key={col.id} collection={col} badge={badges.get(col.id)} />
             ))}
           </div>
         </section>

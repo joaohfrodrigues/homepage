@@ -58,9 +58,95 @@ export interface Collection {
   description: string
   totalPhotos: number
   coverPhotoUrl: string | null
+  publishedAt: string
+  updatedAt: string
+  totalViews: number
+  totalDownloads: number
 }
 
 export type SortOrder = 'popular' | 'recent'
+
+export type AlbumBadgeType = 'recent' | 'popular' | 'downloads' | 'updated'
+
+export interface AlbumBadge {
+  type: AlbumBadgeType
+  emoji: string
+  label: string
+}
+
+const ALBUM_BADGE_META: Record<AlbumBadgeType, { emoji: string; label: string }> = {
+  recent: { emoji: '🆕', label: 'Most recent album' },
+  popular: { emoji: '🔥', label: 'Most popular album' },
+  downloads: { emoji: '📥', label: 'Most downloaded album' },
+  updated: { emoji: '🕐', label: 'Recently updated album' },
+}
+
+// Priority when one album would qualify for more than one badge — only the
+// highest-priority badge is kept, so every album carries at most one.
+const ALBUM_BADGE_PRIORITY: AlbumBadgeType[] = ['recent', 'popular', 'downloads', 'updated']
+
+function toTimestamp(iso: string): number {
+  const t = Date.parse(iso)
+  return Number.isNaN(t) ? 0 : t
+}
+
+const RECENT_BADGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+
+/** Timestamp for the "recent" badge, or 0 (no signal) once the album is older than a month. */
+function recentBadgeValue(publishedAt: string): number {
+  const ts = toTimestamp(publishedAt)
+  if (ts === 0 || Date.now() - ts > RECENT_BADGE_WINDOW_MS) return 0
+  return ts
+}
+
+/**
+ * Picks the collection with the highest value(c). Collections with a value <= 0
+ * are skipped entirely — a zero count isn't a real signal, just an empty one.
+ * Ties favor the more recently published collection.
+ */
+function pickBadgeWinner(
+  collections: Collection[],
+  value: (c: Collection) => number,
+): Collection | null {
+  let winner: Collection | null = null
+  let bestValue = 0
+  for (const c of collections) {
+    const v = value(c)
+    if (v <= 0) continue
+    if (
+      v > bestValue ||
+      (v === bestValue && winner && toTimestamp(c.publishedAt) > toTimestamp(winner.publishedAt))
+    ) {
+      winner = c
+      bestValue = v
+    }
+  }
+  return winner
+}
+
+/**
+ * Assigns at most one badge per collection. Each category's winner is computed
+ * independently; if a higher-priority category already claimed that collection,
+ * the lower-priority badge is simply dropped rather than passed to the runner-up.
+ */
+export function computeAlbumBadges(collections: Collection[]): Map<string, AlbumBadge> {
+  const winners: Record<AlbumBadgeType, Collection | null> = {
+    recent: pickBadgeWinner(collections, (c) => recentBadgeValue(c.publishedAt)),
+    popular: pickBadgeWinner(collections, (c) => c.totalViews),
+    downloads: pickBadgeWinner(collections, (c) => c.totalDownloads),
+    updated: pickBadgeWinner(collections, (c) => toTimestamp(c.updatedAt)),
+  }
+
+  const result = new Map<string, AlbumBadge>()
+  const claimed = new Set<string>()
+  for (const type of ALBUM_BADGE_PRIORITY) {
+    const winner = winners[type]
+    if (!winner || claimed.has(winner.id)) continue
+    result.set(winner.id, { type, ...ALBUM_BADGE_META[type] })
+    claimed.add(winner.id)
+  }
+  return result
+}
 
 /**
  * Collection titles are stored with a short year prefix, e.g. "23' Munich/Vienna".
@@ -196,40 +282,61 @@ export function getCollectionPhotos(opts: {
   return { photos: rows.slice(0, perPage).map(rowToPhoto), hasMore: rows.length > perPage }
 }
 
-export function getAllCollections(): Collection[] {
-  const rows = getDb()
-    .prepare(
-      `SELECT c.id, c.title, c.slug, c.description, c.total_photos,
-        COALESCE(
-          (SELECT p.url_regular FROM photos p
-           JOIN photo_collections pc ON pc.photo_id = p.id
-           WHERE pc.collection_id = c.id ORDER BY p.views DESC LIMIT 1),
-          c.cover_photo_url
-        ) AS cover_photo_url
-      FROM collections c ORDER BY c.updated_at DESC`,
-    )
-    .all() as RawRow[]
-  return rows.map((r) => ({
+const COLLECTION_STATS_SQL = `
+  COALESCE(
+    (SELECT p.url_regular FROM photos p
+     JOIN photo_collections pc ON pc.photo_id = p.id
+     WHERE pc.collection_id = c.id ORDER BY p.views DESC LIMIT 1),
+    c.cover_photo_url
+  ) AS cover_photo_url,
+  COALESCE(
+    (SELECT SUM(p.views) FROM photos p
+     JOIN photo_collections pc ON pc.photo_id = p.id
+     WHERE pc.collection_id = c.id),
+    0
+  ) AS total_views,
+  COALESCE(
+    (SELECT SUM(p.downloads) FROM photos p
+     JOIN photo_collections pc ON pc.photo_id = p.id
+     WHERE pc.collection_id = c.id),
+    0
+  ) AS total_downloads
+`
+
+function rowToCollection(r: RawRow): Collection {
+  return {
     id: r.id as string,
     title: formatCollectionTitle(r.title as string),
     slug: (r.slug as string) || '',
     description: (r.description as string) || '',
     totalPhotos: (r.total_photos as number) || 0,
     coverPhotoUrl: (r.cover_photo_url as string) || null,
-  }))
+    publishedAt: (r.published_at as string) || '',
+    updatedAt: (r.updated_at as string) || '',
+    totalViews: (r.total_views as number) || 0,
+    totalDownloads: (r.total_downloads as number) || 0,
+  }
+}
+
+export function getAllCollections(): Collection[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT c.id, c.title, c.slug, c.description, c.total_photos, c.published_at, c.updated_at,
+        ${COLLECTION_STATS_SQL}
+      FROM collections c ORDER BY c.published_at DESC`,
+    )
+    .all() as RawRow[]
+  return rows.map(rowToCollection)
 }
 
 export function getCollectionBySlug(slug: string): Collection | null {
   const row = getDb()
-    .prepare('SELECT id, title, slug, description, total_photos, cover_photo_url FROM collections WHERE slug = ? LIMIT 1')
+    .prepare(
+      `SELECT c.id, c.title, c.slug, c.description, c.total_photos, c.published_at, c.updated_at,
+        ${COLLECTION_STATS_SQL}
+      FROM collections c WHERE c.slug = ? LIMIT 1`,
+    )
     .get(slug) as RawRow | undefined
   if (!row) return null
-  return {
-    id: row.id as string,
-    title: formatCollectionTitle(row.title as string),
-    slug: (row.slug as string) || slug,
-    description: (row.description as string) || '',
-    totalPhotos: (row.total_photos as number) || 0,
-    coverPhotoUrl: (row.cover_photo_url as string) || null,
-  }
+  return rowToCollection(row)
 }
