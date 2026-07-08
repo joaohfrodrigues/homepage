@@ -48,19 +48,6 @@ jobs:
                   set -euo pipefail
                   python backend/plex_etl.py
 
-            - name: Set up Node
-              uses: actions/setup-node@v6
-
-            - name: Format synced content with Prettier
-              # PyYAML's quoting choices (e.g. single-quote-escaping an
-              # apostrophe) don't always match Prettier's, which the "test"
-              # workflow enforces via pre-commit. Format here, before
-              # committing, so generated content never fails that check.
-              # Version/args must match the prettier hook in
-              # .pre-commit-config.yaml.
-              run: |
-                  npx --yes prettier@4.0.0-alpha.8 --write --tab-width=4 --print-width=100 "content/watch-items/**/*.yaml"
-
             - name: Commit and Push if changed
               run: |
                   git config user.name "GitHub Action"

@@ -25,6 +25,10 @@ repos:
           - id: prettier
             types_or: [javascript, css, json, yaml]
             args: [--write, --tab-width=4, --print-width=100]
+            # content/ is free-text Keystatic CMS data (blurbs, notes, synced
+            # watch history) — formatting it is meaningless and just adds
+            # editor/bot-vs-Prettier diff noise.
+            exclude: ^content/
 
     # General file checks
     - repo: https://github.com/pre-commit/pre-commit-hooks
