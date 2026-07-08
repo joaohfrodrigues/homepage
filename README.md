@@ -81,9 +81,18 @@ Visit <http://localhost:3000> to see the site.
     Watching entry once at least 3 of its episodes have been watched — its date is the most
     recently watched episode.
 
-    Every field except `hidden` is overwritten on each sync. `hidden` is a manual flag set through
-    Keystatic — check a watch item's "Hidden" box in the CMS to drop it from the `/hobbies` feed
-    without deleting it; the ETL will never re-show it on a later sync.
+    **Rating-based visibility:** only titles rated **8/10 or higher in Plex** show up on `/hobbies`
+    by default — everything else (including unrated items) is hidden, reusing the same `hidden`
+    checkbox exposed in Keystatic. `hidden` is recomputed from the rating only when the rating
+    itself changes since the last sync, so a manual override set through Keystatic (e.g. showing a
+    lower-rated title anyway) survives until you re-rate that title in Plex. A failed rating lookup
+    is never treated as a rating change, so a flaky request can't silently re-hide something.
+    Hidden entries older than a year are deleted automatically at the end of every sync
+    (`cleanup_stale_hidden_items`) — an entry you've manually un-hidden is exempt from this too.
+
+    Every field except `hidden` is overwritten on each sync, including `watchedAt` — correct a
+    watched date directly in Plex (Plex supports editing it) rather than in Keystatic, since the
+    next sync will overwrite a Keystatic edit anyway.
 
 See [backend/README.md](./backend/README.md) for detailed ETL documentation.
 
