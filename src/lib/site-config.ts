@@ -4,8 +4,9 @@ export const AUTHOR_NAME = 'João Rodrigues'
 
 export const GITHUB_URL = 'https://github.com/joaohfrodrigues'
 export const UNSPLASH_URL = 'https://unsplash.com/@joaohfrodrigues'
+export const LINKEDIN_URL = 'https://www.linkedin.com/in/joaohfrodrigues/'
 
-export const SOCIAL_LINKS = [GITHUB_URL, UNSPLASH_URL]
+export const SOCIAL_LINKS = [GITHUB_URL, UNSPLASH_URL, LINKEDIN_URL]
 
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/opengraph-image`
 
