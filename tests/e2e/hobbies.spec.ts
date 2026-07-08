@@ -15,9 +15,16 @@ test.describe('/hobbies', () => {
     }
   })
 
-  test("a gear item's note is visible without any interaction", async ({ page }) => {
+  // Cards with neither a photo nor a link have nothing else to do with a
+  // click, so they reveal their note in place instead — see gear-card.tsx.
+  test("a gear item's note is hidden until the card (no photo, no link) is clicked", async ({
+    page,
+  }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByText('Roland TD-02KV', { exact: true }).locator('..')
+    await expect(drumKit.getByText(/Electronic drum set/)).toHaveCount(0)
+
+    await drumKit.click()
     await expect(drumKit.getByText(/Electronic drum set/)).toBeVisible()
   })
 
