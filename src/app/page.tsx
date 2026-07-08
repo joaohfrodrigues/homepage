@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getPhotos } from '@/lib/photos'
+import { getAllCollections, computeAlbumBadges } from '@/lib/photos'
 import { getPublishedArticles } from '@/lib/articles'
 import { getProjects } from '@/lib/projects'
 import { getHobbyFeed, getFeedEntryImage } from '@/lib/hobby-feed'
@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { SectionTitle } from '@/components/ui/section-title'
 import { PageContainer } from '@/components/ui/page-container'
 import { ProjectPill } from '@/components/writing/project-pill'
+import { AlbumCard } from '@/components/photography/album-card'
 
 const description =
   'Personal site of João Rodrigues — photography, writing, film & TV, and music.'
@@ -27,7 +28,9 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const { photos } = getPhotos({ page: 1, perPage: 6, sort: 'popular' })
+  const collections = getAllCollections()
+  const albumBadges = computeAlbumBadges(collections)
+  const featuredAlbums = collections.slice(0, 6)
   const [allArticles, projects] = await Promise.all([getPublishedArticles(), getProjects()])
   const articles = allArticles.slice(0, 3)
   const projectTitles = new Map(projects.map((project) => [project.slug, project.title]))
@@ -53,7 +56,7 @@ export default async function HomePage() {
       />
 
       {/* Photography */}
-      {photos.length > 0 && (
+      {featuredAlbums.length > 0 && (
         <section>
           <SectionTitle
             action={
@@ -68,23 +71,14 @@ export default async function HomePage() {
             Photography
           </SectionTitle>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            {photos.map((photo) => (
-              <Link
-                key={photo.id}
-                href="/photography"
-                className="group relative aspect-square overflow-hidden rounded-md bg-muted"
-                aria-label="View photography"
-              >
-                <Image
-                  src={photo.url}
-                  alt={photo.altDescription || photo.title || 'Photograph by João Rodrigues'}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  placeholder={photo.blurDataURL ? 'blur' : 'empty'}
-                  blurDataURL={photo.blurDataURL || undefined}
-                />
-              </Link>
+            {featuredAlbums.map((album, i) => (
+              <AlbumCard
+                key={album.id}
+                collection={album}
+                badge={albumBadges.get(album.id)}
+                showCount={false}
+                priority={i < 6}
+              />
             ))}
           </div>
         </section>
