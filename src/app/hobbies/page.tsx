@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { getHobbyFeed } from '@/lib/hobby-feed'
+import { getHobbyFeed, getHobbyFilterCategories } from '@/lib/hobby-feed'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { HobbyFeedView } from '@/components/hobby-feed/hobby-feed-view'
 import { PageHeader } from '@/components/ui/page-header'
@@ -28,6 +28,7 @@ export default async function HobbiesPage({
   const initialGearOnly = params.gear === '1'
 
   const feed = await getHobbyFeed()
+  const filterCategories = getHobbyFilterCategories(feed)
 
   return (
     <PageContainer as="main" className="py-16">
@@ -35,6 +36,7 @@ export default async function HobbiesPage({
 
       <HobbyFeedView
         feed={feed}
+        filterCategories={filterCategories}
         initialSelectedHobbies={initialSelectedHobbies}
         initialGearOnly={initialGearOnly}
       />

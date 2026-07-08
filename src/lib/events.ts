@@ -11,6 +11,7 @@ export type EventItem = {
   dateAdded: string
   hobbySlug: string
   hobbyTitle: string
+  hobbyOrder: number
 }
 
 export async function getEventItems(): Promise<EventItem[]> {
@@ -41,6 +42,7 @@ export async function getEventItems(): Promise<EventItem[]> {
       dateAdded: entry.entry.date ?? '',
       hobbySlug: hobby.slug,
       hobbyTitle: hobby.title,
+      hobbyOrder: hobby.order,
     })
   }
 

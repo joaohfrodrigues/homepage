@@ -10,7 +10,7 @@ test.describe('/hobbies', () => {
   // gear/events/watch items can reference them, and never render their own card.
   test('never renders a hobby-level card for any category', async ({ page }) => {
     await page.goto('/hobbies')
-    for (const hobby of ['Film', 'Series', 'Running', 'Music', 'Photography']) {
+    for (const hobby of ['Film', 'Series', 'Running', 'Drums', 'Photography', 'Hiking']) {
       await expect(page.getByRole('heading', { name: hobby, level: 2 })).toHaveCount(0)
     }
   })
