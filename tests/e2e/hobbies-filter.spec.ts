@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test'
 test.describe('/hobbies — category filter', () => {
   test('renders a chip for every hobby plus a separate gear-only toggle', async ({ page }) => {
     await page.goto('/hobbies')
-    for (const label of ['Film', 'Series', 'Running', 'Music', 'Photography']) {
+    for (const label of ['Film', 'Series', 'Running', 'Drums', 'Photography', 'Hiking']) {
       await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible()
     }
     await expect(page.getByRole('button', { name: 'Gear only' })).toBeVisible()
@@ -23,7 +23,7 @@ test.describe('/hobbies — category filter', () => {
 
   test('selecting a hobby chip filters the grid to that hobby only', async ({ page }) => {
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Music', exact: true }).click()
+    await page.getByRole('button', { name: 'Drums', exact: true }).click()
 
     await expect(page.getByText('Roland TD-02KV', { exact: true })).toBeVisible()
     await expect(page.getByText('Hoka Clifton 10', { exact: true })).toHaveCount(0)
@@ -35,8 +35,8 @@ test.describe('/hobbies — category filter', () => {
     page,
   }) => {
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Music', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Music', exact: true })).toHaveAttribute(
+    await page.getByRole('button', { name: 'Drums', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Drums', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -97,7 +97,7 @@ test.describe('/hobbies — category filter', () => {
     page,
   }) => {
     await page.goto('/hobbies')
-    await page.getByRole('button', { name: 'Music', exact: true }).click()
+    await page.getByRole('button', { name: 'Drums', exact: true }).click()
 
     const clear = page.getByRole('button', { name: 'Clear' })
     await expect(clear).toBeVisible()

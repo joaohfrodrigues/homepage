@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { HobbyFeedEntry } from '@/lib/hobby-feed'
+import type { HobbyFeedEntry, HobbyFilterCategory } from '@/lib/hobby-feed'
 import { matchesHobbyFeedFilter } from '@/lib/hobby-feed-filter'
 import { GearCard } from './gear-card'
 import { EventCard } from './event-card'
@@ -16,10 +16,12 @@ function buildFilterQuery(hobbies: ReadonlySet<string>, gearOnly: boolean): stri
 
 export function HobbyFeedView({
   feed,
+  filterCategories,
   initialSelectedHobbies,
   initialGearOnly,
 }: {
   feed: HobbyFeedEntry[]
+  filterCategories: HobbyFilterCategory[]
   initialSelectedHobbies: string[]
   initialGearOnly: boolean
 }) {
@@ -60,6 +62,7 @@ export function HobbyFeedView({
   return (
     <>
       <HobbyFilterBar
+        categories={filterCategories}
         selectedHobbies={selectedHobbies}
         gearOnly={gearOnly}
         onToggleHobby={toggleHobby}

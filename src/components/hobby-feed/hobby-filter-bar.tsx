@@ -1,16 +1,18 @@
 'use client'
 
-import { HOBBY_FILTER_CATEGORIES } from '@/lib/hobby-filter-categories'
+import type { HobbyFilterCategory } from '@/lib/hobby-feed'
 import { tagColor } from '@/lib/tag-colors'
 import { cn } from '@/lib/utils'
 
 export function HobbyFilterBar({
+  categories,
   selectedHobbies,
   gearOnly,
   onToggleHobby,
   onToggleGearOnly,
   onClear,
 }: {
+  categories: HobbyFilterCategory[]
   selectedHobbies: ReadonlySet<string>
   gearOnly: boolean
   onToggleHobby: (slug: string) => void
@@ -21,7 +23,7 @@ export function HobbyFilterBar({
 
   return (
     <div className="mb-8 flex flex-wrap items-center gap-2">
-      {HOBBY_FILTER_CATEGORIES.map(({ slug, label }) => {
+      {categories.map(({ slug, label }) => {
         const isSelected = selectedHobbies.has(slug)
         const { bg, text } = tagColor(label)
         return (

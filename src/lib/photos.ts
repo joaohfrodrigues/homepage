@@ -90,12 +90,12 @@ function toTimestamp(iso: string): number {
   return Number.isNaN(t) ? 0 : t
 }
 
-const RECENT_BADGE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
+const BADGE_RECENCY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000
 
-/** Timestamp for the "recent" badge, or 0 (no signal) once the album is older than a month. */
-function recentBadgeValue(publishedAt: string): number {
-  const ts = toTimestamp(publishedAt)
-  if (ts === 0 || Date.now() - ts > RECENT_BADGE_WINDOW_MS) return 0
+/** Timestamp for a time-based badge, or 0 (no signal) once it's older than a month. */
+function recencyBadgeValue(iso: string): number {
+  const ts = toTimestamp(iso)
+  if (ts === 0 || Date.now() - ts > BADGE_RECENCY_WINDOW_MS) return 0
   return ts
 }
 
@@ -131,10 +131,10 @@ function pickBadgeWinner(
  */
 export function computeAlbumBadges(collections: Collection[]): Map<string, AlbumBadge> {
   const winners: Record<AlbumBadgeType, Collection | null> = {
-    recent: pickBadgeWinner(collections, (c) => recentBadgeValue(c.publishedAt)),
+    recent: pickBadgeWinner(collections, (c) => recencyBadgeValue(c.publishedAt)),
     popular: pickBadgeWinner(collections, (c) => c.totalViews),
     downloads: pickBadgeWinner(collections, (c) => c.totalDownloads),
-    updated: pickBadgeWinner(collections, (c) => toTimestamp(c.updatedAt)),
+    updated: pickBadgeWinner(collections, (c) => recencyBadgeValue(c.updatedAt)),
   }
 
   const result = new Map<string, AlbumBadge>()

@@ -11,6 +11,7 @@ export type GearItem = {
   dateAdded: string
   hobbySlug: string
   hobbyTitle: string
+  hobbyOrder: number
 }
 
 export async function getGearItems(): Promise<GearItem[]> {
@@ -41,6 +42,7 @@ export async function getGearItems(): Promise<GearItem[]> {
       dateAdded: entry.entry.dateAdded ?? '',
       hobbySlug: hobby.slug,
       hobbyTitle: hobby.title,
+      hobbyOrder: hobby.order,
     })
   }
 

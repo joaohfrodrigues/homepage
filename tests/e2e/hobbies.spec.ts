@@ -10,14 +10,21 @@ test.describe('/hobbies', () => {
   // gear/events/watch items can reference them, and never render their own card.
   test('never renders a hobby-level card for any category', async ({ page }) => {
     await page.goto('/hobbies')
-    for (const hobby of ['Film', 'Series', 'Running', 'Music', 'Photography']) {
+    for (const hobby of ['Film', 'Series', 'Running', 'Drums', 'Photography', 'Hiking']) {
       await expect(page.getByRole('heading', { name: hobby, level: 2 })).toHaveCount(0)
     }
   })
 
-  test("a gear item's note is visible without any interaction", async ({ page }) => {
+  // Cards with neither a photo nor a link have nothing else to do with a
+  // click, so they reveal their note in place instead — see gear-card.tsx.
+  test("a gear item's note is hidden until the card (no photo, no link) is clicked", async ({
+    page,
+  }) => {
     await page.goto('/hobbies')
     const drumKit = page.getByText('Roland TD-02KV', { exact: true }).locator('..')
+    await expect(drumKit.getByText(/Electronic drum set/)).toHaveCount(0)
+
+    await drumKit.click()
     await expect(drumKit.getByText(/Electronic drum set/)).toBeVisible()
   })
 

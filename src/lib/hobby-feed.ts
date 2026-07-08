@@ -29,3 +29,22 @@ export function getFeedEntryImage(entry: HobbyFeedEntry): { key: string; src: st
     ? { key: `${entry.kind}-${entry.item.slug}`, src: entry.item.photo, alt: entry.item.name }
     : null
 }
+
+export type HobbyFilterCategory = { slug: string; label: string }
+
+/**
+ * Filter chips are derived from the hobbies actually present in the feed
+ * (not the full Keystatic hobbies collection) so a rename or a hobby with
+ * no items yet never leaves a stale or dead-end chip in the bar.
+ */
+export function getHobbyFilterCategories(feed: HobbyFeedEntry[]): HobbyFilterCategory[] {
+  const bySlug = new Map<string, { label: string; order: number }>()
+  for (const entry of feed) {
+    if (!bySlug.has(entry.item.hobbySlug)) {
+      bySlug.set(entry.item.hobbySlug, { label: entry.item.hobbyTitle, order: entry.item.hobbyOrder })
+    }
+  }
+  return [...bySlug.entries()]
+    .sort(([, a], [, b]) => a.order - b.order || a.label.localeCompare(b.label))
+    .map(([slug, { label }]) => ({ slug, label }))
+}

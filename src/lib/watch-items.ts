@@ -1,20 +1,23 @@
 import { reader } from './reader'
 import type { GearItem } from './gear'
-import { HOBBY_FILTER_CATEGORIES } from './hobby-filter-categories'
+import { getHobbies } from './hobbies'
 
-const CATEGORY_LABEL: Record<'film' | 'series', string> = {
-  film: HOBBY_FILTER_CATEGORIES.find((c) => c.slug === 'film')!.label,
-  series: HOBBY_FILTER_CATEGORIES.find((c) => c.slug === 'series')!.label,
-}
+// Plex only ever tells us 'film' or 'series' — that enum is fixed in the
+// Keystatic schema. The label/slug/order still come from the matching
+// "Film"/"Series" hobby entries so a rename there follows through here too.
+const FALLBACK_LABEL: Record<'film' | 'series', string> = { film: 'Film', series: 'Series' }
 
 export async function getWatchItems(): Promise<GearItem[]> {
-  const entries = await reader.collections.watchItems.all()
+  const [entries, hobbies] = await Promise.all([reader.collections.watchItems.all(), getHobbies()])
+  const hobbiesBySlug = new Map(hobbies.map((hobby) => [hobby.slug, hobby]))
 
   return entries
     .filter((e) => !e.entry.hidden)
     .map((e) => {
       const ratingNote = e.entry.rating != null ? `${e.entry.rating}/10` : ''
       const note = [ratingNote, e.entry.note].filter(Boolean).join(' — ')
+      const hobby = hobbiesBySlug.get(e.entry.type)
+      const label = hobby?.title ?? FALLBACK_LABEL[e.entry.type]
 
       return {
         slug: e.slug,
@@ -23,13 +26,14 @@ export async function getWatchItems(): Promise<GearItem[]> {
         // duplicate show name) — omit it everywhere so every card is
         // consistent rather than showing it for a handful of entries.
         name: e.entry.title,
-        category: CATEGORY_LABEL[e.entry.type],
+        category: label,
         photo: e.entry.posterUrl || null,
         note,
         link: '',
         dateAdded: e.entry.watchedAt,
-        hobbySlug: e.entry.type,
-        hobbyTitle: CATEGORY_LABEL[e.entry.type],
+        hobbySlug: hobby?.slug ?? e.entry.type,
+        hobbyTitle: label,
+        hobbyOrder: hobby?.order ?? 99,
       }
     })
 }

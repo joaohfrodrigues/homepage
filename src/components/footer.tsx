@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { GITHUB_URL, UNSPLASH_URL } from '@/lib/site-config'
+import { GITHUB_URL, UNSPLASH_URL, LINKEDIN_URL } from '@/lib/site-config'
 import { LegoBadgeIcon } from '@/components/ui/lego-badge-icon'
 
 export function Footer() {
@@ -21,6 +21,15 @@ export function Footer() {
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <i className="fa-brands fa-github text-lg leading-none" />
+          </a>
+          <a
+            href={LINKEDIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn"
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <i className="fa-brands fa-linkedin text-lg leading-none" />
           </a>
           <a
             href={UNSPLASH_URL}
