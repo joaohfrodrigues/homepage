@@ -114,3 +114,14 @@
         @apply font-lego-thick uppercase tracking-tight;
     }
 }
+
+/* Keystatic's admin shell hardcodes height: 100vh (see MainPanelLayout in
+   @keystatic/core). On mobile browsers with a collapsing address bar, 100vh
+   is taller than the visible viewport, which pushes its header/toolbar off
+   the top of the screen. Keystatic's style props reject "dvh" outright, so
+   the fix has to happen here instead of at the prop level. Targeted via the
+   --primary-pane-width custom property it sets inline, since its own class
+   names are non-deterministic emotion hashes. */
+[style*='--primary-pane-width'] {
+    height: 100dvh !important;
+}
