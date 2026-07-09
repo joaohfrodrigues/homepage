@@ -1,8 +1,17 @@
+'use client'
+
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { GITHUB_URL, UNSPLASH_URL, LINKEDIN_URL } from '@/lib/site-config'
 import { LegoBadgeIcon } from '@/components/ui/lego-badge-icon'
 
 export function Footer() {
+  const pathname = usePathname()
+
+  if (pathname?.startsWith('/keystatic')) {
+    return null
+  }
+
   return (
     <footer className="border-t border-border mt-auto">
       <div className="pt-4 flex justify-center">
