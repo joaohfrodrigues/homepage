@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Lora } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
@@ -29,6 +29,13 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
   },
+}
+
+// viewport-fit=cover lets the page opt into edge-to-edge rendering so
+// env(safe-area-inset-*) resolves to real values instead of 0 — needed for
+// the Keystatic safe-area padding in globals.css.
+export const viewport: Viewport = {
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({

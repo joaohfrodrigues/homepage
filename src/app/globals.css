@@ -121,7 +121,15 @@
    the top of the screen. Keystatic's style props reject "dvh" outright, so
    the fix has to happen here instead of at the prop level. Targeted via the
    --primary-pane-width custom property it sets inline, since its own class
-   names are non-deterministic emotion hashes. */
+   names are non-deterministic emotion hashes.
+
+   Also pad for env(safe-area-inset-top): on some Android/Chrome
+   configurations the browser's own UI overlays page content edge-to-edge
+   rather than reserving space for it, which hides the header underneath the
+   address bar regardless of vh vs dvh. Requires viewport-fit=cover (set in
+   layout.tsx) for the env() value to be non-zero. */
 [style*='--primary-pane-width'] {
     height: 100dvh !important;
+    padding-top: env(safe-area-inset-top) !important;
+    box-sizing: border-box !important;
 }
