@@ -3,6 +3,6 @@ type: film
 watchedAt: '2026-07-11T16:55:59'
 year: null
 posterUrl: https://image.tmdb.org/t/p/w500/lbBWwxBht4JFP5PsuJ5onpMqugW.jpg
-rating: null
+rating: 8.0
 note: null
-hidden: true
+hidden: false
