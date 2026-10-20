@@ -2,9 +2,8 @@ import { notFound } from 'next/navigation'
 import { getAdjacentArticles, getStandaloneArticle, getStandaloneSlugs } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { PageHeader } from '@/components/ui/page-header'
-import { PageContainer } from '@/components/ui/page-container'
-import { BackLink } from '@/components/ui/back-link'
+import { HouseOverlay } from '@/components/house/house-overlay'
+import { ArticleSheet } from '@/components/house/article-sheet'
 import { ArticleMeta } from '@/components/writing/article-meta'
 import { ArticlePrevNext } from '@/components/writing/article-prev-next'
 import type { Metadata } from 'next'
@@ -49,19 +48,16 @@ export default async function ArticlePage({
   if (!article) notFound()
 
   return (
-    <PageContainer as="main" width="narrow" className="py-12">
-      <div className="mb-2">
-        <BackLink href="/writing" label="Writing" />
-      </div>
-
-      <PageHeader title={article.title} align="left" size="compact" className="mb-3" />
+    <HouseOverlay title={article.title} back={{ href: '/writing', label: 'Bookshelves' }} width="narrow">
       <ArticleMeta
         publishedAt={article.publishedAt}
         readingTime={article.readingTime}
-        className="mb-8"
+        className="mb-6"
       />
 
-      <ArticleBody document={article.body} />
+      <ArticleSheet>
+        <ArticleBody document={article.body} />
+      </ArticleSheet>
 
       <ArticlePrevNext
         prev={
@@ -75,6 +71,6 @@ export default async function ArticlePage({
             : undefined
         }
       />
-    </PageContainer>
+    </HouseOverlay>
   )
 }

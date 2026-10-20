@@ -1,20 +1,17 @@
 import { notFound } from 'next/navigation'
-import { getProjectArticle, getAdjacentArticles, getAllSlugs } from '@/lib/articles'
+import { getProjectArticle, getAdjacentArticles } from '@/lib/articles'
 import { getProject, getAllProjectSlugs } from '@/lib/projects'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { PageHeader } from '@/components/ui/page-header'
-import { PageContainer } from '@/components/ui/page-container'
+import { HouseOverlay } from '@/components/house/house-overlay'
 import { Breadcrumb } from '@/components/writing/breadcrumb'
 import { ArticleMeta } from '@/components/writing/article-meta'
 import { ArticlePrevNext } from '@/components/writing/article-prev-next'
+import { ArticleSheet } from '@/components/house/article-sheet'
 import type { Metadata } from 'next'
 
 export async function generateStaticParams() {
-  const [articleSlugs, projectSlugs] = await Promise.all([
-    getAllSlugs(),
-    getAllProjectSlugs(),
-  ])
+  const projectSlugs = await getAllProjectSlugs()
   // We need to pair each article with its project — read all articles
   const { reader } = await import('@/lib/reader')
   const entries = await reader.collections.articles.all()
@@ -64,7 +61,11 @@ export default async function ProjectArticlePage({
   if (!article || !project) notFound()
 
   return (
-    <PageContainer as="main" width="narrow" className="py-12">
+    <HouseOverlay
+      title={article.title}
+      back={{ href: `/writing/projects/${projectSlug}`, label: project.title }}
+      width="narrow"
+    >
       <Breadcrumb
         items={[
           { label: 'Writing', href: '/writing' },
@@ -73,14 +74,15 @@ export default async function ProjectArticlePage({
         ]}
       />
 
-      <PageHeader title={article.title} align="left" size="compact" className="mb-3" />
       <ArticleMeta
         publishedAt={article.publishedAt}
         readingTime={article.readingTime}
-        className="mb-8"
+        className="mb-6"
       />
 
-      <ArticleBody document={article.body} />
+      <ArticleSheet>
+        <ArticleBody document={article.body} />
+      </ArticleSheet>
 
       <ArticlePrevNext
         prev={
@@ -100,6 +102,6 @@ export default async function ProjectArticlePage({
             : undefined
         }
       />
-    </PageContainer>
+    </HouseOverlay>
   )
 }

@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { Lora } from 'next/font/google'
+import { Lora, Pixelify_Sans } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
-import { Header } from '@/components/header'
-import { Footer } from '@/components/footer'
 import { SITE_URL, SITE_NAME } from '@/lib/site-config'
 
 const lora = Lora({ subsets: ['latin'], variable: '--font-serif' })
+const pixel = Pixelify_Sans({ subsets: ['latin'], variable: '--font-pixel' })
 const lego = localFont({ src: '../../public/fonts/LEGO.ttf', variable: '--font-lego' })
 const legoThick = localFont({
   src: '../../public/fonts/Legothick.ttf',
@@ -44,7 +43,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${lego.variable} ${legoThick.variable}`}>
+    <html lang="en" className={`${lora.variable} ${pixel.variable} ${lego.variable} ${legoThick.variable}`}>
       <head>
         <link
           rel="stylesheet"
@@ -53,11 +52,7 @@ export default function RootLayout({
           referrerPolicy="no-referrer"
         />
       </head>
-      <body className="font-sans min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body className="font-sans min-h-screen flex flex-col">{children}</body>
     </html>
   )
 }
