@@ -32,6 +32,7 @@ import {
   traceSilhouette,
   drawDoorway,
   drawFloor,
+  drawClosedDoor,
   drawFrontDoor,
   drawSideDoorway,
   drawProp,
@@ -39,6 +40,7 @@ import {
   drawWallFace,
   type CharacterName,
   type Facing,
+  type Outfit,
   type PropName,
 } from './pixels'
 import type { Trip } from '@/lib/photos'
@@ -48,6 +50,8 @@ export interface HouseSceneConfig {
   trips: Trip[]
   startRoom: RoomId
   fontFamily: string
+  night: boolean
+  outfit: Outfit
 }
 
 const DELTAS: Record<Direction, Point> = {
@@ -107,6 +111,8 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
+  private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
+  private nightOverlay!: Phaser.GameObjects.Rectangle
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -160,7 +166,7 @@ export class HouseScene extends Phaser.Scene {
     this.npcLabel = this.add
       .text(0, 0, 'João', this.textStyle('#f4ecd8', '#2a2233'))
       .setOrigin(0.5, 1)
-      .setDepth(20)
+      .setDepth(34)
     this.syncNpcLabel()
     this.npcOutline = this.add
       .sprite(this.npc.sprite.x, this.npc.sprite.y, 'house-chars-outline', 'joao-down-idle')
@@ -246,6 +252,8 @@ export class HouseScene extends Phaser.Scene {
           const part = wallPartAt(x, y)
           if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
+          } else if (cell === 'X') {
+            drawClosedDoor(ctx, ox, oy, below.wall, part, cellAt(x - 1, y) === 'X' ? 'right' : 'left')
           } else if (cell === 'D') {
             drawDoorway(ctx, ox, oy, below.floor, part, x, y, {
               left: cellAt(x - 1, y) !== 'D',
@@ -303,7 +311,7 @@ export class HouseScene extends Phaser.Scene {
       FACINGS.forEach((facing, fi) => {
         STEPS.forEach((step, si) => {
           const col = fi * STEPS.length + si
-          drawCharacter(ctx, col * TILE, row * CHAR_H, name, facing, step)
+          drawCharacter(ctx, col * TILE, row * CHAR_H, name, facing, step, name === 'guest' ? this.cfg.outfit : undefined)
           texture.add(`${name}-${facing}-${step}`, 0, col * TILE, row * CHAR_H, TILE, CHAR_H)
         })
       })
@@ -367,7 +375,7 @@ export class HouseScene extends Phaser.Scene {
       this.add
         .text(label.x, label.y, label.text, this.textStyle('#f4ecd8', '#2a2233'))
         .setOrigin(0.5, 0.5)
-        .setDepth(4)
+        .setDepth(34)
     }
   }
 
@@ -401,13 +409,20 @@ export class HouseScene extends Phaser.Scene {
       if (item.kind !== 'prop') continue
       const light = LIGHT_SOURCES[item.prop]
       if (!light) continue
-      this.add
+      const image = this.add
         .image(item.x * TILE + light.x, item.y * TILE + light.y, 'glow')
         .setDisplaySize(light.radius * 2, light.radius * 2)
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setAlpha(item.prop === 'tv' ? 0.35 : 0.7)
         .setDepth(30)
+      this.glows.push({ image, day: item.prop === 'tv' ? 0.35 : 0.6, night: item.prop === 'tv' ? 0.8 : 1 })
     }
+
+    // Night: everything but the light pools and interaction cues sinks into blue.
+    this.nightOverlay = this.add
+      .rectangle(-20 * TILE, -20 * TILE, (MAP_WIDTH + 40) * TILE, (MAP_HEIGHT + 40) * TILE, 0x0b1030)
+      .setOrigin(0)
+      .setDepth(29)
+    this.applyNight(this.cfg.night)
 
     // The Pi's disk enclosure on the study desk.
     const rack = this.propAt('desk')
@@ -428,6 +443,39 @@ export class HouseScene extends Phaser.Scene {
       blink()
       this.time.addEvent({ delay: 350, loop: true, callback: blink })
     }
+  }
+
+  private applyNight(on: boolean) {
+    this.nightOverlay.setAlpha(on ? 0.55 : 0)
+    for (const glow of this.glows) glow.image.setAlpha(on ? glow.night : glow.day)
+  }
+
+  /** Fade out, flip day/night, fade back in — as if the visitor just woke up. */
+  private setNight(on: boolean, animate: boolean) {
+    if (!animate || this.reducedMotion) {
+      this.applyNight(on)
+      return
+    }
+    const camera = this.cameras.main
+    camera.fadeOut(450, 8, 10, 24)
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.applyNight(on)
+      camera.fadeIn(700, 8, 10, 24)
+    })
+  }
+
+  /** Redraw the visitor's frames in a new outfit from the wardrobe. */
+  private repaintGuest(outfit: Outfit) {
+    const texture = this.textures.get('house-chars') as Phaser.Textures.CanvasTexture
+    const ctx = texture.getContext()
+    // The guest is the first row of the sheet.
+    ctx.clearRect(0, 0, texture.width, CHAR_H)
+    FACINGS.forEach((facing, fi) => {
+      STEPS.forEach((step, si) => {
+        drawCharacter(ctx, (fi * STEPS.length + si) * TILE, 0, 'guest', facing, step, outfit)
+      })
+    })
+    texture.refresh()
   }
 
   private decorTiles(item: Decor): Point[] {
@@ -497,18 +545,18 @@ export class HouseScene extends Phaser.Scene {
       this.textures.addCanvas(`cue-shine-${object.id}`, shine)
       this.cues.set(object.id, {
         bounds,
-        outline: this.add.image(bx - 1, by - 1, `cue-outline-${object.id}`).setOrigin(0).setDepth(6).setVisible(false),
+        outline: this.add.image(bx - 1, by - 1, `cue-outline-${object.id}`).setOrigin(0).setDepth(31).setVisible(false),
         shine: this.add
           .image(bx - 1, by - 1, `cue-shine-${object.id}`)
           .setOrigin(0)
-          .setDepth(5)
+          .setDepth(31)
           .setBlendMode(Phaser.BlendModes.ADD)
           .setVisible(false),
-        sparkle: this.add.image(bx + bounds.w - 3, by + 3, 'cue-sparkle').setDepth(7).setVisible(false),
+        sparkle: this.add.image(bx + bounds.w - 3, by + 3, 'cue-sparkle').setDepth(32).setVisible(false),
       })
     }
 
-    this.focusArrow = this.add.image(0, 0, 'cue-arrow').setOrigin(0.5, 1).setDepth(25).setVisible(false)
+    this.focusArrow = this.add.image(0, 0, 'cue-arrow').setOrigin(0.5, 1).setDepth(33).setVisible(false)
   }
 
   /** Show the focus outline/arrow on `target` and sparkles on anything close by. */
@@ -552,7 +600,7 @@ export class HouseScene extends Phaser.Scene {
         .setPosition(sprite.x, sprite.y + 1)
         .setFrame(sprite.frame.name)
         .setFlipX(sprite.flipX)
-        .setDepth(sprite.depth + 0.001)
+        .setDepth(31)
         .setAlpha(still ? 1 : 0.75 + 0.25 * wave)
       arrowX = sprite.x
       arrowY = sprite.y - CHAR_H - 10
@@ -799,6 +847,10 @@ export class HouseScene extends Phaser.Scene {
     } else {
       action = target.object.action
     }
+    if (action.type === 'dialogue' && action.id === 'bathroom' && !this.reducedMotion) {
+      // Knock knock.
+      this.cameras.main.shake(160, 0.003)
+    }
     this.cfg.bridge.game.emit('interact', action)
   }
 
@@ -939,6 +991,8 @@ export class HouseScene extends Phaser.Scene {
     const { ui } = this.cfg.bridge
     this.unsubscribers.push(
       ui.on('teleport', (room) => this.teleport(room)),
+      ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
+      ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('inputEnabled', (enabled) => {
         this.inputEnabled = enabled

@@ -61,7 +61,7 @@ function positionOf(lat: number, lon: number) {
   return { left: `${x * 100}%`, top: `${y * 100}%` }
 }
 
-function PinIcon() {
+export function PinIcon() {
   // An 8x11 pixel pin, drawn on the pixel grid.
   return (
     <svg

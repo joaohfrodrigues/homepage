@@ -431,3 +431,44 @@ export function getTrips(): Trip[] {
   // so trips from the same year keep that order.
   return trips.sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
 }
+
+/** A geotagged photo for the kitchen's "Where was this taken?" game. */
+export interface GeoPhoto {
+  id: string
+  url: string
+  alt: string
+  place: string
+  lat: number
+  lon: number
+  tripSlug: string
+  tripTitle: string
+}
+
+/** The most-viewed geotagged photos, each with the trip it belongs to. */
+export function getGeoPhotos(limit = 80): GeoPhoto[] {
+  const rows = getDb()
+    .prepare(
+      `SELECT p.id, p.url_small, p.alt_description, p.location_city, p.location_name,
+        p.location_latitude AS lat, p.location_longitude AS lon,
+        MIN(c.slug) AS trip_slug, MIN(c.title) AS trip_title
+      FROM photos p
+      JOIN photo_collections pc ON pc.photo_id = p.id
+      JOIN collections c ON c.id = pc.collection_id
+      WHERE p.location_latitude IS NOT NULL AND p.location_longitude IS NOT NULL
+        AND NOT (p.location_latitude = 0 AND p.location_longitude = 0)
+      GROUP BY p.id
+      ORDER BY p.views DESC
+      LIMIT ?`,
+    )
+    .all(limit) as RawRow[]
+  return rows.map((r) => ({
+    id: r.id as string,
+    url: (r.url_small as string) || '',
+    alt: (r.alt_description as string) || 'Travel photograph',
+    place: (r.location_city as string) || ((r.location_name as string) || '').split(',')[0].trim(),
+    lat: r.lat as number,
+    lon: r.lon as number,
+    tripSlug: r.trip_slug as string,
+    tripTitle: formatCollectionTitle(r.trip_title as string),
+  }))
+}

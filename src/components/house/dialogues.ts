@@ -1,4 +1,4 @@
-import type { DialogueId } from '@/game/bridge'
+import type { DialogueId, PanelId } from '@/game/bridge'
 import { getTopic, type TopicId } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 
@@ -9,7 +9,8 @@ export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
   | { label: string; kind: 'external'; href: string }
   | { label: string; kind: 'next'; id: DialogueKey }
-  | { label: string; kind: 'directory' }
+  | { label: string; kind: 'panel'; panel: PanelId }
+  | { label: string; kind: 'night'; on: boolean }
   | { label: string; kind: 'close' }
 
 export interface Dialogue {
@@ -18,7 +19,7 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
-export function buildDialogue(id: DialogueKey, data: HouseData): Dialogue {
+export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean }): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
@@ -60,9 +61,38 @@ export function buildDialogue(id: DialogueKey, data: HouseData): Dialogue {
       return {
         lines: ["The front door. You've only just arrived, so have a look around first!"],
         choices: [
-          { label: 'Open the directory', kind: 'directory' },
+          { label: 'Open the directory', kind: 'panel', panel: 'directory' },
           { label: 'Stay a while', kind: 'close' },
         ],
+      }
+    case 'bed':
+      return house.night
+        ? {
+            lines: ['It’s late, and the bed looks very inviting.'],
+            choices: [
+              { label: 'Sleep until morning', kind: 'night', on: false },
+              { label: 'Five more minutes', kind: 'close' },
+            ],
+          }
+        : {
+            lines: ['A neatly made double bed. The duvet looks very soft.'],
+            choices: [
+              { label: 'Nap until evening', kind: 'night', on: true },
+              { label: 'Not now', kind: 'close' },
+            ],
+          }
+    case 'alarm':
+      return {
+        lines: ['The alarm clock is set for 06:30. A sticky note on it says “long run day”.'],
+        choices: [
+          { label: 'See the races →', kind: 'link', href: '/hobbies/running' },
+          { label: 'Snooze', kind: 'close' },
+        ],
+      }
+    case 'bathroom':
+      return {
+        lines: ['*knock knock*', '“Occupied!”', '…wasn’t João in the living room?'],
+        choices: [{ label: 'Better leave it', kind: 'close' }],
       }
     default: {
       const topic = getTopic(id.slice('topic:'.length) as TopicId)

@@ -71,13 +71,8 @@ export function furnishHouse(): Furnishings {
     decor.push(item)
     return propTiles(item)
   }
-  const topicItem = (id: TopicId, tiles: Point[], extra?: { key: string; label: string }) =>
-    interactables.push({
-      id: extra?.key ?? id,
-      label: extra?.label ?? getTopic(id).item,
-      tiles,
-      action: topicAction(id),
-    })
+  const topicItem = (id: TopicId, tiles: Point[]) =>
+    interactables.push({ id, label: getTopic(id).item, tiles, action: topicAction(id) })
   const paintings = [...K.paintings, ...K.landscapes]
 
   // Rugs first: decor is drawn in order, and furniture stands on them.
@@ -86,14 +81,40 @@ export function furnishHouse(): Furnishings {
   prop('rugliving', 2, 17, false)
 
   // --- Bedroom (4 × 3.5m) -------------------------------------------------------
-  prop('bed', 3, 2)
+  interactables.push({
+    id: 'bed',
+    label: 'Bed — take a nap',
+    tiles: prop('bed', 3, 2),
+    action: { type: 'dialogue', id: 'bed' },
+  })
   prop('nightstand', 2, 3)
-  prop('nightstand', 6, 3)
-  prop('wardrobe', 7, 2)
+  interactables.push({
+    id: 'alarm',
+    label: 'Alarm clock',
+    tiles: prop('alarmclock', 6, 3),
+    action: { type: 'dialogue', id: 'alarm' },
+  })
+  interactables.push({
+    id: 'wardrobe',
+    label: 'Wardrobe — change outfit',
+    tiles: prop('wardrobe', 7, 2),
+    action: { type: 'panel', panel: 'wardrobe' },
+  })
   kenney(K.landscapes[2], 1, 2)
   kenney(K.plantSmall, 8, 9, true)
 
-  // --- Bathroom (2 × 3.5m) ------------------------------------------------------
+  // --- Bathroom (2 × 3.5m), behind a shut door ------------------------------
+  interactables.push({
+    id: 'bathroom-door',
+    label: 'Bathroom door',
+    tiles: [
+      { x: 11, y: 10 },
+      { x: 12, y: 10 },
+      { x: 11, y: 11 },
+      { x: 12, y: 11 },
+    ],
+    action: { type: 'dialogue', id: 'bathroom' },
+  })
   prop('toilet', 10, 2)
   prop('basin', 11, 2)
   prop('shower', 12, 3)
@@ -136,11 +157,21 @@ export function furnishHouse(): Furnishings {
 
   // --- Kitchen (3 × 4m) ---------------------------------------------------------
   prop('counter', 19, 15)
-  prop('coffeecounter', 20, 15)
+  interactables.push({
+    id: 'coffee',
+    label: 'Coffee machine — pull a bica',
+    tiles: prop('coffeecounter', 20, 15),
+    action: { type: 'panel', panel: 'bica' },
+  })
   prop('stove', 21, 15)
   prop('sink', 22, 15)
   prop('counter', 23, 15)
-  topicItem('trips', prop('fridge', 24, 15), { key: 'fridge', label: 'Fridge magnets — every trip' })
+  interactables.push({
+    id: 'fridge',
+    label: 'Fridge magnets — where was this taken?',
+    tiles: prop('fridge', 24, 15),
+    action: { type: 'panel', panel: 'geoguess' },
+  })
   prop('kitchentable', 20, 19)
   prop('chair', 20, 18)
   prop('chairup', 21, 21)
@@ -160,7 +191,7 @@ export function furnishHouse(): Furnishings {
     id: 'directory',
     label: 'Floor plan — house directory',
     tiles: [{ x: 14, y: 22 }],
-    action: { type: 'directory' },
+    action: { type: 'panel', panel: 'directory' },
   })
   prop('doormat', 15, 23, false)
   kenney(K.plantSmall, 17, 23, true)
@@ -176,7 +207,7 @@ export function furnishHouse(): Furnishings {
 
   // Room names over the doorways, read from the corridor.
   labels.push({ text: 'BEDROOM', x: 5 * 16, y: 10 * 16 + 2 })
-  labels.push({ text: 'BATHROOM', x: 12 * 16, y: 10 * 16 + 2 })
+  labels.push({ text: 'OCCUPIED', x: 12 * 16, y: 10 * 16 + 2 })
   labels.push({ text: 'STUDY', x: 20 * 16, y: 10 * 16 + 2 })
   labels.push({ text: 'HALL', x: 16 * 16, y: 14 * 16 + 2 })
 

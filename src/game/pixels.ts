@@ -192,6 +192,38 @@ export function drawDoorway(
   if (edges.right) rect(ctx, ox + 14, oy, 2, 16, PALETTE.woodDark)
 }
 
+/**
+ * A shut interior door seen from the corridor, two tiles wide. The left half
+ * carries a little red "occupied" indicator over the handle.
+ */
+export function drawClosedDoor(
+  ctx: Ctx,
+  ox: number,
+  oy: number,
+  kind: WallKind,
+  part: 'upper' | 'lower',
+  half: 'left' | 'right',
+) {
+  drawWallFace(ctx, ox, oy, kind, part)
+  const left = half === 'left'
+  const top = part === 'upper' ? 4 : 0
+  rect(ctx, ox + (left ? 1 : 0), oy + top, left ? 15 : 15, 16 - top, PALETTE.woodDark)
+  rect(ctx, ox + (left ? 2 : 0), oy + top + (part === 'upper' ? 1 : 0), 14, 16 - top - (part === 'upper' ? 1 : 0), '#efe3c8')
+  if (!left) rect(ctx, ox + 14, oy + top, 1, 16 - top, PALETTE.woodDark)
+  if (part === 'upper') {
+    rect(ctx, ox + (left ? 4 : 2), oy + 7, 10, 6, '#e3d4b2')
+    if (left) {
+      // The occupied indicator.
+      rect(ctx, ox + 11, oy + 13, 5, 3, PALETTE.ink)
+      rect(ctx, ox + 12, oy + 14, 3, 1, PALETTE.red)
+    }
+  } else {
+    rect(ctx, ox + (left ? 4 : 2), oy + 1, 10, 8, '#e3d4b2')
+    if (left) rect(ctx, ox + 12, oy + 1, 3, 2, PALETTE.brass)
+    rect(ctx, ox, oy + 13, 16, 3, '#2f2a3a')
+  }
+}
+
 /** One half of the 90cm front door (two tiles wide), seen from above. */
 export function drawFrontDoor(ctx: Ctx, ox: number, oy: number, half: 'left' | 'right') {
   drawWallCap(ctx, ox, oy)
@@ -260,6 +292,7 @@ export type PropName =
   | 'kitchentable'
   | 'bed'
   | 'nightstand'
+  | 'alarmclock'
   | 'wardrobe'
   | 'rugbed'
   | 'toilet'
@@ -298,6 +331,7 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   kitchentable: { w: 32, h: 32 },
   bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
   nightstand: { w: 16, h: 16 },
+  alarmclock: { w: 16, h: 16 }, // a nightstand with the alarm clock on it
   wardrobe: { w: 32, h: 32 },
   rugbed: { w: 80, h: 32 },
   toilet: { w: 16, h: 32 },
@@ -760,6 +794,20 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(2, 15, 12, 1, PALETTE.shadow)
       break
     }
+    case 'alarmclock': {
+      r(2, 5, 12, 10, PALETTE.ink)
+      r(3, 6, 10, 8, PALETTE.wood)
+      r(3, 9, 10, 1, PALETTE.woodDark)
+      r(7, 11, 2, 1, PALETTE.brass)
+      r(4, 0, 8, 6, PALETTE.ink)
+      r(5, 1, 6, 4, '#1b1b20')
+      r(5, 2, 2, 1, '#e04434')
+      r(8, 2, 2, 1, '#e04434')
+      r(4, 0, 1, 1, PALETTE.brass)
+      r(11, 0, 1, 1, PALETTE.brass)
+      r(2, 15, 12, 1, PALETTE.shadow)
+      break
+    }
     case 'wardrobe': {
       r(0, 0, 32, 32, PALETTE.ink)
       r(1, 1, 30, 30, '#c9b38f')
@@ -985,6 +1033,58 @@ const CHARACTER_COLORS: Record<CharacterName, Record<string, string>> = {
   },
 }
 
+/** The visitor's clothes, picked at the bedroom wardrobe. */
+export interface Outfit {
+  cap: string
+  jacket: string
+  hair: string
+}
+
+export const OUTFIT_OPTIONS: Record<keyof Outfit, { label: string; value: string }[]> = {
+  cap: [
+    { label: 'Red', value: '#c0392b' },
+    { label: 'Navy', value: '#2c3c5a' },
+    { label: 'Mustard', value: '#c9a227' },
+    { label: 'Forest', value: '#3b5c2b' },
+    { label: 'Sky', value: '#5a9fd4' },
+    { label: 'Charcoal', value: '#3a3a44' },
+  ],
+  jacket: [
+    { label: 'Green', value: '#4f7a3a' },
+    { label: 'Red', value: '#a63a40' },
+    { label: 'Denim', value: '#3f6b8a' },
+    { label: 'Ochre', value: '#c08a2b' },
+    { label: 'Plum', value: '#6b4a7a' },
+    { label: 'Grey', value: '#6d6a72' },
+  ],
+  hair: [
+    { label: 'Brown', value: '#7a4a28' },
+    { label: 'Black', value: '#2a2026' },
+    { label: 'Blond', value: '#d8b45a' },
+    { label: 'Ginger', value: '#c0622b' },
+    { label: 'Grey', value: '#a9a4a0' },
+  ],
+}
+
+export const DEFAULT_OUTFIT: Outfit = { cap: '#c0392b', jacket: '#4f7a3a', hair: '#7a4a28' }
+
+function darken(hex: string, amount = 0.72): string {
+  const n = parseInt(hex.slice(1), 16)
+  const channel = (shift: number) => Math.round(((n >> shift) & 0xff) * amount)
+  return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`
+}
+
+function outfitColors(outfit: Outfit): Record<string, string> {
+  return {
+    c: outfit.cap,
+    C: darken(outfit.cap),
+    j: outfit.jacket,
+    J: darken(outfit.jacket),
+    m: outfit.jacket,
+    h: outfit.hair,
+  }
+}
+
 export const FACINGS: Facing[] = ['down', 'up', 'side']
 export const STEPS: Step[] = ['idle', 'a', 'b']
 
@@ -995,8 +1095,9 @@ export function drawCharacter(
   who: CharacterName,
   facing: Facing,
   step: Step,
+  outfit?: Outfit,
 ) {
-  const colors = CHARACTER_COLORS[who]
+  const colors = outfit ? { ...CHARACTER_COLORS[who], ...outfitColors(outfit) } : CHARACTER_COLORS[who]
   // Bob the body down a pixel mid-stride.
   const bob = step === 'idle' ? 0 : 1
   const rows = [...BODY[facing], ...LEGS[facing][step]]

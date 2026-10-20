@@ -20,6 +20,8 @@ export interface Topic {
   /** What you see when you look at the item. */
   look: string
   href: string
+  /** Keystatic hobby slugs whose events and gear fill this topic's window. */
+  hobbies?: string[]
   /**
    * True when `href` opens as a window inside the house. Otherwise the item
    * describes itself and links out to the classic page until it moves in.
@@ -61,8 +63,9 @@ export const TOPICS: Topic[] = [
     item: 'Camera on its tripod',
     title: 'Photography gear',
     look: 'A Sony a6600 on its tripod by the window, with the 35mm and 50mm f/1.8 lenses on the shelf.',
-    href: '/hobbies?hobby=photography&gear=1',
-    inHouse: false,
+    href: '/hobbies/photography',
+    hobbies: ['photography'],
+    inHouse: true,
   },
   {
     id: 'watching',
@@ -70,8 +73,9 @@ export const TOPICS: Topic[] = [
     item: 'TV',
     title: 'Films & series',
     look: 'The TV, still warm. A sticky note lists everything recent that scored 8/10 or more.',
-    href: '/hobbies?hobby=film,series',
-    inHouse: false,
+    href: '/hobbies/watching',
+    hobbies: ['film', 'series'],
+    inHouse: true,
   },
   {
     id: 'drums',
@@ -79,8 +83,9 @@ export const TOPICS: Topic[] = [
     item: 'Drum kit',
     title: 'Drums',
     look: 'A Roland TD-02KV electronic kit, ready for the next gig with 404s.',
-    href: '/hobbies?hobby=drums',
-    inHouse: false,
+    href: '/hobbies/drums',
+    hobbies: ['drums'],
+    inHouse: true,
   },
   {
     id: 'running',
@@ -88,8 +93,9 @@ export const TOPICS: Topic[] = [
     item: 'Medals & running shoes',
     title: 'Running',
     look: 'Race medals and a bib hang by the door, above a well-worn pair of Hoka Cliftons.',
-    href: '/hobbies?hobby=running',
-    inHouse: false,
+    href: '/hobbies/running',
+    hobbies: ['running'],
+    inHouse: true,
   },
   {
     id: 'hiking',
@@ -97,11 +103,17 @@ export const TOPICS: Topic[] = [
     item: 'Backpack & boots',
     title: 'Hiking',
     look: 'A backpack on its hook and muddy boots below it — they have been up Pico.',
-    href: '/hobbies?hobby=hiking',
-    inHouse: false,
+    href: '/hobbies/hiking',
+    hobbies: ['hiking'],
+    inHouse: true,
   },
 ]
 
 export function getTopic(id: TopicId): Topic {
   return TOPICS.find((topic) => topic.id === id)!
+}
+
+/** The topic behind a /hobbies/<slug> window, e.g. "running" or "watching". */
+export function getHobbyTopic(slug: string): Topic | undefined {
+  return TOPICS.find((topic) => topic.hobbies && topic.href === `/hobbies/${slug}`)
 }

@@ -1,13 +1,24 @@
 import type { RoomId } from './layout'
+import type { Outfit } from './pixels'
 import type { TopicId } from './topics'
+
+/** Windows drawn by React over the house that aren't pages of their own. */
+export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess'
 
 /** What happens when the visitor interacts with something in the house. */
 export type InteractAction =
   | { type: 'navigate'; href: string }
   | { type: 'dialogue'; id: DialogueId }
-  | { type: 'directory' }
+  | { type: 'panel'; panel: PanelId }
 
-export type DialogueId = 'joao' | 'letterbox' | 'front-door' | `topic:${TopicId}`
+export type DialogueId =
+  | 'joao'
+  | 'letterbox'
+  | 'front-door'
+  | 'bed'
+  | 'alarm'
+  | 'bathroom'
+  | `topic:${TopicId}`
 
 /** The interactable the player is facing or hovering, shown in the HUD. */
 export interface Hint {
@@ -29,6 +40,9 @@ interface UiEvents {
   inputEnabled: boolean
   /** Trigger whatever the player is currently facing (HUD button / touch). */
   interactFacing: undefined
+  /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
+  night: { on: boolean; animate: boolean }
+  outfit: Outfit
 }
 
 type Listener<T> = (payload: T) => void

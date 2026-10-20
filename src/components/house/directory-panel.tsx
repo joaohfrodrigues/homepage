@@ -5,13 +5,33 @@ import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, type Room, type RoomId } from '@/game/layout'
 import { TOPICS } from '@/game/topics'
+import type { PanelId } from '@/game/bridge'
 import { cn } from '@/lib/utils'
 
 interface Props {
   currentRoom: RoomId | null
+  night: boolean
   onTeleport: (room: RoomId) => void
   onContact: () => void
+  onPanel: (panel: PanelId) => void
+  onToggleNight: () => void
   onClose: () => void
+}
+
+/** A directory row that opens something in place rather than navigating. */
+function ActionRow({ label, item, onClick }: { label: string; item: string; onClick: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-baseline justify-between gap-2 px-3 py-1 text-left text-sm hover:bg-[#ebe0c8]"
+      >
+        <span>{label}</span>
+        <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">{item}</span>
+      </button>
+    </li>
+  )
 }
 
 const ROOM_COLORS: Record<RoomId, string> = {
@@ -25,7 +45,7 @@ const ROOM_COLORS: Record<RoomId, string> = {
 }
 
 /** The front-door directory and the M-key minimap: the fast path through the house. */
-export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: Props) {
+export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPanel, onToggleNight, onClose }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -64,7 +84,7 @@ export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: 
 
         <FloorPlan currentRoom={currentRoom} onTeleport={onTeleport} />
 
-        <div className="mt-6 grid gap-6 sm:grid-cols-3">
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {ROOMS.filter((room) => room.listed).map((room) => (
             <section key={room.id}>
               <RoomButton room={room} current={room.id === currentRoom} onClick={() => onTeleport(room.id)} />
@@ -87,6 +107,18 @@ export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: 
                       About João
                     </Link>
                   </li>
+                )}
+                {room.id === 'kitchen' && (
+                  <>
+                    <ActionRow label="Where was this taken?" item="Fridge" onClick={() => onPanel('geoguess')} />
+                    <ActionRow label="Pull a bica" item="Coffee machine" onClick={() => onPanel('bica')} />
+                  </>
+                )}
+                {room.id === 'bedroom' && (
+                  <>
+                    <ActionRow label="Change outfit" item="Wardrobe" onClick={() => onPanel('wardrobe')} />
+                    <ActionRow label={night ? 'Wake up' : 'Nap until evening'} item="Bed" onClick={onToggleNight} />
+                  </>
                 )}
                 {room.id === 'hall' && (
                   <li>
@@ -169,6 +201,13 @@ function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; on
             {label}
           </>
         )
+        if (room.locked) {
+          return (
+            <g key={room.id} aria-label={`${room.name} (occupied)`} opacity={0.6}>
+              {body}
+            </g>
+          )
+        }
         return (
           <g
             key={room.id}

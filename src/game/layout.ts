@@ -9,6 +9,7 @@ export const METRES_PER_TILE = 0.5
  *   .  floor
  *   D  doorway through a north wall (walkable)
  *   d  doorway through a side wall (walkable)
+ *   X  a shut door (the bathroom: occupied)
  *   F  front door
  *
  * A wall run directly above a floor renders as a two-tile-high wall face, so
@@ -28,8 +29,8 @@ export const FLOOR_PLAN = [
   '#........#....#..........#',
   '#........#....#..........#',
   '#........#....#..........#',
-  '####DD#####DD######DD#####',
-  '####DD#####DD######DD#####',
+  '####DD#####XX######DD#####',
+  '####DD#####XX######DD#####',
   '#........................#',
   '#........................#',
   '###############DD#########',
@@ -72,6 +73,8 @@ export interface Room {
   spawnFacing: Direction
   /** Rooms with something to see get their own entry in the directory list. */
   listed: boolean
+  /** Behind a shut door: shown on the floor plan but not somewhere to teleport. */
+  locked?: boolean
 }
 
 export const ROOMS: Room[] = [
@@ -111,13 +114,13 @@ export const ROOMS: Room[] = [
   {
     id: 'kitchen',
     name: 'Kitchen',
-    blurb: 'Coffee, and a fridge covered in trip magnets.',
+    blurb: 'Pull a bica, or guess where the fridge-magnet photos were taken.',
     rect: { x: 19, y: 16, w: 6, h: 8 },
     floor: 'tile',
     wall: 'tile',
     spawn: { x: 19, y: 17 },
     spawnFacing: 'right',
-    listed: false,
+    listed: true,
   },
   {
     id: 'study',
@@ -133,13 +136,13 @@ export const ROOMS: Room[] = [
   {
     id: 'bedroom',
     name: 'Bedroom',
-    blurb: 'Off limits, mostly.',
+    blurb: 'Change outfit at the wardrobe, or nap until nightfall.',
     rect: { x: 1, y: 3, w: 8, h: 7 },
     floor: 'wood',
     wall: 'sage',
     spawn: { x: 4, y: 9 },
     spawnFacing: 'up',
-    listed: false,
+    listed: true,
   },
   {
     id: 'bathroom',
@@ -151,6 +154,7 @@ export const ROOMS: Room[] = [
     spawn: { x: 11, y: 9 },
     spawnFacing: 'up',
     listed: false,
+    locked: true,
   },
 ]
 
