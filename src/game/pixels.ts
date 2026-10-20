@@ -84,6 +84,26 @@ export function drawFloor(ctx: Ctx, ox: number, oy: number, kind: FloorKind, tx:
       }
       break
     }
+    case 'tile': {
+      // 25cm ceramic floor tiles with light grout.
+      for (let qy = 0; qy < 2; qy++) {
+        for (let qx = 0; qx < 2; qx++) {
+          const shade = hash(tx * 2 + qx, ty * 2 + qy) > 0.5 ? '#d9d4ca' : '#d2ccc1'
+          rect(ctx, ox + qx * 8, oy + qy * 8, 8, 8, shade)
+          rect(ctx, ox + qx * 8 + 7, oy + qy * 8, 1, 8, '#b9b2a6')
+          rect(ctx, ox + qx * 8, oy + qy * 8 + 7, 8, 1, '#b9b2a6')
+        }
+      }
+      break
+    }
+    case 'bath': {
+      rect(ctx, ox, oy, 16, 16, '#eef2f4')
+      for (let i = 3; i < 16; i += 4) {
+        rect(ctx, ox + i, oy, 1, 16, '#d3dde3')
+        rect(ctx, ox, oy + i, 16, 1, '#d3dde3')
+      }
+      break
+    }
   }
 }
 
@@ -94,6 +114,9 @@ const WALLPAPER: Record<WallKind, { base: string; accent: string; board: string 
   cream: { base: '#efe3c8', accent: '#e3d4b2', board: '#8f5e37' },
   rose: { base: '#e7bfb4', accent: '#d9a99d', board: '#7a4b3a' },
   library: { base: '#3f5a4a', accent: '#37503f', board: '#5a3d27' },
+  sage: { base: '#c9d6c3', accent: '#bccab5', board: '#8f5e37' },
+  bath: { base: '#e3eef2', accent: '#c9dbe3', board: '#9fc3d6' },
+  tile: { base: '#f2f2ee', accent: '#dcdcd4', board: '#8a8090' },
 }
 
 export function drawWallCap(ctx: Ctx, ox: number, oy: number) {
@@ -119,6 +142,15 @@ function drawWallpaper(ctx: Ctx, ox: number, oy: number, kind: WallKind, part: '
       rect(ctx, ox + 3, oy + y, 1, 1, paper.accent)
       rect(ctx, ox + 11, oy + y + 3, 1, 1, paper.accent)
     }
+  } else if (kind === 'bath' || kind === 'tile') {
+    // Wall tiles: a square grid for the bathroom, staggered metro tiles in the kitchen.
+    for (let y = 3; y < 16; y += 4) rect(ctx, ox, oy + y, 16, 1, paper.accent)
+    for (let row = 0; row < 4; row++) {
+      const offset = kind === 'tile' && row % 2 ? 4 : 0
+      for (let x = offset + 3; x < 16; x += kind === 'tile' ? 8 : 4) rect(ctx, ox + x, oy + row * 4, 1, 3, paper.accent)
+    }
+  } else if (kind === 'sage') {
+    for (let x = 2; x < 16; x += 6) rect(ctx, ox + x, oy, 1, 16, paper.accent)
   } else if (kind === 'cream') {
     rect(ctx, ox, oy + (part === 'upper' ? 12 : 4), 16, 1, paper.accent)
   }
@@ -160,77 +192,138 @@ export function drawDoorway(
   if (edges.right) rect(ctx, ox + 14, oy, 2, 16, PALETTE.woodDark)
 }
 
-export function drawFrontDoor(ctx: Ctx, ox: number, oy: number) {
+/** One half of the 90cm front door (two tiles wide), seen from above. */
+export function drawFrontDoor(ctx: Ctx, ox: number, oy: number, half: 'left' | 'right') {
   drawWallCap(ctx, ox, oy)
-  rect(ctx, ox + 1, oy, 14, 12, PALETTE.woodDark)
-  rect(ctx, ox + 2, oy, 12, 10, '#a0522d')
-  rect(ctx, ox + 2, oy + 4, 12, 1, '#7a3d21')
-  rect(ctx, ox + 11, oy + 5, 2, 2, PALETTE.brassLight)
+  const left = half === 'left'
+  rect(ctx, ox + (left ? 1 : 0), oy, 15, 12, PALETTE.woodDark)
+  rect(ctx, ox + (left ? 2 : 0), oy, 14, 10, '#a0522d')
+  rect(ctx, ox + (left ? 2 : 0), oy + 4, 14, 1, '#7a3d21')
+  if (!left) {
+    rect(ctx, ox + 14, oy, 1, 12, PALETTE.woodDark)
+    rect(ctx, ox + 9, oy + 5, 2, 2, PALETTE.brassLight)
+  }
   rect(ctx, ox, oy + 12, 16, 4, '#3b3150')
 }
 
+/** A doorway through a side wall: each neighbouring room's floor meets at a threshold. */
+export function drawSideDoorway(ctx: Ctx, ox: number, oy: number, left: FloorKind, right: FloorKind, tx: number, ty: number) {
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(ox, oy, 8, 16)
+  ctx.clip()
+  drawFloor(ctx, ox, oy, left, tx, ty)
+  ctx.restore()
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(ox + 8, oy, 8, 16)
+  ctx.clip()
+  drawFloor(ctx, ox, oy, right, tx, ty)
+  ctx.restore()
+  rect(ctx, ox + 7, oy, 2, 16, PALETTE.woodDark)
+  rect(ctx, ox, oy, 16, 16, 'rgba(20,14,30,0.12)')
+}
+
 // ---------------------------------------------------------------------------
-// Props that aren't in the Kenney sheet
+// Furniture that isn't in the Kenney sheet, drawn to scale at 1 tile = 50cm.
+// Pieces that stand against a north wall are drawn from the wall-face row
+// down, so their height reads against the 2.5m wall behind them.
 
 export type PropName =
-  | 'letterbox'
-  | 'signboard'
   | 'doormat'
+  | 'console'
+  | 'coathooks'
+  | 'boots'
+  | 'medalhanger'
+  | 'shoerack'
   | 'bookshelf'
-  | 'fireplace'
+  | 'wallmap'
   | 'desk'
-  | 'serverrack'
-  | 'maptable'
-  | 'rug'
-  | 'rugteal'
+  | 'officechair'
   | 'armchair'
   | 'floorlamp'
   | 'camerastand'
+  | 'drums'
+  | 'rugstudy'
   | 'tv'
   | 'sofa'
-  | 'drums'
-  | 'medalboard'
-  | 'shoerack'
-  | 'coathooks'
-  | 'boots'
+  | 'coffeetable'
+  | 'rugliving'
+  | 'diningtable'
+  | 'chair'
+  | 'chairup'
+  | 'counter'
+  | 'coffeecounter'
+  | 'stove'
+  | 'sink'
+  | 'fridge'
+  | 'kitchentable'
+  | 'bed'
+  | 'nightstand'
+  | 'wardrobe'
+  | 'rugbed'
+  | 'toilet'
+  | 'basin'
+  | 'shower'
+  | 'bathmat'
 
 export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
-  letterbox: { w: 16, h: 16 },
-  signboard: { w: 16, h: 32 },
-  doormat: { w: 16, h: 16 },
-  bookshelf: { w: 16, h: 32 },
-  fireplace: { w: 32, h: 48 },
-  desk: { w: 32, h: 32 },
-  serverrack: { w: 16, h: 32 },
-  maptable: { w: 64, h: 48 },
-  rug: { w: 96, h: 80 },
-  rugteal: { w: 96, h: 64 },
-  armchair: { w: 16, h: 16 },
+  doormat: { w: 32, h: 16 }, // 1m × 0.5m
+  console: { w: 16, h: 32 }, // 0.5m deep × 1m long, against the side wall
+  coathooks: { w: 16, h: 32 },
+  boots: { w: 16, h: 16 },
+  medalhanger: { w: 16, h: 32 },
+  shoerack: { w: 16, h: 16 },
+  bookshelf: { w: 16, h: 32 }, // four of these make 2m of shelving
+  wallmap: { w: 48, h: 32 }, // 1.5m × 1m pin map
+  desk: { w: 48, h: 32 }, // 1.4m desk
+  officechair: { w: 16, h: 16 },
+  armchair: { w: 32, h: 32 },
   floorlamp: { w: 16, h: 32 },
   camerastand: { w: 16, h: 32 },
-  tv: { w: 32, h: 32 },
-  sofa: { w: 48, h: 16 },
-  drums: { w: 32, h: 32 },
-  medalboard: { w: 32, h: 32 },
-  shoerack: { w: 32, h: 16 },
-  coathooks: { w: 32, h: 32 },
-  boots: { w: 16, h: 16 },
+  drums: { w: 32, h: 32 }, // an electronic kit is about 1m × 1m
+  rugstudy: { w: 64, h: 48 },
+  tv: { w: 64, h: 48 }, // 55" screen over a 2m media unit
+  sofa: { w: 64, h: 32 }, // 3-seater, 2m × 0.9m
+  coffeetable: { w: 32, h: 16 },
+  rugliving: { w: 96, h: 64 }, // 3m × 2m
+  diningtable: { w: 48, h: 32 }, // seats four
+  chair: { w: 16, h: 16 },
+  chairup: { w: 16, h: 16 },
+  counter: { w: 16, h: 32 }, // wall cabinet above, 60cm counter below
+  coffeecounter: { w: 16, h: 32 },
+  stove: { w: 16, h: 32 },
+  sink: { w: 16, h: 32 },
+  fridge: { w: 16, h: 32 },
+  kitchentable: { w: 32, h: 32 },
+  bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
+  nightstand: { w: 16, h: 16 },
+  wardrobe: { w: 32, h: 32 },
+  rugbed: { w: 80, h: 32 },
+  toilet: { w: 16, h: 32 },
+  basin: { w: 16, h: 32 },
+  shower: { w: 32, h: 32 }, // 1m × 1m tray
+  bathmat: { w: 32, h: 16 },
 }
 
-/** Where the scene paints the trip map onto the map table, in prop pixels. */
-export const MAP_TABLE = { x: 6, y: 6, w: 52, h: 30 }
-/** The firebox opening the scene animates flames in. */
-export const FIREPLACE_FIRE = { x: 8, y: 33, w: 16, h: 10 }
-/** Status LEDs on the server rack, blinked by the scene. */
-export const SERVER_LEDS = [3, 9, 15, 21].map((y) => ({ x: 11, y: y + 1 }))
+/** Where the scene paints the trip map inside the wall map's frame, in prop pixels. */
+export const MAP_WALL = { x: 3, y: 4, w: 42, h: 24 }
+/** Status LEDs on the Pi's disk enclosure, blinked by the scene. */
+export const DESK_LEDS = [
+  { x: 43, y: 11 },
+  { x: 43, y: 13 },
+  { x: 41, y: 11 },
+]
 /** Where light comes from, for the scene's warm glows. */
 export const LIGHT_SOURCES: Partial<Record<PropName, { x: number; y: number; radius: number }>> = {
-  fireplace: { x: 16, y: 38, radius: 40 },
   floorlamp: { x: 8, y: 5, radius: 30 },
-  tv: { x: 16, y: 10, radius: 22 },
+  tv: { x: 32, y: 18, radius: 30 },
+  nightstand: { x: 8, y: 2, radius: 16 },
+  desk: { x: 24, y: 8, radius: 18 },
 }
 
 const BOOK_COLORS = ['#8e2f35', '#2f5f63', '#c9a227', '#3f6b8a', '#6b4a2e', '#4f7a3a', '#d9a99d', '#2a2233']
+const WHITE_GOODS = { body: '#e8e4da', line: '#c9c3b5', steel: '#b8bcc4', steelDark: '#8a9099' }
 
 function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
   for (let dy = -r; dy <= r; dy++) {
@@ -242,57 +335,135 @@ function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
 function drawRug(ctx: Ctx, ox: number, oy: number, w: number, h: number, c: { edge: string; field: string; trim: string }) {
   rect(ctx, ox + 2, oy, w - 4, h, c.edge)
   rect(ctx, ox + 3, oy + 1, w - 6, h - 2, c.field)
-  rect(ctx, ox + 7, oy + 5, w - 14, h - 10, c.trim)
-  rect(ctx, ox + 8, oy + 6, w - 16, h - 12, c.field)
-  // A diamond medallion in the middle and tassels on the short ends.
+  rect(ctx, ox + 6, oy + 4, w - 12, h - 8, c.trim)
+  rect(ctx, ox + 7, oy + 5, w - 14, h - 10, c.field)
   const cx = ox + w / 2
   const cy = oy + h / 2
-  for (let i = 0; i < 9; i++) {
-    rect(ctx, cx - i, cy - 9 + i, i * 2, 1, c.trim)
-    rect(ctx, cx - i, cy + 8 - i, i * 2, 1, c.trim)
+  const size = Math.min(8, Math.floor(h / 2) - 6)
+  for (let i = 0; i < size; i++) {
+    rect(ctx, cx - i, cy - size + i, i * 2, 1, c.trim)
+    rect(ctx, cx - i, cy + size - 1 - i, i * 2, 1, c.trim)
   }
-  rect(ctx, cx - 3, cy - 1, 6, 2, c.edge)
   for (let y = oy + 3; y < oy + h - 3; y += 3) {
     rect(ctx, ox, y, 2, 1, c.trim)
     rect(ctx, ox + w - 2, y, 2, 1, c.trim)
   }
 }
 
+/** A 60cm kitchen unit: wall cabinet and tiled splashback above, counter and doors below. */
+function drawKitchenUnit(ctx: Ctx, ox: number, oy: number) {
+  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
+  r(0, 0, 16, 8, WHITE_GOODS.body)
+  r(0, 7, 16, 1, WHITE_GOODS.line)
+  r(7, 0, 1, 7, WHITE_GOODS.line)
+  r(5, 5, 1, 1, WHITE_GOODS.steelDark)
+  r(9, 5, 1, 1, WHITE_GOODS.steelDark)
+  r(0, 8, 16, 8, '#f2f2ee')
+  for (let x = 3; x < 16; x += 4) r(x, 8, 1, 8, '#dcdcd4')
+  r(0, 12, 16, 1, '#dcdcd4')
+  r(0, 16, 16, 3, '#5f5766')
+  r(0, 16, 16, 1, '#7d7383')
+  r(0, 19, 16, 12, WHITE_GOODS.body)
+  r(7, 19, 1, 12, WHITE_GOODS.line)
+  r(5, 23, 1, 3, WHITE_GOODS.steelDark)
+  r(9, 23, 1, 3, WHITE_GOODS.steelDark)
+  r(0, 31, 16, 1, '#8a8090')
+}
+
+function drawChair(ctx: Ctx, ox: number, oy: number, backOnTop: boolean) {
+  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
+  r(3, 4, 10, 10, PALETTE.ink)
+  r(4, 5, 8, 8, PALETTE.woodLight)
+  if (backOnTop) {
+    r(3, 1, 10, 4, PALETTE.ink)
+    r(4, 2, 8, 2, PALETTE.wood)
+  } else {
+    r(3, 12, 10, 4, PALETTE.ink)
+    r(4, 13, 8, 2, PALETTE.wood)
+  }
+}
+
 export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
-    case 'letterbox': {
-      r(7, 9, 2, 7, PALETTE.woodDark)
-      r(2, 2, 12, 9, PALETTE.ink)
-      r(3, 3, 10, 7, PALETTE.red)
-      r(3, 3, 10, 1, '#e05a48')
-      r(5, 5, 6, 1, PALETTE.ink)
-      r(5, 7, 6, 2, PALETTE.paper)
-      r(6, 8, 4, 1, '#b5aa94')
-      r(13, 4, 1, 3, PALETTE.brassLight)
-      break
-    }
-    case 'signboard': {
-      r(3, 14, 2, 18, PALETTE.woodDark)
-      r(11, 14, 2, 18, PALETTE.woodDark)
-      r(0, 1, 16, 18, PALETTE.ink)
-      r(1, 2, 14, 16, PALETTE.wood)
-      r(2, 3, 12, 14, PALETTE.paper)
-      // Roof-shaped header and a list of "rooms".
-      r(4, 4, 8, 2, PALETTE.red)
-      r(6, 3, 4, 1, PALETTE.red)
-      for (let i = 0; i < 4; i++) {
-        r(3, 8 + i * 2, 1, 1, PALETTE.wood)
-        r(5, 8 + i * 2, 4 + ((i * 3) % 5), 1, '#6d6359')
-      }
-      break
-    }
+    // --- Entrance hall --------------------------------------------------------
     case 'doormat': {
-      r(1, 3, 14, 11, '#5a3d27')
-      r(2, 4, 12, 9, '#8a6a3f')
-      for (let y = 5; y < 12; y += 2) r(3, y, 10, 1, '#7a5c35')
+      r(1, 3, 30, 11, '#5a3d27')
+      r(2, 4, 28, 9, '#8a6a3f')
+      for (let y = 5; y < 12; y += 2) r(3, y, 26, 1, '#7a5c35')
       break
     }
+    case 'console': {
+      // A narrow table along the side wall: the day's post, and a framed plan of the flat.
+      r(1, 0, 14, 31, PALETTE.ink)
+      r(2, 1, 12, 28, PALETTE.wood)
+      r(2, 1, 1, 28, PALETTE.woodHighlight)
+      r(4, 3, 9, 10, PALETTE.woodDark)
+      r(5, 4, 7, 5, PALETTE.paper)
+      r(6, 6, 7, 5, '#fbf6ea')
+      r(10, 7, 2, 2, PALETTE.red)
+      r(7, 9, 4, 1, '#b5aa94')
+      r(4, 16, 9, 11, PALETTE.ink)
+      r(5, 17, 7, 9, PALETTE.paper)
+      r(6, 18, 2, 3, '#7f9f88')
+      r(9, 18, 2, 3, '#d9b98c')
+      r(6, 22, 5, 3, '#e7bfb4')
+      r(2, 29, 2, 2, PALETTE.woodDark)
+      r(12, 29, 2, 2, PALETTE.woodDark)
+      break
+    }
+    case 'coathooks': {
+      r(1, 4, 14, 2, PALETTE.woodDark)
+      r(7, 6, 2, 2, PALETTE.brass)
+      // Hiking backpack hanging from the middle hook.
+      r(2, 7, 12, 21, PALETTE.ink)
+      r(3, 8, 10, 19, '#4f7a3a')
+      r(3, 8, 10, 2, '#62924a')
+      r(4, 17, 8, 7, '#3b5c2b')
+      r(7, 19, 2, 1, PALETTE.tape)
+      r(3, 28, 10, 1, PALETTE.shadow)
+      break
+    }
+    case 'boots': {
+      for (const x of [2, 9]) {
+        r(x, 4, 5, 10, PALETTE.ink)
+        r(x + 1, 5, 3, 8, '#6b4a2e')
+        r(x + 1, 6, 3, 1, '#b5835a')
+        r(x, 13, 6, 2, '#2b2b33')
+      }
+      r(1, 15, 14, 1, PALETTE.shadow)
+      break
+    }
+    case 'medalhanger': {
+      r(1, 3, 14, 2, PALETTE.woodDark)
+      for (const [x, ribbon, drop] of [
+        [3, '#3f6b8a', 12],
+        [7, PALETTE.red, 9],
+        [11, '#4f7a3a', 13],
+      ] as const) {
+        r(x, 5, 2, drop, ribbon)
+        disc(ctx, ox + x + 1, oy + 7 + drop, 2, PALETTE.brass)
+        r(x + 1, 6 + drop, 1, 1, PALETTE.brassLight)
+      }
+      r(3, 23, 10, 7, PALETTE.paper)
+      r(4, 24, 8, 1, PALETTE.red)
+      r(5, 26, 6, 2, PALETTE.ink)
+      break
+    }
+    case 'shoerack': {
+      r(1, 7, 14, 8, PALETTE.ink)
+      r(2, 8, 12, 6, PALETTE.wood)
+      r(2, 11, 12, 1, PALETTE.woodDark)
+      // Running shoes on top.
+      for (const x of [2, 8]) {
+        r(x, 3, 6, 5, PALETTE.ink)
+        r(x + 1, 4, 4, 3, '#3b7dd8')
+        r(x + 1, 6, 4, 1, PALETTE.paper)
+      }
+      r(1, 15, 14, 1, PALETTE.shadow)
+      break
+    }
+    // --- Study ----------------------------------------------------------------
     case 'bookshelf': {
       r(0, 0, 16, 32, PALETTE.ink)
       r(1, 1, 14, 30, PALETTE.woodDark)
@@ -314,85 +485,57 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(7, 27, 2, 1, PALETTE.brass)
       break
     }
-    case 'fireplace': {
-      // Stone chimney breast on the wall, firebox and hearth on the floor.
-      r(2, 0, 28, 32, '#7d7383')
-      for (let y = 0; y < 30; y += 4) {
-        r(2, y + 3, 28, 1, '#625a69')
-        for (let x = (y / 4) % 2 === 0 ? 6 : 10; x < 30; x += 8) r(x, y, 1, 3, '#625a69')
-      }
-      r(0, 24, 32, 4, PALETTE.woodDark)
-      r(0, 24, 32, 1, PALETTE.woodHighlight)
-      r(9, 19, 4, 5, PALETTE.brass)
-      r(20, 20, 3, 4, PALETTE.paper)
-      r(2, 28, 28, 16, '#8a8090')
-      r(6, 31, 20, 13, PALETTE.ink)
-      r(7, 32, 18, 12, '#1c1416')
-      r(9, 41, 14, 2, PALETTE.woodDark)
-      r(11, 40, 10, 1, '#5a3d27')
-      r(0, 44, 32, 4, '#5f5766')
-      r(0, 44, 32, 1, '#7d7383')
+    case 'wallmap': {
+      r(2, 3, 46, 28, PALETTE.shadow)
+      r(1, 2, 46, 28, PALETTE.ink)
+      r(2, 3, 44, 26, PALETTE.woodDark)
+      r(2, 3, 44, 1, PALETTE.woodHighlight)
+      r(MAP_WALL.x, MAP_WALL.y, MAP_WALL.w, MAP_WALL.h, '#7fb0c9')
       break
     }
     case 'desk': {
-      // Monitor against the wall, desk top on the floor row.
-      r(6, 1, 18, 13, PALETTE.ink)
-      r(7, 2, 16, 10, '#1f3b4d')
-      for (let i = 0; i < 4; i++) r(9, 4 + i * 2, 3 + ((i * 5) % 9), 1, i % 2 ? '#7fd1b9' : '#e8c95a')
-      r(13, 14, 4, 3, PALETTE.ink)
-      r(0, 16, 32, 4, PALETTE.wood)
-      r(0, 16, 32, 1, PALETTE.woodHighlight)
-      r(8, 17, 12, 2, '#d8d0c0')
-      r(24, 14, 4, 4, PALETTE.red)
-      r(25, 15, 2, 1, '#e05a48')
-      r(0, 20, 32, 9, PALETTE.woodDark)
-      r(2, 22, 10, 5, '#7d5634')
-      r(6, 24, 2, 1, PALETTE.brass)
+      // Monitor against the wall; the Pi and its disk enclosure at the right end.
+      r(12, 1, 22, 14, PALETTE.ink)
+      r(13, 2, 20, 11, '#1f3b4d')
+      for (let i = 0; i < 4; i++) r(15, 4 + i * 2, 4 + ((i * 5) % 11), 1, i % 2 ? '#7fd1b9' : '#e8c95a')
+      r(21, 15, 4, 2, PALETTE.ink)
+      r(38, 8, 8, 9, PALETTE.ink)
+      r(39, 9, 6, 7, '#2a2d35')
+      r(40, 15, 4, 1, '#3a3d46')
+      r(0, 16, 48, 4, PALETTE.wood)
+      r(0, 16, 48, 1, PALETTE.woodHighlight)
+      r(15, 17, 16, 2, '#d8d0c0')
+      r(33, 17, 3, 2, '#d8d0c0')
+      r(38, 17, 6, 2, '#2e8b57')
+      r(39, 17, 1, 1, PALETTE.brass)
+      r(6, 14, 4, 4, PALETTE.red)
+      r(7, 15, 2, 1, '#e05a48')
+      r(0, 20, 48, 9, PALETTE.woodDark)
+      r(34, 22, 12, 5, '#7d5634')
+      r(39, 24, 2, 1, PALETTE.brass)
       r(1, 29, 3, 3, PALETTE.woodDark)
-      r(28, 29, 3, 3, PALETTE.woodDark)
+      r(44, 29, 3, 3, PALETTE.woodDark)
       break
     }
-    case 'serverrack': {
-      r(1, 0, 14, 31, PALETTE.ink)
-      r(2, 1, 12, 29, '#3b3f4a')
-      for (const led of SERVER_LEDS) {
-        r(3, led.y - 1, 10, 4, '#2a2d35')
-        r(4, led.y, 5, 1, '#4a4f5c')
-        r(led.x, led.y, 1, 1, '#4cd964')
-      }
-      // The Raspberry Pi itself, on the bottom shelf.
-      r(3, 26, 9, 3, '#2e8b57')
-      r(4, 27, 2, 1, '#c9a227')
-      r(1, 31, 14, 1, PALETTE.shadow)
+    case 'officechair': {
+      r(4, 1, 8, 8, PALETTE.ink)
+      r(5, 2, 6, 6, '#3a3d46')
+      r(3, 8, 10, 5, PALETTE.ink)
+      r(4, 9, 8, 3, '#4a4f5c')
+      r(7, 13, 2, 2, PALETTE.ink)
+      r(3, 15, 10, 1, PALETTE.shadow)
       break
     }
-    case 'maptable': {
-      r(0, 1, 64, 41, PALETTE.ink)
-      r(1, 2, 62, 38, PALETTE.woodDark)
-      r(3, 4, 58, 34, PALETTE.wood)
-      r(3, 4, 58, 1, PALETTE.woodHighlight)
-      r(MAP_TABLE.x - 1, MAP_TABLE.y - 1, MAP_TABLE.w + 2, MAP_TABLE.h + 2, '#d8c8a0')
-      r(1, 40, 62, 3, '#4f3622')
-      r(3, 43, 3, 5, PALETTE.woodDark)
-      r(58, 43, 3, 5, PALETTE.woodDark)
-      break
-    }
-    case 'rug':
-      drawRug(ctx, ox, oy, 96, 80, { edge: '#5c1f24', field: '#8e2f35', trim: '#c9a227' })
-      break
-    case 'rugteal':
-      drawRug(ctx, ox, oy, 96, 64, { edge: '#24484b', field: '#2f5f63', trim: '#e8c95a' })
-      break
     case 'armchair': {
-      // Seen from behind, facing up into the room.
-      r(1, 2, 14, 14, PALETTE.ink)
-      r(2, 3, 12, 8, '#8e2f35')
-      r(2, 3, 12, 1, '#b04a50')
-      r(2, 9, 3, 6, '#7a2730')
-      r(11, 9, 3, 6, '#7a2730')
-      r(5, 11, 6, 4, '#a63a40')
-      r(2, 15, 2, 1, PALETTE.woodDark)
-      r(12, 15, 2, 1, PALETTE.woodDark)
+      // A wing chair seen from behind, angled into the room.
+      r(2, 3, 28, 27, PALETTE.ink)
+      r(4, 4, 24, 13, '#8e2f35')
+      r(4, 4, 24, 2, '#b04a50')
+      r(3, 13, 6, 16, '#7a2730')
+      r(23, 13, 6, 16, '#7a2730')
+      r(9, 17, 14, 11, '#a63a40')
+      r(3, 30, 3, 2, PALETTE.woodDark)
+      r(26, 30, 3, 2, PALETTE.woodDark)
       break
     }
     case 'floorlamp': {
@@ -406,52 +549,20 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'camerastand': {
-      // Tripod legs...
       for (let i = 0; i < 14; i++) {
         r(7 - Math.floor(i / 3), 17 + i, 1, 1, '#3a3340')
         r(8 + Math.floor(i / 3), 17 + i, 1, 1, '#3a3340')
       }
       r(7, 15, 2, 14, '#4a4458')
-      // ...and the camera on top, lens towards the room.
-      r(2, 7, 12, 9, PALETTE.ink)
-      r(3, 8, 10, 7, '#1b1b20')
-      r(3, 8, 3, 2, '#3a3a44')
-      disc(ctx, ox + 8, oy + 11, 3, '#3a3a44')
-      disc(ctx, ox + 8, oy + 11, 2, '#14141a')
-      r(9, 10, 1, 1, '#8fb5d6')
-      r(10, 6, 3, 2, '#2a2a30')
-      break
-    }
-    case 'tv': {
-      r(2, 1, 28, 18, PALETTE.ink)
-      r(4, 3, 24, 14, '#26323f')
-      r(5, 4, 6, 2, '#3b4b5c')
-      r(4, 12, 24, 5, '#1d2731')
-      r(14, 19, 4, 2, PALETTE.ink)
-      r(0, 20, 32, 11, PALETTE.woodDark)
-      r(0, 20, 32, 1, PALETTE.woodHighlight)
-      r(2, 23, 13, 6, '#7d5634')
-      r(17, 23, 13, 6, '#7d5634')
-      r(20, 25, 7, 2, '#1b1b20')
-      r(25, 25, 1, 1, '#4cd964')
-      r(0, 31, 32, 1, PALETTE.shadow)
-      break
-    }
-    case 'sofa': {
-      // Back view, facing the TV.
-      r(0, 1, 48, 15, PALETTE.ink)
-      r(1, 2, 46, 8, '#3f6b8a')
-      r(1, 2, 46, 1, '#5a88a8')
-      r(16, 3, 1, 7, '#355a75')
-      r(31, 3, 1, 7, '#355a75')
-      r(1, 8, 5, 7, '#355a75')
-      r(42, 8, 5, 7, '#355a75')
-      r(6, 10, 36, 5, '#4b7da0')
-      r(8, 9, 6, 3, PALETTE.tape)
+      r(3, 9, 10, 7, PALETTE.ink)
+      r(4, 10, 8, 5, '#1b1b20')
+      r(4, 10, 2, 1, '#3a3a44')
+      disc(ctx, ox + 8, oy + 12, 2, '#3a3a44')
+      r(8, 12, 1, 1, '#8fb5d6')
+      r(9, 8, 2, 1, '#2a2a30')
       break
     }
     case 'drums': {
-      // Electronic kit from above: pads on a rack, cymbals, kick and throne.
       r(4, 6, 24, 2, '#3a3340')
       r(4, 6, 2, 16, '#3a3340')
       r(26, 6, 2, 16, '#3a3340')
@@ -475,72 +586,291 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       disc(ctx, ox + 16, oy + 28, 2, '#8e2f35')
       break
     }
-    case 'medalboard': {
-      r(1, 5, 30, 20, PALETTE.woodDark)
-      r(2, 6, 28, 18, '#b5835a')
-      // Two race bibs...
-      r(3, 8, 10, 8, PALETTE.paper)
-      r(4, 9, 8, 1, PALETTE.red)
-      r(5, 11, 6, 3, PALETTE.ink)
-      r(14, 7, 9, 8, PALETTE.paper)
-      r(15, 8, 7, 1, '#3f6b8a')
-      r(16, 10, 5, 3, PALETTE.ink)
-      // ...and medals hanging off the frame.
-      for (const [x, ribbon] of [
-        [24, '#3f6b8a'],
-        [28, PALETTE.red],
-      ] as const) {
-        r(x, 6, 2, 12, ribbon)
-        disc(ctx, ox + x + 1, oy + 20, 2, PALETTE.brass)
-        r(x + 1, 19, 1, 1, PALETTE.brassLight)
-      }
-      r(5, 18, 14, 1, '#7a5c35')
-      r(5, 21, 10, 1, '#7a5c35')
+    case 'rugstudy':
+      drawRug(ctx, ox, oy, 64, 48, { edge: '#5c1f24', field: '#8e2f35', trim: '#c9a227' })
+      break
+    // --- Living room ----------------------------------------------------------
+    case 'tv': {
+      r(12, 5, 40, 24, PALETTE.ink)
+      r(14, 7, 36, 20, '#26323f')
+      r(16, 9, 9, 2, '#3b4b5c')
+      r(14, 22, 36, 5, '#1d2731')
+      r(20, 31, 24, 2, '#2a2a30')
+      r(0, 33, 64, 13, PALETTE.ink)
+      r(1, 34, 62, 11, PALETTE.woodDark)
+      r(1, 34, 62, 1, PALETTE.woodHighlight)
+      r(3, 36, 18, 7, '#7d5634')
+      r(23, 36, 18, 7, '#1b1b20')
+      r(43, 36, 18, 7, '#7d5634')
+      r(26, 39, 9, 3, '#e8e8f0')
+      r(33, 40, 1, 1, '#4cd964')
+      r(0, 46, 64, 2, PALETTE.shadow)
       break
     }
-    case 'shoerack': {
-      r(1, 7, 30, 8, PALETTE.ink)
-      r(2, 8, 28, 6, PALETTE.wood)
-      r(2, 11, 28, 1, PALETTE.woodDark)
-      // Running shoes on top, a spare pair below.
-      for (const x of [4, 10]) {
-        r(x, 3, 5, 5, PALETTE.ink)
-        r(x + 1, 4, 3, 3, '#3b7dd8')
-        r(x + 1, 6, 3, 1, PALETTE.paper)
-      }
-      for (const x of [18, 24]) {
-        r(x, 9, 5, 2, '#6d6359')
-        r(x, 11, 5, 1, PALETTE.paper)
-      }
+    case 'sofa': {
+      // Seen from behind, facing the TV.
+      r(0, 5, 64, 25, PALETTE.ink)
+      r(1, 6, 62, 12, '#3f6b8a')
+      r(1, 6, 62, 2, '#5a88a8')
+      r(21, 8, 1, 10, '#355a75')
+      r(42, 8, 1, 10, '#355a75')
+      r(1, 14, 6, 15, '#355a75')
+      r(57, 14, 6, 15, '#355a75')
+      r(7, 18, 50, 10, '#4b7da0')
+      r(10, 14, 8, 5, PALETTE.tape)
+      r(2, 30, 2, 2, PALETTE.woodDark)
+      r(60, 30, 2, 2, PALETTE.woodDark)
+      break
+    }
+    case 'coffeetable': {
+      r(1, 2, 30, 11, PALETTE.ink)
+      r(2, 3, 28, 8, PALETTE.wood)
+      r(2, 3, 28, 1, PALETTE.woodHighlight)
+      r(5, 5, 7, 4, '#3f6b8a')
+      r(6, 4, 6, 1, PALETTE.paper)
+      disc(ctx, ox + 23, oy + 7, 2, '#4f7a3a')
+      r(3, 11, 2, 3, PALETTE.woodDark)
+      r(27, 11, 2, 3, PALETTE.woodDark)
       r(1, 15, 30, 1, PALETTE.shadow)
       break
     }
-    case 'coathooks': {
-      r(2, 5, 28, 3, PALETTE.woodDark)
-      for (const x of [6, 14, 22]) r(x, 7, 2, 2, PALETTE.brass)
-      // A hiking backpack and a red rain jacket.
-      r(3, 9, 11, 17, PALETTE.ink)
-      r(4, 10, 9, 15, '#4f7a3a')
-      r(4, 10, 9, 2, '#62924a')
-      r(5, 17, 7, 6, '#3b5c2b')
-      r(6, 19, 5, 1, PALETTE.tape)
-      r(17, 9, 11, 19, PALETTE.ink)
-      r(18, 10, 9, 17, PALETTE.red)
-      r(22, 10, 1, 17, PALETTE.redDark)
-      r(18, 10, 9, 2, '#e05a48')
+    case 'rugliving':
+      drawRug(ctx, ox, oy, 96, 64, { edge: '#24484b', field: '#2f5f63', trim: '#e8c95a' })
+      break
+    case 'diningtable': {
+      r(1, 1, 46, 26, PALETTE.ink)
+      r(2, 2, 44, 22, '#a0703f')
+      r(2, 2, 44, 1, '#bf8a52')
+      for (const [x, y] of [
+        [8, 5],
+        [32, 5],
+        [8, 14],
+        [32, 14],
+      ] as const) {
+        r(x, y, 8, 6, PALETTE.paper)
+        disc(ctx, ox + x + 4, oy + y + 3, 2, '#e8e4da')
+      }
+      disc(ctx, ox + 24, oy + 12, 3, '#4f7a3a')
+      r(2, 24, 44, 3, '#7d5634')
+      r(3, 27, 3, 5, PALETTE.woodDark)
+      r(42, 27, 3, 5, PALETTE.woodDark)
       break
     }
-    case 'boots': {
-      for (const x of [2, 9]) {
-        r(x, 4, 5, 10, PALETTE.ink)
-        r(x + 1, 5, 3, 8, '#6b4a2e')
-        r(x + 1, 6, 3, 1, '#b5835a')
-        r(x, 13, 6, 2, '#2b2b33')
+    case 'chair':
+      drawChair(ctx, ox, oy, true)
+      break
+    case 'chairup':
+      drawChair(ctx, ox, oy, false)
+      break
+    // --- Kitchen --------------------------------------------------------------
+    case 'counter':
+      drawKitchenUnit(ctx, ox, oy)
+      break
+    case 'coffeecounter': {
+      drawKitchenUnit(ctx, ox, oy)
+      r(4, 9, 8, 8, PALETTE.ink)
+      r(5, 10, 6, 6, '#2a2a30')
+      r(6, 13, 3, 1, '#c0392b')
+      r(9, 15, 2, 2, PALETTE.paper)
+      break
+    }
+    case 'stove': {
+      drawKitchenUnit(ctx, ox, oy)
+      r(1, 0, 14, 6, WHITE_GOODS.steel)
+      r(3, 6, 10, 2, WHITE_GOODS.steelDark)
+      r(0, 16, 16, 3, '#2a2a30')
+      r(3, 17, 3, 1, '#55555f')
+      r(10, 17, 3, 1, '#55555f')
+      r(2, 20, 12, 9, '#2a2a30')
+      r(3, 21, 10, 1, WHITE_GOODS.steel)
+      r(4, 23, 8, 4, '#3a3a44')
+      break
+    }
+    case 'sink': {
+      drawKitchenUnit(ctx, ox, oy)
+      // A window over the sink.
+      r(1, 0, 14, 9, '#ffffff')
+      r(2, 1, 12, 7, '#bfe3f2')
+      r(7, 1, 1, 7, '#ffffff')
+      r(3, 2, 3, 1, '#e8f6fc')
+      r(7, 11, 2, 5, WHITE_GOODS.steel)
+      r(3, 16, 10, 3, WHITE_GOODS.steel)
+      r(4, 17, 8, 1, WHITE_GOODS.steelDark)
+      break
+    }
+    case 'fridge': {
+      // 1.8m tall: twice the height of the counters beside it. Covered in trip magnets.
+      r(0, 0, 16, 31, PALETTE.ink)
+      r(1, 1, 14, 29, '#dfe3e8')
+      r(1, 1, 14, 1, '#f4f6f8')
+      r(1, 11, 14, 1, WHITE_GOODS.steel)
+      r(12, 4, 1, 5, WHITE_GOODS.steelDark)
+      r(12, 14, 1, 8, WHITE_GOODS.steelDark)
+      for (const [x, y, color] of [
+        [3, 3, PALETTE.red],
+        [6, 5, '#3f6b8a'],
+        [3, 7, PALETTE.tape],
+        [8, 2, '#4f7a3a'],
+        [3, 14, '#c9a227'],
+        [7, 16, '#8e2f35'],
+        [4, 20, '#2f5f63'],
+        [8, 23, '#e07a3a'],
+      ] as const) {
+        r(x, y, 2, 2, color)
       }
-      r(1, 15, 14, 1, PALETTE.shadow)
+      r(5, 13, 5, 4, PALETTE.paper)
+      r(0, 31, 16, 1, PALETTE.shadow)
+      break
+    }
+    case 'kitchentable': {
+      disc(ctx, ox + 16, oy + 13, 12, PALETTE.ink)
+      disc(ctx, ox + 16, oy + 13, 11, '#c4955e')
+      disc(ctx, ox + 16, oy + 12, 4, '#e8e4da')
+      r(13, 10, 2, 2, PALETTE.red)
+      r(17, 11, 2, 2, '#e8c95a')
+      r(15, 25, 2, 6, PALETTE.woodDark)
+      r(11, 30, 10, 2, PALETTE.woodDark)
+      break
+    }
+    // --- Bedroom ----------------------------------------------------------------
+    case 'bed': {
+      r(0, 2, 48, 14, PALETTE.ink)
+      r(1, 3, 46, 12, '#7d5634')
+      r(1, 3, 46, 1, PALETTE.woodHighlight)
+      r(1, 14, 46, 64, PALETTE.ink)
+      r(2, 15, 44, 10, '#f4ecd8')
+      r(5, 16, 16, 7, '#ffffff')
+      r(27, 16, 16, 7, '#ffffff')
+      r(5, 22, 16, 1, '#e3d9c4')
+      r(27, 22, 16, 1, '#e3d9c4')
+      r(2, 25, 44, 52, '#6f8fa8')
+      r(2, 25, 44, 4, '#8fb0c8')
+      for (let y = 33; y < 75; y += 8) r(2, y, 44, 1, '#64829a')
+      r(1, 77, 46, 3, PALETTE.woodDark)
+      break
+    }
+    case 'nightstand': {
+      r(2, 5, 12, 10, PALETTE.ink)
+      r(3, 6, 10, 8, PALETTE.wood)
+      r(3, 9, 10, 1, PALETTE.woodDark)
+      r(7, 11, 2, 1, PALETTE.brass)
+      r(5, 0, 6, 4, '#f0d9a0')
+      r(5, 0, 6, 1, '#fff1c8')
+      r(7, 4, 2, 1, PALETTE.ink)
+      r(2, 15, 12, 1, PALETTE.shadow)
+      break
+    }
+    case 'wardrobe': {
+      r(0, 0, 32, 32, PALETTE.ink)
+      r(1, 1, 30, 30, '#c9b38f')
+      r(1, 1, 30, 2, '#dcc8a4')
+      r(15, 3, 2, 28, '#a8946f')
+      r(12, 14, 1, 5, PALETTE.woodDark)
+      r(19, 14, 1, 5, PALETTE.woodDark)
+      break
+    }
+    case 'rugbed':
+      drawRug(ctx, ox, oy, 80, 32, { edge: '#5f7a64', field: '#8fae95', trim: '#f4ecd8' })
+      break
+    // --- Bathroom ---------------------------------------------------------------
+    case 'toilet': {
+      r(3, 7, 10, 9, PALETTE.ink)
+      r(4, 8, 8, 7, '#f4f6f8')
+      r(6, 9, 4, 1, WHITE_GOODS.steel)
+      r(3, 16, 10, 12, PALETTE.ink)
+      r(4, 17, 8, 10, '#f4f6f8')
+      r(5, 19, 6, 6, '#dfe6ec')
+      r(3, 28, 10, 1, PALETTE.shadow)
+      break
+    }
+    case 'basin': {
+      r(2, 1, 12, 10, WHITE_GOODS.steel)
+      r(3, 2, 10, 8, '#bfe3f2')
+      r(4, 3, 3, 1, '#e8f6fc')
+      r(7, 11, 2, 4, WHITE_GOODS.steel)
+      r(1, 14, 14, 6, PALETTE.ink)
+      r(2, 15, 12, 4, '#f4f6f8')
+      r(4, 16, 8, 2, '#dfe6ec')
+      r(1, 20, 14, 10, '#c9b38f')
+      r(7, 21, 1, 9, '#a8946f')
+      r(1, 30, 14, 1, PALETTE.shadow)
+      break
+    }
+    case 'shower': {
+      r(0, 0, 32, 32, '#9fc3d6')
+      r(1, 1, 30, 30, '#e8eef2')
+      for (let x = 5; x < 31; x += 6) r(x, 1, 1, 30, '#dfe6ec')
+      disc(ctx, ox + 16, oy + 16, 2, WHITE_GOODS.steelDark)
+      r(0, 31, 32, 1, '#7fa7bd')
+      r(31, 0, 1, 32, '#7fa7bd')
+      break
+    }
+    case 'bathmat': {
+      r(2, 3, 28, 10, '#5f8fa8')
+      r(3, 4, 26, 8, '#7fb0c9')
+      for (let x = 5; x < 28; x += 3) r(x, 4, 1, 8, '#6fa0b9')
       break
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Interaction cues
+
+export const OUTLINE_COLOR = '#fff3c4'
+
+/**
+ * Traces the opaque pixels of `src` (anything over half alpha, so soft drop
+ * shadows don't count) into two canvases one pixel larger on every side: a
+ * one-pixel outline hugging the shape, and the shape itself filled white for
+ * an additive "lit up" pass.
+ */
+export function traceSilhouette(src: HTMLCanvasElement): { outline: HTMLCanvasElement; shine: HTMLCanvasElement } {
+  const { width: w, height: h } = src
+  const alpha = src.getContext('2d')!.getImageData(0, 0, w, h).data
+  const solid = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && alpha[(y * w + x) * 4 + 3] > 128
+  const make = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = w + 2
+    canvas.height = h + 2
+    return canvas
+  }
+  const outline = make()
+  const shine = make()
+  const octx = outline.getContext('2d')!
+  const sctx = shine.getContext('2d')!
+  octx.fillStyle = OUTLINE_COLOR
+  sctx.fillStyle = '#ffffff'
+  for (let y = -1; y <= h; y++) {
+    for (let x = -1; x <= w; x++) {
+      if (solid(x, y)) sctx.fillRect(x + 1, y + 1, 1, 1)
+      else if (solid(x + 1, y) || solid(x - 1, y) || solid(x, y + 1) || solid(x, y - 1)) {
+        octx.fillRect(x + 1, y + 1, 1, 1)
+      }
+    }
+  }
+  return { outline, shine }
+}
+
+/** A 7x7 four-pointed twinkle marking something you can interact with nearby. */
+export function drawSparkle(ctx: Ctx) {
+  rect(ctx, 3, 0, 1, 7, PALETTE.brassLight)
+  rect(ctx, 0, 3, 7, 1, PALETTE.brassLight)
+  rect(ctx, 2, 2, 3, 3, PALETTE.brassLight)
+  rect(ctx, 3, 1, 1, 5, '#ffffff')
+  rect(ctx, 1, 3, 5, 1, '#ffffff')
+}
+
+/** A 7x6 downward chevron that bobs over whatever the visitor is focused on. */
+export function drawFocusArrow(ctx: Ctx) {
+  const rows = ['kkkkkkk', 'kyyyyyk', '.kyyyk.', '..kyk..', '...k...']
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === 'k') rect(ctx, x, y, 1, 1, PALETTE.ink)
+      if (row[x] === 'y') rect(ctx, x, y, 1, 1, y === 1 ? '#fff3c4' : PALETTE.brassLight)
+    }
+  })
+  rect(ctx, 1, 5, 5, 1, PALETTE.shadow)
 }
 
 // ---------------------------------------------------------------------------
@@ -549,6 +879,9 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
 export type Facing = 'down' | 'up' | 'side'
 export type Step = 'idle' | 'a' | 'b'
 export type CharacterName = 'joao' | 'guest'
+
+/** Characters are a tile wide and 1.5 tiles tall (~1.75m against a 2.5m wall). */
+export const CHAR_H = 24
 
 // k outline · s skin · S skin shade · e eye · h hair · f facial hair
 // c cap · C cap brim · j jacket · J jacket hem · t shirt · m camera
@@ -565,10 +898,15 @@ const BODY: Record<Facing, string[]> = {
     '...khssSSsshk...',
     '...kffssssffk...',
     '....kffffffk....',
+    '.....kSSSSk.....',
     '...kjjjttjjjk...',
-    '..kjjjjmmmjjjk..',
-    '..ksjjjmmmjjsk..',
-    '...kJJJJJJJJk...',
+    '..kjjjjttjjjjk..',
+    '..kjjjjmmjjjjk..',
+    '..kjjjjmmjjjjk..',
+    '..kjjjjjjjjjjk..',
+    '..ksjjjjjjjjsk..',
+    '..ksJJJJJJJJsk..',
+    '...kppppppppk...',
   ],
   up: [
     '................',
@@ -581,10 +919,15 @@ const BODY: Record<Facing, string[]> = {
     '...kshhhhhhsk...',
     '....khhhhhhk....',
     '....kSSSSSSk....',
+    '.....kSSSSk.....',
     '...kjjjjjjjjk...',
     '..kjjjjjjjjjjk..',
+    '..kjjjjjjjjjjk..',
+    '..kjjjjjjjjjjk..',
+    '..kjjjjjjjjjjk..',
     '..ksjjjjjjjjsk..',
-    '...kJJJJJJJJk...',
+    '..ksJJJJJJJJsk..',
+    '...kppppppppk...',
   ],
   side: [
     '................',
@@ -597,28 +940,33 @@ const BODY: Record<Facing, string[]> = {
     '....khssssssk...',
     '....khhfffffk...',
     '.....kfffffk....',
+    '......kSSk......',
+    '.....kjjjjk.....',
     '....kjjjjjjk....',
     '....kjjjjmmk....',
+    '....kjjjjjjk....',
+    '....kjjsjjjk....',
     '....kjjsjjjk....',
     '....kJJJJJJk....',
+    '.....kppppk.....',
   ],
 }
 
 const LEGS: Record<Facing, Record<Step, string[]>> = {
   down: {
-    idle: ['....kppkkppk....', '....kbbkkbbk....'],
-    a: ['....kbbkkppk....', '........kbbk....'],
-    b: ['....kppkkbbk....', '....kbbk........'],
+    idle: ['....kppkkppk....', '....kppkkppk....', '....kppkkppk....', '....kbbkkbbk....', '................'],
+    a: ['....kppkkppk....', '....kppkkppk....', '....kbbkkppk....', '........kbbk....', '................'],
+    b: ['....kppkkppk....', '....kppkkppk....', '....kppkkbbk....', '....kbbk........', '................'],
   },
   up: {
-    idle: ['....kppkkppk....', '....kbbkkbbk....'],
-    a: ['....kbbkkppk....', '........kbbk....'],
-    b: ['....kppkkbbk....', '....kbbk........'],
+    idle: ['....kppkkppk....', '....kppkkppk....', '....kppkkppk....', '....kbbkkbbk....', '................'],
+    a: ['....kppkkppk....', '....kppkkppk....', '....kbbkkppk....', '........kbbk....', '................'],
+    b: ['....kppkkppk....', '....kppkkppk....', '....kppkkbbk....', '....kbbk........', '................'],
   },
   side: {
-    idle: ['.....kppk.......', '.....kbbbk......'],
-    a: ['....kpk.kpk.....', '...kbbk.kbbk....'],
-    b: ['.....kppk.......', '......kbbbk.....'],
+    idle: ['.....kppk.......', '.....kppk.......', '.....kppk.......', '.....kbbbk......', '................'],
+    a: ['.....kppk.......', '....kpkkpk......', '...kpk..kpk.....', '..kbbk..kbbk....', '................'],
+    b: ['.....kppk.......', '.....kppk.......', '.....kppk.......', '......kbbbk.....', '................'],
   },
 }
 
@@ -653,7 +1001,7 @@ export function drawCharacter(
   const bob = step === 'idle' ? 0 : 1
   const rows = [...BODY[facing], ...LEGS[facing][step]]
   // Soft shadow under the feet.
-  rect(ctx, ox + 4, oy + 15, 8, 1, PALETTE.shadow)
+  rect(ctx, ox + 3, oy + CHAR_H - 2, 10, 2, PALETTE.shadow)
   rows.forEach((row, y) => {
     const dy = y < BODY[facing].length ? bob : 0
     for (let x = 0; x < row.length; x++) {

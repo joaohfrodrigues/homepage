@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { HouseBridge, Hint, InteractAction } from './bridge'
-import { furnishHouse, propTiles, type Furnishings, type Interactable } from './furnishings'
+import { furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
   MAP_HEIGHT,
@@ -11,23 +11,29 @@ import {
   isFloorCell,
   roomAt,
   roomBelow,
+  roomOf,
   wallPartAt,
+  type Direction,
   type Point,
   type RoomId,
 } from './layout'
 import { isOnMap, projectToMap } from './map-projection'
 import {
-  FIREPLACE_FIRE,
   LIGHT_SOURCES,
-  MAP_TABLE,
+  MAP_WALL,
+  CHAR_H,
   FACINGS,
   PROP_SIZES,
   STEPS,
-  SERVER_LEDS,
+  DESK_LEDS,
   drawCharacter,
+  drawFocusArrow,
+  drawSparkle,
+  traceSilhouette,
   drawDoorway,
   drawFloor,
   drawFrontDoor,
+  drawSideDoorway,
   drawProp,
   drawWallCap,
   drawWallFace,
@@ -43,8 +49,6 @@ export interface HouseSceneConfig {
   startRoom: RoomId
   fontFamily: string
 }
-
-type Direction = 'up' | 'down' | 'left' | 'right'
 
 const DELTAS: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -89,7 +93,20 @@ export class HouseScene extends Phaser.Scene {
   private npc!: Walker
   private npcLabel!: Phaser.GameObjects.Text
   private keys!: Record<string, Phaser.Input.Keyboard.Key>
-  private highlight!: Phaser.GameObjects.Graphics
+  /** Per-interactable focus outline, "lit up" overlay and nearby sparkle. */
+  private cues = new Map<
+    string,
+    {
+      outline: Phaser.GameObjects.Image
+      shine: Phaser.GameObjects.Image
+      sparkle: Phaser.GameObjects.Image
+      bounds: { x: number; y: number; w: number; h: number }
+    }
+  >()
+  private npcOutline!: Phaser.GameObjects.Sprite
+  private focusArrow!: Phaser.GameObjects.Image
+  private focused: Target | null = null
+  private reducedMotion = false
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -134,7 +151,7 @@ export class HouseScene extends Phaser.Scene {
     this.addLabels()
     this.addAmbience()
 
-    this.highlight = this.add.graphics().setDepth(5)
+    this.bakeCues()
 
     const start = getRoom(this.cfg.startRoom).spawn
     this.player = this.addWalker('guest', start, this.spawnFacing(this.cfg.startRoom))
@@ -145,6 +162,10 @@ export class HouseScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(20)
     this.syncNpcLabel()
+    this.npcOutline = this.add
+      .sprite(this.npc.sprite.x, this.npc.sprite.y, 'house-chars-outline', 'joao-down-idle')
+      .setOrigin(0.5, 1)
+      .setVisible(false)
 
     this.setupCamera()
     this.setupInput()
@@ -159,7 +180,8 @@ export class HouseScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.unsubscribers.forEach((off) => off()))
   }
 
-  update() {
+  update(time: number) {
+    this.animateCues(time)
     if (!this.inputEnabled || this.player.moving) return
 
     const direction = this.heldDirection() ?? this.queuedStep
@@ -217,7 +239,9 @@ export class HouseScene extends Phaser.Scene {
         if (cell === '.') {
           drawFloor(ctx, ox, oy, roomAt(x, y)?.floor ?? 'wood', x, y)
         } else if (cell === 'F') {
-          drawFrontDoor(ctx, ox, oy)
+          drawFrontDoor(ctx, ox, oy, cellAt(x - 1, y) === 'F' ? 'right' : 'left')
+        } else if (cell === 'd') {
+          drawSideDoorway(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'wood', roomAt(x + 1, y)?.floor ?? 'wood', x, y)
         } else {
           const part = wallPartAt(x, y)
           if (part === 'cap' || !below) {
@@ -245,25 +269,25 @@ export class HouseScene extends Phaser.Scene {
       }
     }
 
-    this.drawTableMap(ctx)
+    this.drawWallMap(ctx)
     texture.refresh()
     this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
   }
 
-  /** The trip map spread over the study's map table, one pin per trip. */
-  private drawTableMap(ctx: CanvasRenderingContext2D) {
-    const table = this.propAt('maptable')
-    if (!table) return
+  /** The trip map in its frame on the study wall, one pin per trip. */
+  private drawWallMap(ctx: CanvasRenderingContext2D) {
+    const frame = this.propAt('wallmap')
+    if (!frame) return
     const map = this.textures.get('europe-wall').getSourceImage() as HTMLImageElement
-    const ox = table.x * TILE + MAP_TABLE.x
-    const oy = table.y * TILE + MAP_TABLE.y
-    ctx.drawImage(map, ox, oy, MAP_TABLE.w, MAP_TABLE.h)
+    const ox = frame.x * TILE + MAP_WALL.x
+    const oy = frame.y * TILE + MAP_WALL.y
+    ctx.drawImage(map, ox, oy, MAP_WALL.w, MAP_WALL.h)
     for (const trip of this.cfg.trips) {
       const stop = trip.stops[0]
       if (!stop || !isOnMap(stop.lat, stop.lon)) continue
       const pos = projectToMap(stop.lat, stop.lon)
-      const px = ox + Math.round(pos.x * (MAP_TABLE.w - 1))
-      const py = oy + Math.round(pos.y * (MAP_TABLE.h - 1))
+      const px = ox + Math.round(pos.x * (MAP_WALL.w - 1))
+      const py = oy + Math.round(pos.y * (MAP_WALL.h - 1))
       ctx.fillStyle = '#2a2233'
       ctx.fillRect(px - 1, py - 1, 3, 3)
       ctx.fillStyle = '#e04434'
@@ -273,18 +297,39 @@ export class HouseScene extends Phaser.Scene {
 
   private bakeCharacters() {
     const who: CharacterName[] = ['guest', 'joao']
-    const texture = this.textures.createCanvas('house-chars', FACINGS.length * STEPS.length * TILE, who.length * TILE)!
+    const texture = this.textures.createCanvas('house-chars', FACINGS.length * STEPS.length * TILE, who.length * CHAR_H)!
     const ctx = texture.getContext()
     who.forEach((name, row) => {
       FACINGS.forEach((facing, fi) => {
         STEPS.forEach((step, si) => {
           const col = fi * STEPS.length + si
-          drawCharacter(ctx, col * TILE, row * TILE, name, facing, step)
-          texture.add(`${name}-${facing}-${step}`, 0, col * TILE, row * TILE, TILE, TILE)
+          drawCharacter(ctx, col * TILE, row * CHAR_H, name, facing, step)
+          texture.add(`${name}-${facing}-${step}`, 0, col * TILE, row * CHAR_H, TILE, CHAR_H)
         })
       })
     })
     texture.refresh()
+
+    // Matching outline frames (1px larger each side) for João's focus cue.
+    const OUT_W = TILE + 2
+    const OUT_H = CHAR_H + 2
+    const outlines = this.textures.createCanvas('house-chars-outline', FACINGS.length * STEPS.length * OUT_W, who.length * OUT_H)!
+    const frame = document.createElement('canvas')
+    frame.width = TILE
+    frame.height = CHAR_H
+    const frameCtx = frame.getContext('2d')!
+    who.forEach((name, row) => {
+      FACINGS.forEach((facing, fi) => {
+        STEPS.forEach((step, si) => {
+          const col = fi * STEPS.length + si
+          frameCtx.clearRect(0, 0, TILE, CHAR_H)
+          drawCharacter(frameCtx, 0, 0, name, facing, step)
+          outlines.getContext().drawImage(traceSilhouette(frame).outline, col * OUT_W, row * OUT_H)
+          outlines.add(`${name}-${facing}-${step}`, 0, col * OUT_W, row * OUT_H, OUT_W, OUT_H)
+        })
+      })
+    })
+    outlines.refresh()
 
     for (const name of who) {
       for (const facing of FACINGS) {
@@ -341,7 +386,7 @@ export class HouseScene extends Phaser.Scene {
     return this.furnishings.decor.find((item) => item.kind === 'prop' && item.prop === name)
   }
 
-  /** The cosy bits that move: fire, warm light pools and the server's LEDs. */
+  /** The cosy bits: warm light pools under lamps and screens, and the Pi's blinking LEDs. */
   private addAmbience() {
     const glow = this.textures.createCanvas('glow', 64, 64)!
     const gctx = glow.getContext()
@@ -356,45 +401,21 @@ export class HouseScene extends Phaser.Scene {
       if (item.kind !== 'prop') continue
       const light = LIGHT_SOURCES[item.prop]
       if (!light) continue
-      const pool = this.add
+      this.add
         .image(item.x * TILE + light.x, item.y * TILE + light.y, 'glow')
         .setDisplaySize(light.radius * 2, light.radius * 2)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(item.prop === 'tv' ? 0.35 : 0.7)
         .setDepth(30)
-      if (item.prop === 'fireplace') {
-        this.tweens.add({ targets: pool, alpha: 0.45, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-      }
     }
 
-    const fireplace = this.propAt('fireplace')
-    if (fireplace) {
-      const flames = this.add.graphics().setDepth(1)
-      const fx = fireplace.x * TILE + FIREPLACE_FIRE.x
-      const bottom = fireplace.y * TILE + FIREPLACE_FIRE.y + FIREPLACE_FIRE.h
-      const colors = [0xe0662b, 0xf2a43a, 0xffe08a]
-      const draw = () => {
-        flames.clear()
-        for (let i = 0; i < FIREPLACE_FIRE.w; i += 2) {
-          const centre = 1 - Math.abs(i - FIREPLACE_FIRE.w / 2) / (FIREPLACE_FIRE.w / 2)
-          const height = Math.round((2 + centre * (FIREPLACE_FIRE.h - 3)) * (0.6 + Math.random() * 0.4))
-          colors.forEach((color, layer) => {
-            const h = Math.max(0, height - layer * 3)
-            flames.fillStyle(color, 1)
-            flames.fillRect(fx + i, bottom - h - 2, 2, h)
-          })
-        }
-      }
-      draw()
-      this.time.addEvent({ delay: 120, loop: true, callback: draw })
-    }
-
-    const rack = this.propAt('serverrack')
+    // The Pi's disk enclosure on the study desk.
+    const rack = this.propAt('desk')
     if (rack) {
       const leds = this.add.graphics().setDepth(1)
       const blink = () => {
         leds.clear()
-        for (const led of SERVER_LEDS) {
+        for (const led of DESK_LEDS) {
           const on = Math.random() > 0.25
           leds.fillStyle(on ? 0x4cd964 : 0x1d4d2a, 1)
           leds.fillRect(rack.x * TILE + led.x, rack.y * TILE + led.y, 1, 1)
@@ -409,12 +430,153 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
+  private decorTiles(item: Decor): Point[] {
+    return item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+  }
+
+  /**
+   * Interaction cues: for every interactable, trace the silhouette of the
+   * furniture it's made of into an outline and a "lit up" overlay, plus a
+   * sparkle shown while the visitor is close by.
+   */
+  private bakeCues() {
+    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    const small = (name: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
+      const texture = this.textures.createCanvas(name, w, h)!
+      draw(texture.getContext())
+      texture.refresh()
+    }
+    small('cue-sparkle', 7, 7, drawSparkle)
+    small('cue-arrow', 7, 6, drawFocusArrow)
+
+    const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
+    for (const object of this.furnishings.interactables) {
+      const keys = new Set(object.tiles.map(key))
+      const parts = this.furnishings.decor.filter(
+        (item) => item.solid && this.decorTiles(item).some((tile) => keys.has(key(tile))),
+      )
+      const rects =
+        parts.length > 0
+          ? parts.map((item) => ({
+              x: item.x * TILE,
+              y: item.y * TILE,
+              ...(item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }),
+            }))
+          : object.tiles.map((tile) => ({ x: tile.x * TILE, y: tile.y * TILE, w: TILE, h: TILE }))
+      const bx = Math.min(...rects.map((r) => r.x))
+      const by = Math.min(...rects.map((r) => r.y))
+      const bounds = {
+        x: bx,
+        y: by,
+        w: Math.max(...rects.map((r) => r.x + r.w)) - bx,
+        h: Math.max(...rects.map((r) => r.y + r.h)) - by,
+      }
+
+      const source = document.createElement('canvas')
+      source.width = bounds.w
+      source.height = bounds.h
+      const ctx = source.getContext('2d')!
+      if (parts.length === 0) {
+        // Things baked into the walls (the front door) get a plain tile outline.
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, bounds.w, bounds.h)
+      }
+      for (const item of parts) {
+        const ox = item.x * TILE - bx
+        const oy = item.y * TILE - by
+        if (item.kind === 'prop') drawProp(ctx, ox, oy, item.prop)
+        else {
+          const sx = (item.frame % KENNEY_COLUMNS) * 17
+          const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
+          ctx.drawImage(sheet, sx, sy, 16, 16, ox, oy, 16, 16)
+        }
+      }
+
+      const { outline, shine } = traceSilhouette(source)
+      this.textures.addCanvas(`cue-outline-${object.id}`, outline)
+      this.textures.addCanvas(`cue-shine-${object.id}`, shine)
+      this.cues.set(object.id, {
+        bounds,
+        outline: this.add.image(bx - 1, by - 1, `cue-outline-${object.id}`).setOrigin(0).setDepth(6).setVisible(false),
+        shine: this.add
+          .image(bx - 1, by - 1, `cue-shine-${object.id}`)
+          .setOrigin(0)
+          .setDepth(5)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setVisible(false),
+        sparkle: this.add.image(bx + bounds.w - 3, by + 3, 'cue-sparkle').setDepth(7).setVisible(false),
+      })
+    }
+
+    this.focusArrow = this.add.image(0, 0, 'cue-arrow').setOrigin(0.5, 1).setDepth(25).setVisible(false)
+  }
+
+  /** Show the focus outline/arrow on `target` and sparkles on anything close by. */
+  private updateCues(target: Target | null) {
+    this.focused = target
+    for (const [id, cue] of this.cues) {
+      const isFocused = target?.kind === 'object' && target.object.id === id
+      cue.outline.setVisible(isFocused)
+      cue.shine.setVisible(isFocused)
+      cue.sparkle.setVisible(this.inputEnabled && !isFocused && this.isNear(id))
+    }
+    this.npcOutline.setVisible(target?.kind === 'npc')
+    this.focusArrow.setVisible(target !== null)
+  }
+
+  /** Within two tiles, and in the same room — walls shouldn't leak sparkles. */
+  private isNear(objectId: string): boolean {
+    const object = this.furnishings.interactables.find((o) => o.id === objectId)!
+    const { x, y } = this.player.tile
+    const here = roomAt(x, y)?.id ?? this.currentRoom
+    if (roomOf(object.tiles)?.id !== here) return false
+    return object.tiles.some((tile) => Math.max(Math.abs(tile.x - x), Math.abs(tile.y - y)) <= 2)
+  }
+
+  /** Per-frame pulse, bob and twinkle for the cues (static under reduced motion). */
+  private animateCues(time: number) {
+    const still = this.reducedMotion
+    const wave = Math.sin(time / 180)
+    let arrowX = 0
+    let arrowY = 0
+    const target = this.focused
+    if (target?.kind === 'object') {
+      const cue = this.cues.get(target.object.id)!
+      cue.outline.setAlpha(still ? 1 : 0.75 + 0.25 * wave)
+      cue.shine.setAlpha(still ? 0.12 : 0.1 + 0.07 * wave)
+      arrowX = cue.bounds.x + cue.bounds.w / 2
+      arrowY = cue.bounds.y - 1
+    } else if (target?.kind === 'npc') {
+      const sprite = this.npc.sprite
+      this.npcOutline
+        .setPosition(sprite.x, sprite.y + 1)
+        .setFrame(sprite.frame.name)
+        .setFlipX(sprite.flipX)
+        .setDepth(sprite.depth + 0.001)
+        .setAlpha(still ? 1 : 0.75 + 0.25 * wave)
+      arrowX = sprite.x
+      arrowY = sprite.y - CHAR_H - 10
+    }
+    if (target) {
+      const bob = still ? 0 : Math.round(Math.sin(time / 160) * 1.5)
+      this.focusArrow.setPosition(Math.round(arrowX), Math.round(arrowY) + bob)
+    }
+    let i = 0
+    for (const cue of this.cues.values()) {
+      if (cue.sparkle.visible) {
+        cue.sparkle.setAlpha(still ? 1 : 0.35 + 0.65 * Math.abs(Math.sin(time / 320 + i * 1.7)))
+      }
+      i++
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Characters and movement
 
   private addWalker(who: CharacterName, tile: Point, facing: Direction): Walker {
     const sprite = this.add
-      .sprite(tile.x * TILE + TILE / 2, tile.y * TILE + TILE / 2, 'house-chars', `${who}-down-idle`)
+      .sprite(tile.x * TILE + TILE / 2, (tile.y + 1) * TILE, 'house-chars', `${who}-down-idle`)
+      .setOrigin(0.5, 1)
       .setDepth(10 + tile.y / 100)
     const walker: Walker = { sprite, who, tile: { ...tile }, facing, moving: false }
     this.setIdle(walker)
@@ -483,7 +645,7 @@ export class HouseScene extends Phaser.Scene {
     this.tweens.add({
       targets: walker.sprite,
       x: target.x * TILE + TILE / 2,
-      y: target.y * TILE + TILE / 2,
+      y: (target.y + 1) * TILE,
       duration,
       onUpdate: () => {
         if (walker === this.npc) this.syncNpcLabel()
@@ -584,7 +746,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private syncNpcLabel() {
-    this.npcLabel.setPosition(Math.round(this.npc.sprite.x), Math.round(this.npc.sprite.y - 8))
+    this.npcLabel.setPosition(Math.round(this.npc.sprite.x), Math.round(this.npc.sprite.y - CHAR_H - 1))
   }
 
   // -------------------------------------------------------------------------
@@ -594,6 +756,12 @@ export class HouseScene extends Phaser.Scene {
     if (this.npc.tile.x === tile.x && this.npc.tile.y === tile.y) return { kind: 'npc' }
     const object = this.objectsByTile.get(key(tile))
     return object ? { kind: 'object', object } : null
+  }
+
+  /** Like targetAt, but João's head (which pokes into the tile above him) counts too. */
+  private pointerTargetAt(tile: Point): Target | null {
+    if (this.npc.tile.x === tile.x && this.npc.tile.y === tile.y + 1) return { kind: 'npc' }
+    return this.targetAt(tile)
   }
 
   private facingTile(): Point {
@@ -637,7 +805,7 @@ export class HouseScene extends Phaser.Scene {
   private handleTap(pointer: Phaser.Input.Pointer) {
     if (!this.inputEnabled) return
     const tile = { x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }
-    const target = this.targetAt(tile)
+    const target = this.pointerTargetAt(tile)
 
     if (target) {
       const tiles = this.targetTiles(target)
@@ -666,7 +834,7 @@ export class HouseScene extends Phaser.Scene {
 
   private handleHover(pointer: Phaser.Input.Pointer) {
     const tile = { x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }
-    this.hoverTarget = this.targetAt(tile)
+    this.hoverTarget = this.pointerTargetAt(tile)
     this.input.setDefaultCursor(this.hoverTarget ? 'pointer' : 'default')
     this.updateHint()
   }
@@ -674,7 +842,7 @@ export class HouseScene extends Phaser.Scene {
   private updateHint() {
     const facing = this.targetAt(this.facingTile())
     const target = this.hoverTarget ?? facing
-    this.drawHighlight(target)
+    this.updateCues(target)
     const hint: Hint | null = target
       ? { label: this.targetLabel(target), hover: this.hoverTarget !== null && target === this.hoverTarget }
       : null
@@ -684,20 +852,6 @@ export class HouseScene extends Phaser.Scene {
     this.cfg.bridge.game.emit('hint', hint)
   }
 
-  private drawHighlight(target: Target | null) {
-    this.highlight.clear()
-    if (!target || !this.inputEnabled) return
-    const tiles = this.targetTiles(target)
-    const xs = tiles.map((t) => t.x)
-    const ys = tiles.map((t) => t.y)
-    const x = Math.min(...xs) * TILE
-    const y = Math.min(...ys) * TILE
-    const w = (Math.max(...xs) + 1) * TILE - x
-    const h = (Math.max(...ys) + 1) * TILE - y
-    this.highlight.lineStyle(1, 0xe8c95a, 0.9)
-    this.highlight.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1)
-  }
-
   private updateRoom() {
     const room = roomAt(this.player.tile.x, this.player.tile.y)
     if (!room || room.id === this.currentRoom) return
@@ -705,9 +859,8 @@ export class HouseScene extends Phaser.Scene {
     this.cfg.bridge.game.emit('room', room.id)
   }
 
-  private spawnFacing(_room: RoomId): Direction {
-    // Every spawn point is just inside a door, looking into the room.
-    return 'up'
+  private spawnFacing(room: RoomId): Direction {
+    return getRoom(room).spawnFacing
   }
 
   private teleport(roomId: RoomId) {
@@ -722,12 +875,12 @@ export class HouseScene extends Phaser.Scene {
         const free = this.neighbours([spawn]).find((t) => this.isWalkable(t.x, t.y, true))
         if (free) {
           this.npc.tile = free
-          this.npc.sprite.setPosition(free.x * TILE + TILE / 2, free.y * TILE + TILE / 2)
+          this.npc.sprite.setPosition(free.x * TILE + TILE / 2, (free.y + 1) * TILE)
           this.syncNpcLabel()
         }
       }
       this.player.tile = { ...spawn }
-      this.player.sprite.setPosition(spawn.x * TILE + TILE / 2, spawn.y * TILE + TILE / 2)
+      this.player.sprite.setPosition(spawn.x * TILE + TILE / 2, (spawn.y + 1) * TILE)
       this.player.sprite.setDepth(10 + spawn.y / 100)
       this.player.facing = this.spawnFacing(roomId)
       this.setIdle(this.player)

@@ -1,46 +1,58 @@
 export const TILE = 16
 
+/** Real-world size of one tile. Furniture and rooms are sized from this. */
+export const METRES_PER_TILE = 0.5
+
 /**
- * Floor plan of the house, one character per 16px tile:
+ * Floor plan of the apartment, one character per 16px tile (50cm):
  *   #  wall (rendered as a cap or a wall face depending on what's below it)
  *   .  floor
- *   D  open doorway (walkable)
+ *   D  doorway through a north wall (walkable)
+ *   d  doorway through a side wall (walkable)
  *   F  front door
  *
  * A wall run directly above a floor renders as a two-tile-high wall face, so
  * every room's north wall is two rows of `#` (or `D` for its door).
  *
- * Kept to Pokémon-house proportions: two cosy rooms upstairs of a mudroom,
- * each holding several topics as furniture rather than one room per topic.
+ * A Lisbon-style T2 of about 75m²: bedroom, bathroom and study off a 1m-wide
+ * corridor, and the entrance hall opening onto the living room and kitchen.
  */
 export const FLOOR_PLAN = [
-  '#########################',
-  '#########################',
-  '#########################',
-  '#...........#...........#',
-  '#...........#...........#',
-  '#...........#...........#',
-  '#...........#...........#',
-  '#...........#...........#',
-  '#...........#...........#',
-  '#...........#...........#',
-  '######D###########D######',
-  '######D###########D######',
-  '#.......................#',
-  '#.......................#',
-  '#.......................#',
-  '#.......................#',
-  '#.......................#',
-  '############F############',
+  '##########################',
+  '##########################',
+  '##########################',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '#........#....#..........#',
+  '####DD#####DD######DD#####',
+  '####DD#####DD######DD#####',
+  '#........................#',
+  '#........................#',
+  '###############DD#########',
+  '###############DD#########',
+  '#............#....#......#',
+  '#............d....d......#',
+  '#............d....d......#',
+  '#............#....#......#',
+  '#............#....#......#',
+  '#............#....#......#',
+  '#............#....#......#',
+  '#............#....#......#',
+  '###############FF#########',
 ]
 
 export const MAP_WIDTH = FLOOR_PLAN[0].length
 export const MAP_HEIGHT = FLOOR_PLAN.length
 
-export type RoomId = 'entry' | 'study' | 'living'
+export type RoomId = 'hall' | 'corridor' | 'living' | 'kitchen' | 'study' | 'bedroom' | 'bathroom'
 
-export type FloorKind = 'wood' | 'checker' | 'parquet'
-export type WallKind = 'cream' | 'rose' | 'library'
+export type FloorKind = 'wood' | 'checker' | 'parquet' | 'tile' | 'bath'
+export type WallKind = 'cream' | 'rose' | 'library' | 'sage' | 'bath' | 'tile'
+export type Direction = 'up' | 'down' | 'left' | 'right'
 
 export interface Point {
   x: number
@@ -57,35 +69,88 @@ export interface Room {
   floor: FloorKind
   wall: WallKind
   spawn: Point
+  spawnFacing: Direction
+  /** Rooms with something to see get their own entry in the directory list. */
+  listed: boolean
 }
 
 export const ROOMS: Room[] = [
   {
-    id: 'entry',
-    name: 'Mudroom',
-    blurb: 'Front door, letterbox, and the running and hiking kit.',
-    rect: { x: 1, y: 12, w: 23, h: 5 },
+    id: 'hall',
+    name: 'Entrance hall',
+    blurb: 'Front door, the post, and the running and hiking kit.',
+    rect: { x: 14, y: 16, w: 4, h: 8 },
     floor: 'checker',
     wall: 'rose',
-    spawn: { x: 12, y: 16 },
+    spawn: { x: 15, y: 23 },
+    spawnFacing: 'up',
+    listed: true,
   },
   {
-    id: 'study',
-    name: 'Study',
-    blurb: 'Map table, bookshelves, the home server and the camera.',
-    rect: { x: 1, y: 3, w: 11, h: 7 },
-    floor: 'parquet',
-    wall: 'library',
-    spawn: { x: 6, y: 9 },
+    id: 'corridor',
+    name: 'Corridor',
+    blurb: 'Bedroom, bathroom and study open off it.',
+    rect: { x: 1, y: 12, w: 24, h: 2 },
+    floor: 'wood',
+    wall: 'cream',
+    spawn: { x: 16, y: 13 },
+    spawnFacing: 'up',
+    listed: false,
   },
   {
     id: 'living',
     name: 'Living room',
-    blurb: 'The TV, the drum kit — and usually João.',
-    rect: { x: 13, y: 3, w: 11, h: 7 },
+    blurb: 'The TV, the dining table — and usually João.',
+    rect: { x: 1, y: 16, w: 12, h: 8 },
     floor: 'wood',
     wall: 'cream',
-    spawn: { x: 18, y: 9 },
+    spawn: { x: 12, y: 17 },
+    spawnFacing: 'left',
+    listed: true,
+  },
+  {
+    id: 'kitchen',
+    name: 'Kitchen',
+    blurb: 'Coffee, and a fridge covered in trip magnets.',
+    rect: { x: 19, y: 16, w: 6, h: 8 },
+    floor: 'tile',
+    wall: 'tile',
+    spawn: { x: 19, y: 17 },
+    spawnFacing: 'right',
+    listed: false,
+  },
+  {
+    id: 'study',
+    name: 'Study',
+    blurb: 'Wall map, bookshelves, the home server, camera and drums.',
+    rect: { x: 15, y: 3, w: 10, h: 7 },
+    floor: 'parquet',
+    wall: 'library',
+    spawn: { x: 19, y: 9 },
+    spawnFacing: 'up',
+    listed: true,
+  },
+  {
+    id: 'bedroom',
+    name: 'Bedroom',
+    blurb: 'Off limits, mostly.',
+    rect: { x: 1, y: 3, w: 8, h: 7 },
+    floor: 'wood',
+    wall: 'sage',
+    spawn: { x: 4, y: 9 },
+    spawnFacing: 'up',
+    listed: false,
+  },
+  {
+    id: 'bathroom',
+    name: 'Bathroom',
+    blurb: 'Second door on the left.',
+    rect: { x: 10, y: 3, w: 4, h: 7 },
+    floor: 'bath',
+    wall: 'bath',
+    spawn: { x: 11, y: 9 },
+    spawnFacing: 'up',
+    listed: false,
   },
 ]
 
@@ -107,7 +172,7 @@ export function cellAt(x: number, y: number): string {
 /** Tiles the player can stand on, ignoring furniture and characters. */
 export function isFloorCell(x: number, y: number): boolean {
   const cell = cellAt(x, y)
-  return cell === '.' || cell === 'D'
+  return cell === '.' || cell === 'D' || cell === 'd'
 }
 
 export type WallPart = 'cap' | 'upper' | 'lower'
@@ -126,6 +191,15 @@ export function wallPartAt(x: number, y: number): WallPart {
 export function roomBelow(x: number, y: number): Room | undefined {
   for (let dy = 1; dy <= 2; dy++) {
     const room = roomAt(x, y + dy)
+    if (room) return room
+  }
+  return undefined
+}
+
+/** The room a piece of furniture belongs to, including things hung on a wall face. */
+export function roomOf(tiles: Point[]): Room | undefined {
+  for (const tile of tiles) {
+    const room = roomAt(tile.x, tile.y) ?? roomBelow(tile.x, tile.y) ?? roomAt(tile.x, tile.y - 1)
     if (room) return room
   }
   return undefined

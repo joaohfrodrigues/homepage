@@ -15,9 +15,13 @@ interface Props {
 }
 
 const ROOM_COLORS: Record<RoomId, string> = {
-  entry: '#e7bfb4',
-  study: '#7f9f88',
+  hall: '#e7bfb4',
+  corridor: '#cdb48c',
   living: '#d9b98c',
+  kitchen: '#d2ccc1',
+  study: '#7f9f88',
+  bedroom: '#b9c8b2',
+  bathroom: '#c9dbe3',
 }
 
 /** The front-door directory and the M-key minimap: the fast path through the house. */
@@ -61,7 +65,7 @@ export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: 
         <FloorPlan currentRoom={currentRoom} onTeleport={onTeleport} />
 
         <div className="mt-6 grid gap-6 sm:grid-cols-3">
-          {ROOMS.map((room) => (
+          {ROOMS.filter((room) => room.listed).map((room) => (
             <section key={room.id}>
               <RoomButton room={room} current={room.id === currentRoom} onClick={() => onTeleport(room.id)} />
               <ul className="mt-1 flex flex-col">
@@ -84,7 +88,7 @@ export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: 
                     </Link>
                   </li>
                 )}
-                {room.id === 'entry' && (
+                {room.id === 'hall' && (
                   <li>
                     <button
                       type="button"
@@ -92,7 +96,7 @@ export function DirectoryPanel({ currentRoom, onTeleport, onContact, onClose }: 
                       className="flex w-full items-baseline justify-between gap-2 px-3 py-1 text-left text-sm hover:bg-[#ebe0c8]"
                     >
                       <span>Contact</span>
-                      <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">Letterbox</span>
+                      <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">The post</span>
                     </button>
                   </li>
                 )}
@@ -186,7 +190,7 @@ function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; on
       })}
       {FLOOR_PLAN.flatMap((row, y) =>
         [...row].map((cell, x) =>
-          cell === 'D' || cell === 'F' ? (
+          cell === 'D' || cell === 'd' || cell === 'F' ? (
             <rect
               key={`${x},${y}`}
               x={x}

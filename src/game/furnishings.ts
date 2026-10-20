@@ -71,77 +71,120 @@ export function furnishHouse(): Furnishings {
     decor.push(item)
     return propTiles(item)
   }
-  const topicItem = (id: TopicId, tiles: Point[]) =>
-    interactables.push({ id, label: getTopic(id).item, tiles, action: topicAction(id) })
+  const topicItem = (id: TopicId, tiles: Point[], extra?: { key: string; label: string }) =>
+    interactables.push({
+      id: extra?.key ?? id,
+      label: extra?.label ?? getTopic(id).item,
+      tiles,
+      action: topicAction(id),
+    })
+  const paintings = [...K.paintings, ...K.landscapes]
 
-  // --- Study: a cosy library around the map table --------------------------
-  prop('rug', 3, 4, false)
-  topicItem('writing', [1, 2, 3, 4].flatMap((x) => prop('bookshelf', x, 2)))
-  prop('fireplace', 6, 1)
-  topicItem('home-server', [...prop('desk', 8, 2), ...prop('serverrack', 10, 2)])
-  kenney(K.plant, 11, 3, true)
-  topicItem('trips', prop('maptable', 4, 5))
-  prop('armchair', 9, 6)
-  prop('floorlamp', 10, 5)
-  topicItem('camera', prop('camerastand', 1, 6))
-  kenney(K.plantSmall, 1, 9, true)
-  kenney(K.plant, 11, 9, true)
+  // Rugs first: decor is drawn in order, and furniture stands on them.
+  prop('rugbed', 2, 7, false)
+  prop('rugstudy', 18, 5, false)
+  prop('rugliving', 2, 17, false)
 
-  // --- Living room ----------------------------------------------------------
-  prop('rugteal', 15, 4, false)
-  topicItem('watching', prop('tv', 17, 2))
-  kenney(K.landscapes[0], 14, 2)
-  kenney(K.landscapes[1], 21, 2)
-  kenney(K.plant, 13, 3, true)
-  kenney(K.plant, 23, 3, true)
-  prop('sofa', 16, 7)
-  topicItem('drums', prop('drums', 21, 6))
-  kenney(K.plantSmall, 13, 9, true)
+  // --- Bedroom (4 × 3.5m) -------------------------------------------------------
+  prop('bed', 3, 2)
+  prop('nightstand', 2, 3)
+  prop('nightstand', 6, 3)
+  prop('wardrobe', 7, 2)
+  kenney(K.landscapes[2], 1, 2)
+  kenney(K.plantSmall, 8, 9, true)
 
-  // --- Mudroom --------------------------------------------------------------
-  kenney(K.runnerH.left, 2, 14)
-  for (let x = 3; x < 22; x++) kenney(K.runnerH.mid, x, 14)
-  kenney(K.runnerH.right, 22, 14)
-  topicItem('running', [...prop('medalboard', 2, 10), ...prop('shoerack', 2, 12)])
-  topicItem('hiking', [...prop('coathooks', 20, 10), ...prop('boots', 21, 12)])
-  kenney(K.mirror, 9, 11)
-  kenney(K.paintings[4], 15, 11)
+  // --- Bathroom (2 × 3.5m) ------------------------------------------------------
+  prop('toilet', 10, 2)
+  prop('basin', 11, 2)
+  prop('shower', 12, 3)
+  prop('bathmat', 11, 7, false)
+
+  // --- Study (5 × 3.5m) ---------------------------------------------------------
+  topicItem('writing', [15, 16, 17, 18].flatMap((x) => prop('bookshelf', x, 2)))
+  topicItem('trips', prop('wallmap', 19, 1))
+  topicItem('home-server', prop('desk', 22, 2))
+  prop('officechair', 23, 4)
+  prop('armchair', 15, 6)
+  prop('floorlamp', 17, 6)
+  topicItem('camera', prop('camerastand', 24, 5))
+  topicItem('drums', prop('drums', 23, 7))
+  kenney(K.plant, 15, 9, true)
+  kenney(K.plantSmall, 24, 9, true)
+
+  // --- Corridor (1m wide) -------------------------------------------------------
+  kenney(K.runnerH.left, 2, 13)
+  for (let x = 3; x < 23; x++) kenney(K.runnerH.mid, x, 13)
+  kenney(K.runnerH.right, 23, 13)
+  ;[2, 8, 15, 23].forEach((x, i) => kenney(paintings[(i * 2) % paintings.length], x, 11))
+  kenney(K.plant, 1, 12, true)
+  kenney(K.plant, 24, 12, true)
+
+  // --- Living room (6 × 4m) -----------------------------------------------------
+  topicItem('watching', prop('tv', 3, 14))
+  kenney(K.landscapes[0], 9, 15)
+  kenney(K.landscapes[1], 11, 15)
+  prop('coffeetable', 4, 18)
+  prop('sofa', 3, 20)
+  prop('floorlamp', 7, 20)
+  prop('diningtable', 9, 19)
+  prop('chair', 9, 18)
+  prop('chair', 11, 18)
+  prop('chairup', 9, 21)
+  prop('chairup', 11, 21)
   kenney(K.plant, 1, 16, true)
-  kenney(K.plant, 23, 16, true)
+  kenney(K.plant, 1, 23, true)
 
-  prop('doormat', 12, 16, false)
-  prop('letterbox', 11, 16)
+  // --- Kitchen (3 × 4m) ---------------------------------------------------------
+  prop('counter', 19, 15)
+  prop('coffeecounter', 20, 15)
+  prop('stove', 21, 15)
+  prop('sink', 22, 15)
+  prop('counter', 23, 15)
+  topicItem('trips', prop('fridge', 24, 15), { key: 'fridge', label: 'Fridge magnets — every trip' })
+  prop('kitchentable', 20, 19)
+  prop('chair', 20, 18)
+  prop('chairup', 21, 21)
+  kenney(K.plantSmall, 24, 23, true)
+
+  // --- Entrance hall (2 × 4m) ---------------------------------------------------
+  topicItem('hiking', [...prop('coathooks', 14, 14), ...prop('boots', 14, 16)])
+  topicItem('running', [...prop('medalhanger', 17, 14), ...prop('shoerack', 17, 16)])
+  prop('console', 14, 21)
   interactables.push({
     id: 'letterbox',
-    label: 'Letterbox — get in touch',
-    tiles: [{ x: 11, y: 16 }],
+    label: 'Post on the console — get in touch',
+    tiles: [{ x: 14, y: 21 }],
     action: { type: 'dialogue', id: 'letterbox' },
   })
-
   interactables.push({
     id: 'directory',
-    label: 'House directory',
-    tiles: prop('signboard', 14, 15),
+    label: 'Floor plan — house directory',
+    tiles: [{ x: 14, y: 22 }],
     action: { type: 'directory' },
   })
-  labels.push({ text: 'DIRECTORY', x: 14 * 16 + 8, y: 15 * 16 - 4 })
-
+  prop('doormat', 15, 23, false)
+  kenney(K.plantSmall, 17, 23, true)
   interactables.push({
     id: 'front-door',
     label: 'Front door',
-    tiles: [{ x: 12, y: 17 }],
+    tiles: [
+      { x: 15, y: 24 },
+      { x: 16, y: 24 },
+    ],
     action: { type: 'dialogue', id: 'front-door' },
   })
 
-  // Room names over the doorways, read from the mudroom.
-  labels.push({ text: 'STUDY', x: 6 * 16 + 8, y: 10 * 16 + 2 })
-  labels.push({ text: 'LIVING ROOM', x: 18 * 16 + 8, y: 10 * 16 + 2 })
+  // Room names over the doorways, read from the corridor.
+  labels.push({ text: 'BEDROOM', x: 5 * 16, y: 10 * 16 + 2 })
+  labels.push({ text: 'BATHROOM', x: 12 * 16, y: 10 * 16 + 2 })
+  labels.push({ text: 'STUDY', x: 20 * 16, y: 10 * 16 + 2 })
+  labels.push({ text: 'HALL', x: 16 * 16, y: 14 * 16 + 2 })
 
   return {
     decor,
     interactables,
     labels,
-    npcStart: { x: 19, y: 5 },
-    npcArea: { x: 13, y: 4, w: 11, h: 6 },
+    npcStart: { x: 8, y: 17 },
+    npcArea: { x: 1, y: 17, w: 12, h: 7 },
   }
 }

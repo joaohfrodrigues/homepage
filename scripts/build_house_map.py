@@ -3,10 +3,10 @@
 Usage:
     curl -sLO https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_land.geojson
     python scripts/build_house_map.py ne_50m_land.geojson public/house/europe-map.png 176 100
-    python scripts/build_house_map.py ne_50m_land.geojson public/house/europe-map-wall.png 52 30
+    python scripts/build_house_map.py ne_50m_land.geojson public/house/europe-map-wall.png 42 24
 
-The large map is the travel-map overlay; the small one lies on the study's
-map table in-game.
+The large map is the travel-map overlay; the small one hangs on the study's
+wall in-game.
 
 Land polygons come from Natural Earth (public domain). The projection constants
 must stay in sync with src/game/map-projection.ts, which places trip pins on

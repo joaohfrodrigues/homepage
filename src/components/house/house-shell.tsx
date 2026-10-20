@@ -19,7 +19,7 @@ interface Props {
 function startRoomFor(pathname: string): RoomId {
   if (pathname.startsWith('/photography')) return 'study'
   if (pathname.startsWith('/about')) return 'living'
-  return 'entry'
+  return 'hall'
 }
 
 /**
@@ -213,7 +213,7 @@ export function HouseShell({ data, children }: Props) {
           currentRoom={room}
           onTeleport={teleport}
           onContact={() => {
-            teleport('entry')
+            teleport('hall')
             setDialogue('letterbox')
           }}
           onClose={() => setDirectoryOpen(false)}
