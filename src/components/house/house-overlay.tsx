@@ -70,7 +70,10 @@ export function HouseOverlay({ title, eyebrow, back, width = 'wide', children }:
             {eyebrow && !back && (
               <p className="font-pixel text-xs uppercase tracking-widest text-[#8e2a20]">{eyebrow}</p>
             )}
-            <h1 id="overlay-title" className="font-pixel truncate text-2xl sm:text-3xl">
+            <h1
+              id="overlay-title"
+              className={cn('font-pixel text-balance', title.length > 40 ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl')}
+            >
               {title}
             </h1>
           </div>

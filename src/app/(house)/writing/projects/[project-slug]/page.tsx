@@ -4,11 +4,9 @@ import { getProjectArticles } from '@/lib/articles'
 import { ArticleBody } from '@/components/article-body'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import type { Metadata } from 'next'
-import { PageHeader } from '@/components/ui/page-header'
-import { SectionTitle } from '@/components/ui/section-title'
-import { PageContainer } from '@/components/ui/page-container'
-import { BackLink } from '@/components/ui/back-link'
 import { ArticleListItem } from '@/components/writing/article-list-item'
+import { HouseOverlay } from '@/components/house/house-overlay'
+import { DeskTerminal } from '@/components/house/writing-centerpieces'
 
 export async function generateStaticParams() {
   const slugs = await getAllProjectSlugs()
@@ -50,30 +48,19 @@ export default async function ProjectPage({
   if (!project) notFound()
 
   return (
-    <PageContainer as="main" width="narrow" className="py-12">
-      <div className="mb-6">
-        <BackLink href="/writing" label="Writing" />
-      </div>
-
-      <PageHeader
-        title={project.title}
-        description={project.description}
-        eyebrow="Project"
-        size="compact"
-        align="left"
-        className="mb-8"
-      />
+    <HouseOverlay title={project.title} back={{ href: '/writing', label: 'Bookshelves' }}>
+      <DeskTerminal project={project} articles={articles} />
 
       {(project.body as unknown[]).length > 0 && (
-        <div className="mb-12 prose-sm">
+        <div className="mt-8 prose-sm">
           <ArticleBody document={project.body} />
         </div>
       )}
 
-      <section>
-        <SectionTitle>Articles</SectionTitle>
+      <section className="mt-10" aria-label="Articles">
+        <h2 className="font-pixel mb-6 text-xl">Articles</h2>
         {articles.length === 0 ? (
-          <p className="text-muted-foreground">No articles yet.</p>
+          <p className="text-[#6d6359]">No articles yet.</p>
         ) : (
           <ul className="space-y-8">
             {articles.map((article) => (
@@ -88,6 +75,6 @@ export default async function ProjectPage({
           </ul>
         )}
       </section>
-    </PageContainer>
+    </HouseOverlay>
   )
 }

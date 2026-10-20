@@ -43,7 +43,7 @@ function startRoomFor(pathname: string): RoomId {
     const topic = getHobbyTopic(pathname.slice('/hobbies/'.length))
     if (topic) return topic.room
   }
-  if (pathname.startsWith('/photography')) return 'study'
+  if (pathname.startsWith('/photography') || pathname.startsWith('/writing')) return 'study'
   if (pathname.startsWith('/about')) return 'living'
   return 'hall'
 }

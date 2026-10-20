@@ -46,7 +46,7 @@ export const TOPICS: Topic[] = [
     title: 'Writing & projects',
     look: 'Shelves of notebooks and printouts: articles, and the side projects behind them.',
     href: '/writing',
-    inHouse: false,
+    inHouse: true,
   },
   {
     id: 'home-server',
@@ -55,7 +55,7 @@ export const TOPICS: Topic[] = [
     title: 'Home server series',
     look: 'A Raspberry Pi and its disk enclosure blink away at the end of the desk: media center, VPN gateway and secure tunnel, all written up in a series.',
     href: '/writing/projects/raspberry-pi',
-    inHouse: false,
+    inHouse: true,
   },
   {
     id: 'camera',
