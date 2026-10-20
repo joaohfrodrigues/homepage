@@ -35,6 +35,7 @@
     --radius-sm: calc(var(--radius) - 4px);
 
     --font-serif: var(--font-serif), ui-serif, Georgia, serif;
+    --font-pixel: var(--font-pixel), ui-monospace, monospace;
     --font-lego: var(--font-lego), ui-sans-serif, sans-serif;
     --font-lego-thick: var(--font-lego-thick), ui-sans-serif, sans-serif;
 }
@@ -112,6 +113,37 @@
     /* Legothick.ttf has no lowercase or accented glyphs — always pair it with uppercase */
     .heading-lego {
         @apply font-lego-thick uppercase tracking-tight;
+    }
+
+    /* RPG-style window used by everything layered over the house: a stepped
+       ink / brass / ink border built from spread shadows so the corners stay
+       square, like the pixel art underneath. */
+    .pixel-window {
+        background: #f6efdf;
+        color: #2a2233;
+        box-shadow:
+            0 0 0 3px #2a2233,
+            0 0 0 5px #c9a227,
+            0 0 0 8px #2a2233,
+            0 14px 0 8px rgb(0 0 0 / 0.35);
+    }
+
+    .pixel-button {
+        @apply font-pixel inline-flex items-center gap-2 px-3 py-1.5 text-sm transition-transform;
+        background: #2a2233;
+        color: #f4ecd8;
+        box-shadow: 0 3px 0 #120e18;
+    }
+
+    .pixel-button:hover,
+    .pixel-button:focus-visible {
+        background: #3d3150;
+        outline: none;
+    }
+
+    .pixel-button:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 #120e18;
     }
 }
 

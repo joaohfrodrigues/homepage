@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
-import { getPhotos, getAllCollections, computeAlbumBadges } from '@/lib/photos'
+import { getPhotos, getAllCollections, computeAlbumBadges, getTrips } from '@/lib/photos'
 import { GalleryClient } from '@/components/photography/gallery-client'
 import { AlbumCard } from '@/components/photography/album-card'
+import { HouseOverlay } from '@/components/house/house-overlay'
+import { TravelMap } from '@/components/house/travel-map'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { PageHeader } from '@/components/ui/page-header'
-import { SectionTitle } from '@/components/ui/section-title'
-import { PageContainer } from '@/components/ui/page-container'
 
 const description = 'Street and travel photography.'
 
@@ -26,16 +25,21 @@ export default async function PhotographyPage() {
     getAllCollections(),
   ])
   const badges = computeAlbumBadges(collections)
+  const trips = getTrips()
 
   return (
-    <PageContainer as="main" className="py-16">
-      <PageHeader title="Photography" description={description} className="mb-10" />
+    <HouseOverlay eyebrow="Study · map table" title="Travel map">
+      <p className="mb-5 text-[#6d6359]">
+        {description} Every pin is a trip with its own exhibition — pick one, or browse every photo
+        below.
+      </p>
 
-      {/* Collections — the primary way to browse */}
+      <TravelMap trips={trips} />
+
       {collections.length > 0 && (
-        <section className="mb-12" aria-label="Collections">
-          <SectionTitle>Collections</SectionTitle>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <section className="mt-10" aria-label="Collections">
+          <h2 className="font-pixel mb-4 text-xl">Exhibitions</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {collections.map((col) => (
               <AlbumCard key={col.id} collection={col} badge={badges.get(col.id)} />
             ))}
@@ -43,11 +47,10 @@ export default async function PhotographyPage() {
         </section>
       )}
 
-      {/* All photos — secondary, searchable feed */}
-      <section aria-label="All photos">
-        <SectionTitle>All photos</SectionTitle>
+      <section className="mt-10" aria-label="All photos">
+        <h2 className="font-pixel mb-4 text-xl">All photos</h2>
         <GalleryClient initialPhotos={photos} initialHasMore={hasMore} />
       </section>
-    </PageContainer>
+    </HouseOverlay>
   )
 }

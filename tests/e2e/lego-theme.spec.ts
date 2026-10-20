@@ -1,23 +1,22 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Lego theme', () => {
-  test('home page hero title uses the Lego display font', async ({ page }) => {
-    await page.goto('/')
-    const h1 = page.locator('h1', { hasText: 'Rodrigues' })
-    await expect(h1).toHaveClass(/heading-lego/)
+  test('classic page title uses the Lego display font', async ({ page }) => {
+    await page.goto('/writing')
+    await expect(page.locator('h1').first()).toHaveClass(/heading-lego/)
   })
 
   test('active nav link shows a filled brand-colored brick icon', async ({ page }) => {
-    await page.goto('/photography')
-    const activeLink = page.locator('nav').first().locator('a[href="/photography"]')
+    await page.goto('/writing')
+    const activeLink = page.locator('nav').first().locator('a[href="/writing"]')
     const icon = activeLink.locator('svg')
     await expect(icon).toHaveClass(/opacity-100/)
     await expect(icon).toHaveClass(/text-brand/)
   })
 
   test('inactive nav links keep the brick icon hidden until hover', async ({ page }) => {
-    await page.goto('/photography')
-    const inactiveLink = page.locator('nav').first().locator('a[href="/writing"]')
+    await page.goto('/writing')
+    const inactiveLink = page.locator('nav').first().locator('a[href="/photography"]')
     const icon = inactiveLink.locator('svg')
     await expect(icon).toHaveClass(/opacity-0/)
   })
@@ -29,7 +28,7 @@ test.describe('Lego theme', () => {
   })
 
   test('footer renders the Lego badge divider', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/writing')
     const divider = page.locator('footer > div').first().locator('svg')
     await expect(divider).toBeVisible()
   })

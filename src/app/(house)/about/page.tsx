@@ -4,9 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import { getPage } from '@/lib/pages'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
-import { LegoBricksIllustration } from '@/components/ui/lego-bricks-illustration'
-import { PageHeader } from '@/components/ui/page-header'
-import { PageContainer } from '@/components/ui/page-container'
+import { HouseOverlay } from '@/components/house/house-overlay'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -28,15 +26,9 @@ export default function AboutPage() {
   if (!page) notFound()
 
   return (
-    <PageContainer width="narrow" className="py-16">
+    <HouseOverlay eyebrow="Living room" title="About João" width="narrow">
       <PersonJsonLd />
-      <PageHeader
-        title="About"
-        icon={<LegoBricksIllustration className="h-14 w-14 text-brand shrink-0" />}
-        align="left"
-        className="mb-8"
-      />
-      <div className="prose prose-neutral dark:prose-invert max-w-none">
+      <div className="prose prose-neutral max-w-none">
         <ReactMarkdown
           components={{
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,6 +45,6 @@ export default function AboutPage() {
           {page.content}
         </ReactMarkdown>
       </div>
-    </PageContainer>
+    </HouseOverlay>
   )
 }

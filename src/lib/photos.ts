@@ -340,3 +340,94 @@ export function getCollectionBySlug(slug: string): Collection | null {
   if (!row) return null
   return rowToCollection(row)
 }
+
+export interface TripStop {
+  name: string
+  lat: number
+  lon: number
+  photos: number
+}
+
+/** A collection seen as a trip: where it went, for the travel room's map. */
+export interface Trip {
+  id: string
+  slug: string
+  /** Display title, e.g. "Italy · 2025". */
+  title: string
+  place: string
+  year: number | null
+  totalPhotos: number
+  coverPhotoUrl: string | null
+  /** Clusters of geotagged photos, biggest first. Empty if nothing is geotagged. */
+  stops: TripStop[]
+}
+
+// Photos within the same half-degree cell (~50km) count as one stop.
+const STOP_GRID_DEGREES = 0.5
+
+/**
+ * Every collection as a trip, with its photos' GPS positions clustered into
+ * stops. Newest trips first, by the year prefix in the title.
+ */
+export function getTrips(): Trip[] {
+  const rawTitles = new Map(
+    (getDb().prepare('SELECT id, title FROM collections').all() as RawRow[]).map((r) => [
+      r.id as string,
+      r.title as string,
+    ]),
+  )
+  const located = getDb()
+    .prepare(
+      `SELECT pc.collection_id AS cid, p.location_city AS city, p.location_name AS name,
+        p.location_latitude AS lat, p.location_longitude AS lon
+      FROM photos p JOIN photo_collections pc ON pc.photo_id = p.id
+      WHERE p.location_latitude IS NOT NULL AND p.location_longitude IS NOT NULL
+        AND NOT (p.location_latitude = 0 AND p.location_longitude = 0)`,
+    )
+    .all() as RawRow[]
+
+  type Cluster = { lat: number; lon: number; count: number; names: Map<string, number> }
+  const clusters = new Map<string, Map<string, Cluster>>()
+  for (const row of located) {
+    const cid = row.cid as string
+    const lat = row.lat as number
+    const lon = row.lon as number
+    const key = `${Math.round(lat / STOP_GRID_DEGREES)}:${Math.round(lon / STOP_GRID_DEGREES)}`
+    const byKey = clusters.get(cid) ?? new Map<string, Cluster>()
+    clusters.set(cid, byKey)
+    const cluster = byKey.get(key) ?? { lat: 0, lon: 0, count: 0, names: new Map() }
+    byKey.set(key, cluster)
+    cluster.lat += lat
+    cluster.lon += lon
+    cluster.count++
+    // Prefer the city; fall back to the first part of the place name ("Pico, Açores, …").
+    const name = (row.city as string) || ((row.name as string) || '').split(',')[0].trim()
+    if (name) cluster.names.set(name, (cluster.names.get(name) ?? 0) + 1)
+  }
+
+  const trips = getAllCollections().map((collection): Trip => {
+    const match = (rawTitles.get(collection.id) ?? '').match(/^(\d{2})'\s*(.+)$/)
+    const stops = [...(clusters.get(collection.id)?.values() ?? [])]
+      .map((c) => ({
+        name: [...c.names.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '',
+        lat: c.lat / c.count,
+        lon: c.lon / c.count,
+        photos: c.count,
+      }))
+      .sort((a, b) => b.photos - a.photos)
+    return {
+      id: collection.id,
+      slug: collection.slug,
+      title: collection.title,
+      place: match ? match[2] : collection.title,
+      year: match ? 2000 + Number(match[1]) : null,
+      totalPhotos: collection.totalPhotos,
+      coverPhotoUrl: collection.coverPhotoUrl,
+      stops,
+    }
+  })
+
+  // getAllCollections is already newest-published first and sort is stable,
+  // so trips from the same year keep that order.
+  return trips.sort((a, b) => (b.year ?? 0) - (a.year ?? 0))
+}
