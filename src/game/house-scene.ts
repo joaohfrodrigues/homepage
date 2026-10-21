@@ -169,6 +169,9 @@ export class HouseScene extends Phaser.Scene {
    */
   private queuedStep: Direction | null = null
   private queuedInteract = false
+  /** Held on the touch D-pad; read alongside the keyboard each frame. */
+  private padDirection: Direction | null = null
+  private tapToMove = true
   /** Keys pressed before this (e.g. Enter on a dialogue choice) belong to React. */
   private inputEnabledAt = 0
   private hoverTarget: Target | null = null
@@ -781,6 +784,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private heldDirection(): Direction | null {
+    if (this.padDirection) return this.padDirection
     const k = this.keys
     if (k.LEFT.isDown || k.A.isDown) return 'left'
     if (k.RIGHT.isDown || k.D.isDown) return 'right'
@@ -1253,6 +1257,8 @@ export class HouseScene extends Phaser.Scene {
 
   private handleTap(pointer: Phaser.Input.Pointer) {
     if (!this.inputEnabled) return
+    // With the on-screen pad, touches on the house are just looking around.
+    if (pointer.wasTouch && !this.tapToMove) return
     const tile = { x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }
     const target = this.pointerTargetAt(tile)
 
@@ -1401,6 +1407,18 @@ export class HouseScene extends Phaser.Scene {
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('interactFacing', () => this.interactFacing()),
+      ui.on('padDirection', (direction) => {
+        // A quick tap that lifts before the next frame still takes one step.
+        if (direction) this.queuedStep = direction
+        this.padDirection = direction
+      }),
+      ui.on('tapToMove', (enabled) => {
+        this.tapToMove = enabled
+        if (!enabled) {
+          this.path = []
+          this.pendingTarget = null
+        }
+      }),
       ui.on('inputEnabled', (enabled) => {
         this.inputEnabled = enabled
         this.input.keyboard!.enabled = enabled
@@ -1409,6 +1427,7 @@ export class HouseScene extends Phaser.Scene {
         this.pendingTarget = null
         this.queuedStep = null
         this.queuedInteract = false
+        this.padDirection = null
         if (enabled) {
           this.inputEnabledAt = performance.now()
           this.npcTalking = false
