@@ -365,6 +365,13 @@ const FURNITURE = {
     rugTaupeStudy: { ...borderedRug(48, 403, 432, 2, 2), tint: TAUPE },
     runnerTaupe: { ...borderedRug(48, 403, 432, 2, 0, { thin: true }), tint: TAUPE },
     doormatTaupe: { ...borderedRug(48, 403, 432, 0, 0, { thin: true }), tint: TAUPE },
+    // Bedroom: a teak headboard with white pillows on the modular bed's grey cover and footboard.
+    bedTeakGrey: {
+        parts: [
+            ['4_Bedroom', 96, 928, 32, 16, 0, 0],
+            ['4_Bedroom', 32, 944, 32, 22, 0, 16],
+        ],
+    },
 };
 
 const furnitureSheets = new Map();

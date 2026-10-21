@@ -395,7 +395,6 @@ export type PropName =
   | 'kcounter'
   | 'khob'
   | 'litterbox'
-  | 'bed'
   | 'nightstand'
   | 'alarmclock'
   | 'wardrobeside'
@@ -437,7 +436,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
   khob: { w: 16, h: 16 },
   litterbox: { w: 16, h: 16 },
-  bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
   nightstand: { w: 16, h: 16 },
   alarmclock: { w: 16, h: 16 }, // a nightstand with the alarm clock on it
   wardrobeside: { w: 16, h: 64 }, // 2m of wardrobe along a side wall, seen from above
@@ -999,22 +997,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     // --- Bedroom ----------------------------------------------------------------
-    case 'bed': {
-      r(0, 2, 48, 14, PALETTE.ink)
-      r(1, 3, 46, 12, PALETTE.wood)
-      r(1, 3, 46, 1, PALETTE.woodHighlight)
-      r(1, 14, 46, 64, PALETTE.ink)
-      r(2, 15, 44, 10, '#f4ecd8')
-      r(5, 16, 16, 7, '#ffffff')
-      r(27, 16, 16, 7, '#ffffff')
-      r(5, 22, 16, 1, '#e3d9c4')
-      r(27, 22, 16, 1, '#e3d9c4')
-      r(2, 25, 44, 52, '#6f8fa8')
-      r(2, 25, 44, 4, '#8fb0c8')
-      for (let y = 33; y < 75; y += 8) r(2, y, 44, 1, '#64829a')
-      r(1, 77, 46, 3, PALETTE.woodDark)
-      break
-    }
     case 'nightstand': {
       r(2, 5, 12, 10, PALETTE.ink)
       r(3, 6, 10, 8, PALETTE.wood)

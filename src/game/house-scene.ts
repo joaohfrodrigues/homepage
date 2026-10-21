@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { HouseBridge, Hint, InteractAction } from './bridge'
-import { furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
+import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
   MAP_HEIGHT,
@@ -503,7 +503,7 @@ export class HouseScene extends Phaser.Scene {
     for (const item of this.furnishings.decor) {
       if (item.kind === 'prop' && CHAIR_PROPS.has(item.prop)) propTiles(item).forEach((t) => this.chairs.add(key(t)))
       if (!item.solid) continue
-      const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+      const tiles = decorTiles(item)
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
     for (const object of this.furnishings.interactables) {
@@ -631,10 +631,6 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
-  private decorTiles(item: Decor): Point[] {
-    return item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
-  }
-
   /**
    * Interaction cues: for every interactable, trace the silhouette of the
    * furniture it's made of into an outline and a "lit up" overlay, plus a
@@ -653,7 +649,7 @@ export class HouseScene extends Phaser.Scene {
     for (const object of this.furnishings.interactables) {
       const keys = new Set(object.tiles.map(key))
       const parts = this.furnishings.decor.filter(
-        (item) => item.solid && this.decorTiles(item).some((tile) => keys.has(key(tile))),
+        (item) => item.solid && decorTiles(item).some((tile) => keys.has(key(tile))),
       )
       const rects =
         parts.length > 0

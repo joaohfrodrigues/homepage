@@ -55,6 +55,13 @@ export function propTiles(decor: Extract<Decor, { kind: 'prop' }>): Point[] {
   return tilesOf(decor.x, decor.y, size.w / 16, size.h / 16)
 }
 
+/** The tiles a piece of decor covers: a prop's size, a pack sprite's area, or one tile. */
+export function decorTiles(decor: Decor): Point[] {
+  if (decor.kind === 'prop') return propTiles(decor)
+  if (decor.kind === 'limezu' && decor.area) return tilesOf(decor.x, decor.y, decor.area.w, decor.area.h)
+  return [{ x: decor.x, y: decor.y }]
+}
+
 /** Opening a topic goes straight into its window. */
 export function topicAction(id: TopicId): InteractAction {
   return { type: 'navigate', href: getTopic(id).href }
@@ -71,6 +78,12 @@ export function furnishHouse(): Furnishings {
     decor.push({ kind: 'kenney', frame, x, y, solid })
   const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
     decor.push({ kind: 'limezu', sprite, x, y, solid })
+  /** A solid pack sprite over a w x h area; returns its tiles. */
+  const limezuArea = (sprite: LimezuSprite, x: number, y: number, w: number, h: number) => {
+    const item: Decor = { kind: 'limezu', sprite, x, y, solid: true, area: { w, h } }
+    decor.push(item)
+    return decorTiles(item)
+  }
   /** Rugs lie flat under everything, centred over their area. */
   const rug = (sprite: LimezuSprite, x: number, y: number, w: number, h: number) =>
     decor.push({ kind: 'limezu', sprite, x, y, solid: false, area: { w, h } })
@@ -177,17 +190,18 @@ export function furnishHouse(): Furnishings {
   kenney(paintings[4], 13, 12)
 
   // --- Bedroom (4 × 4m) ---------------------------------------------------------
+  // A double bed against the north wall between two bedside tables.
   interactables.push({
     id: 'bed',
     label: 'Bed — take a nap',
-    tiles: prop('bed', 15, 2),
+    tiles: limezuArea('bedTeakGrey', 15, 3, 2, 2),
     action: { type: 'dialogue', id: 'bed' },
   })
   prop('nightstand', 14, 3)
   interactables.push({
     id: 'alarm',
     label: 'Alarm clock',
-    tiles: prop('alarmclock', 18, 3),
+    tiles: prop('alarmclock', 17, 3),
     action: { type: 'dialogue', id: 'alarm' },
   })
   kenney(K.landscapes[2], 16, 1)
@@ -253,12 +267,12 @@ export function furnishHouse(): Furnishings {
       start: { x: 7, y: 11 },
       perches: [
         ...[4, 5, 6, 7].map((x) => ({ x, y: 8 })), // the sofa seat
-        ...[15, 16, 17].flatMap((x) => [4, 5, 6].map((y) => ({ x, y }))), // the duvet
+        ...[15, 16].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 6, y: 19 }, // the litter box
       ],
       spots: [
         { x: 5, y: 8 }, // sofa
-        { x: 16, y: 5 }, // bed
+        { x: 16, y: 4 }, // bed
         { x: 8, y: 3 }, // under the street window
         { x: 22, y: 7 }, // balcony
         { x: 19, y: 16 }, // the study rug

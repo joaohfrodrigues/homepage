@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { furnishHouse, propTiles } from '../../src/game/furnishings'
+import { decorTiles, furnishHouse } from '../../src/game/furnishings'
 import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point } from '../../src/game/layout'
 import { limezuRect } from '../../src/game/limezu-furniture'
 
@@ -17,8 +17,7 @@ function solidFurniture(): Set<string> {
   const solid = new Set<string>()
   for (const item of furnishHouse().decor) {
     if (!item.solid) continue
-    const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
-    tiles.forEach((tile) => solid.add(key(tile)))
+    decorTiles(item).forEach((tile) => solid.add(key(tile)))
   }
   return solid
 }
