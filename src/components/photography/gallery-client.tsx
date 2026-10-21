@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useTransition } from 'react'
 import { Search } from 'lucide-react'
 import { PhotoGrid } from './photo-grid'
 import { Lightbox } from './lightbox'
+import { useHistoryLayer } from '@/components/house/house-navigation'
 import type { Photo, SortOrder } from '@/lib/photos'
 
 interface Props {
@@ -24,6 +25,10 @@ export function GalleryClient({ initialPhotos, initialHasMore, collectionId }: P
   const isLoadingMore = useRef(false)
   // Track page in a ref so the IntersectionObserver never re-registers just because a page loaded
   const pageRef = useRef(1)
+
+  // Back closes the lightbox rather than the page under it.
+  const closeLightbox = useCallback(() => setLightboxIndex(null), [])
+  useHistoryLayer(lightboxIndex !== null, closeLightbox)
 
   const fetchPhotos = useCallback(
     async (opts: { q: string; s: SortOrder; p: number; append: boolean }) => {
@@ -134,7 +139,7 @@ export function GalleryClient({ initialPhotos, initialHasMore, collectionId }: P
         <Lightbox
           photos={photos}
           index={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
+          onClose={closeLightbox}
           onNavigate={setLightboxIndex}
         />
       )}

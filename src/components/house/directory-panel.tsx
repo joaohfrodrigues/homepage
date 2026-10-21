@@ -7,6 +7,7 @@ import { X } from 'lucide-react'
 import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, type RoomId } from '@/game/layout'
 import { TOPICS } from '@/game/topics'
 import type { PanelId, VisitTarget } from '@/game/bridge'
+import { openPage } from './house-navigation'
 import { useEscapeKey } from './panel-window'
 
 interface Props {
@@ -66,7 +67,7 @@ function EntryRow({
             // New-tab and other modified clicks behave like any link.
             if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
             e.preventDefault()
-            onVisit(entry.target, () => router.push(href, { scroll: false }))
+            onVisit(entry.target, () => openPage(router, href))
           }}
         >
           {content}

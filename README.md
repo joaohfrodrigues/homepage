@@ -65,6 +65,14 @@ A first visit to the home page opens with a welcome card from João: shortcuts t
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
 
+Pages over the house have real URLs, so Back closes them. Panels, dialogue and the photo lightbox
+aren't pages, but each gets a history entry at the same URL while it is open
+(`useHistoryLayer` in `src/components/house/house-navigation.tsx`), so the browser's Back or a
+phone's swipe back closes just that layer instead of leaving the site. Closing one any other way
+steps back over its entry, and a page opened from a panel takes over the panel's entry, so Back
+from that page returns to the house. The welcome card gets no entry: Back from it leaves, as from
+any first page.
+
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 

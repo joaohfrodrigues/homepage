@@ -14,7 +14,7 @@ import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogue
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
-import { HouseNavigationContext } from './house-navigation'
+import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -80,6 +80,8 @@ export function HouseShell({ data, children }: Props) {
   const [room, setRoom] = useState<RoomId | null>(null)
   const [dialogue, setDialogue] = useState<DialogueKey | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
+  // Between a directory pick and the guest reaching its item, which then opens a page or panel.
+  const [visiting, setVisiting] = useState(false)
   const [showControls, setShowControls] = useState(true)
   // Night and outfit only matter once the game has booted client-side, so
   // reading the clock and localStorage in the initializers can't cause a
@@ -106,9 +108,23 @@ export function HouseShell({ data, children }: Props) {
     setShownPathname(pathname)
     if (overlayOpen) {
       setPanel(null)
+      setDialogue(null)
       setWelcome(false)
     }
   }
+
+  // What to open once the guest reaches the item the directory sent them to.
+  const pendingVisit = useRef<{ target: VisitTarget; then: () => void } | null>(null)
+
+  // Back closes the panel or dialogue instead of leaving the house. The
+  // welcome card has no entry of its own: it is the page the visitor landed
+  // on, so Back from it leaves like Back from any first page.
+  useHistoryLayer(dialogue !== null || panel !== null || visiting, () => {
+    setPanel(null)
+    setDialogue(null)
+    setVisiting(false)
+    pendingVisit.current = null
+  })
 
   // The page before this one, to tell whether closing it can just step back.
   const previousPathname = useRef<string | null>(null)
@@ -230,14 +246,13 @@ export function HouseShell({ data, children }: Props) {
     [bridge],
   )
 
-  // What to open once the guest reaches the item the directory sent them to.
-  const pendingVisit = useRef<{ target: VisitTarget; then: () => void } | null>(null)
   useEffect(
     () =>
       bridge.game.on('arrived', (target) => {
         const pending = pendingVisit.current
         if (pending?.target !== target) return
         pendingVisit.current = null
+        setVisiting(false)
         pending.then()
       }),
     [bridge],
@@ -246,6 +261,7 @@ export function HouseShell({ data, children }: Props) {
   const visit = useCallback(
     (target: VisitTarget, then: () => void) => {
       setPanel(null)
+      setVisiting(true)
       pendingVisit.current = { target, then }
       bridge.ui.emit('visit', target)
     },
@@ -288,7 +304,7 @@ export function HouseShell({ data, children }: Props) {
     switch (choice.kind) {
       case 'link':
         setDialogue(null)
-        router.push(choice.href, { scroll: false })
+        openPage(router, choice.href)
         break
       case 'external':
         window.open(choice.href, '_blank', 'noopener,noreferrer')

@@ -186,6 +186,184 @@ test.describe('House', () => {
   })
 })
 
+/** A fresh tab: Back from the first page it loads leaves for here. */
+const BLANK = 'about:blank'
+
+test.describe('Back closes what is open over the house', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('Back from the plain house leaves as usual', async ({ page }) => {
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('Back closes the directory, then leaves', async ({ page }) => {
+    await page.keyboard.press('m')
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
+    await expect(directory).toBeVisible()
+    await page.goBack()
+    await expect(directory).not.toBeVisible()
+    await expect(page).toHaveURL('/')
+    // The house still takes input: the directory opens again.
+    await page.keyboard.press('m')
+    await expect(directory).toBeVisible()
+    await page.goBack()
+    await expect(directory).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  const closings: { name: string; close: (page: Page) => Promise<void> }[] = [
+    { name: 'its close button', close: (page) => page.getByRole('button', { name: 'Close directory' }).click() },
+    { name: 'Escape', close: (page) => page.keyboard.press('Escape') },
+    { name: 'M again', close: (page) => page.keyboard.press('m') },
+    { name: 'a click outside', close: (page) => page.mouse.click(5, 300) },
+    {
+      name: 'a jump to a room',
+      close: (page) =>
+        page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the study' }).click(),
+    },
+  ]
+  for (const { name, close } of closings) {
+    test(`closing the directory with ${name} leaves no history behind`, async ({ page }) => {
+      await page.keyboard.press('m')
+      const directory = page.getByRole('dialog', { name: 'What are you after?' })
+      await expect(directory).toBeVisible()
+      await close(page)
+      await expect(directory).not.toBeVisible()
+      await page.goBack()
+      await expect(page).toHaveURL(BLANK)
+    })
+  }
+
+  test('reopening the directory straight after closing it still gets Back', async ({ page }) => {
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
+    await page.keyboard.press('m')
+    await page.keyboard.press('m')
+    await page.keyboard.press('m')
+    await expect(directory).toBeVisible()
+    await page.goBack()
+    await expect(directory).not.toBeVisible()
+    await expect(page).toHaveURL('/')
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('Back closes the guestbook opened with G, from the HUD or from the directory', async ({ page }) => {
+    const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    await page.keyboard.press('g')
+    await expect(guestbook).toBeVisible()
+    await page.goBack()
+    await expect(guestbook).not.toBeVisible()
+
+    await page.getByRole('button', { name: 'Guestbook' }).click()
+    await expect(guestbook).toBeVisible()
+    await page.goBack()
+    await expect(guestbook).not.toBeVisible()
+
+    // From the directory the guestbook takes over the directory's entry.
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Guestbook/ }).click()
+    await expect(guestbook).toBeVisible()
+    await page.goBack()
+    await expect(guestbook).not.toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'What are you after?' })).not.toBeVisible()
+    await expect(page).toHaveURL('/')
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('switching between the directory and the guestbook keeps one entry', async ({ page }) => {
+    await page.keyboard.press('m')
+    await page.keyboard.press('g')
+    const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    await expect(guestbook).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(guestbook).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('Back closes the kitchen games and the wardrobe', async ({ page }) => {
+    for (const [subject, title] of [
+      [/^Pull a bica/, 'Pull a bica'],
+      [/^Where was this taken\?/, 'Where was this taken?'],
+      [/^Change outfit/, 'Change outfit'],
+    ] as const) {
+      await page.keyboard.press('m')
+      await subjects(page).getByRole('button', { name: subject }).click()
+      const panel = page.getByRole('dialog', { name: title })
+      await expect(panel).toBeVisible()
+      await page.goBack()
+      await expect(panel).not.toBeVisible()
+      await expect(page).toHaveURL('/')
+    }
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('Back closes a dialogue', async ({ page }) => {
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Contact/ }).click()
+    const dialogue = page.getByRole('dialog', { name: /^(Talking to|Notice)/ })
+    await expect(dialogue).toBeVisible()
+    await page.goBack()
+    await expect(dialogue).not.toBeVisible()
+    await expect(page).toHaveURL('/')
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('a page opened from the directory takes its place in history', async ({ page }) => {
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('link', { name: /^About João/ }).click()
+    const about = page.getByRole('dialog', { name: 'About João' })
+    await expect(about).toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL('/')
+    await expect(about).not.toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'What are you after?' })).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('the fridge game’s trip link takes the panel’s place in history', async ({ page }) => {
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Where was this taken\?/ }).click()
+    const guess = page.getByRole('dialog', { name: 'Where was this taken?' })
+    await guess.getByRole('application').click({ position: { x: 100, y: 60 } })
+    await guess.getByRole('button', { name: 'Guess' }).click()
+    await guess.getByRole('link', { name: /trip/ }).click()
+    await expect(page).toHaveURL(/\/photography\/.+/)
+    await expect(guess).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL('/')
+    await expect(guess).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+
+  test('Back steps from a trip to the travel map to the house', async ({ page }) => {
+    await page.getByRole('button', { name: /Directory/ }).click()
+    await subjects(page).getByRole('link', { name: /^Trips & photography/ }).click()
+    const map = page.getByRole('dialog', { name: 'Travel map' })
+    await map.locator('a[href^="/photography/"][aria-label*="photos"]').first().click()
+    await expect(page).toHaveURL(/\/photography\/.+/)
+    await page.goBack()
+    await expect(page).toHaveURL('/photography')
+    await expect(map).toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL('/')
+    await expect(map).not.toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
+  })
+})
+
 test.describe('Welcome card', () => {
   test('a first visit gets the card, and it stays dismissed after a reload', async ({ page }) => {
     await page.goto('/')
@@ -224,6 +402,14 @@ test.describe('Welcome card', () => {
     await page.getByRole('button', { name: 'Close and return to the house' }).click()
     await expect(page).toHaveURL('/')
     await expect(card).not.toBeVisible()
+  })
+
+  test('Back from the card leaves, like Back from any first page', async ({ page }) => {
+    await page.goto('/')
+    const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
+    await page.goBack()
+    await expect(page).toHaveURL(BLANK)
   })
 
   test('a deep link skips the card', async ({ page }) => {
