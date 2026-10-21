@@ -298,7 +298,31 @@ console.log(
 // ---------------------------------------------------------------------------
 // Furniture
 
-/** Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels. */
+/**
+ * A plain modular rug from the Bedroom sheet grown to (30 + 16 * cols) x (30 + 14 * bands):
+ * its 30x30 piece split down the middle, with the 16-wide slice to its right repeated
+ * between the halves and its middle rows repeated between the top and bottom. The
+ * repeats start on odd rows and columns so the fabric's dither lines up.
+ */
+function plainRug(mx, my, cols, bands) {
+    const columns = [[mx, 15], ...Array(cols).fill([mx + 31, 16]), [mx + 15, 15]];
+    const parts = [];
+    let dx = 0;
+    for (const [sx, w] of columns) {
+        parts.push(['4_Bedroom', sx, my, w, 15, dx, 0]);
+        for (let b = 0; b < bands; b++)
+            parts.push(['4_Bedroom', sx, my + 7, w, 14, dx, 15 + 14 * b]);
+        parts.push(['4_Bedroom', sx, my + 15, w, 15, dx, 15 + 14 * bands]);
+        dx += w;
+    }
+    return { parts };
+}
+
+/**
+ * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, or
+ * { parts: [[sheet, x, y, w, h, dx, dy], ...] } assembled from several pieces,
+ * with `rotate: true` to turn the result a quarter turn clockwise.
+ */
 const FURNITURE = {
     palm: ['1_Generic', 212, 408, 23, 31],
     pottedTree: ['1_Generic', 215, 457, 18, 31],
@@ -310,37 +334,72 @@ const FURNITURE = {
     sprig: ['1_Generic', 227, 984, 9, 13],
     topiary: ['1_Generic', 115, 1040, 10, 14],
     snakePlant: ['2_LivingRoom', 2, 86, 12, 14],
+    // Rugs
+    rugTerracotta: plainRug(161, 1073, 4, 2),
+    rugBeige: ['1_Generic', 3, 706, 43, 28],
+    rugPurple: ['1_Generic', 196, 339, 56, 58],
+    runnerPurple: { parts: [['1_Generic', 176, 387, 16, 58, 0, 0]], rotate: true },
+    doormatGrey: ['1_Generic', 131, 211, 41, 17],
 };
 
 const furnitureSheets = new Map();
-const shelfWidth = 128;
-const placed = {};
-let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
-for (const [name, [sheet, x, y, w, h]] of Object.entries(FURNITURE)) {
+function sheetFor(sheet) {
     if (!furnitureSheets.has(sheet)) {
         const file = readdirSync(THEMES).find(f => f.startsWith(`${sheet}_`));
         furnitureSheets.set(sheet, decode(join(THEMES, file)));
     }
-    if (cursorX + w > shelfWidth)
+    return furnitureSheets.get(sheet);
+}
+
+/** Draws one sprite's parts into its own image, turned if asked. */
+function assemble(entry) {
+    const spec = Array.isArray(entry) ? { parts: [[...entry, 0, 0]] } : entry;
+    const parts = spec.parts.map(([sheet, x, y, w, h, dx, dy]) => ({ sheet, x, y, w, h, dx, dy }));
+    const w = Math.max(...parts.map(part => part.dx + part.w));
+    const h = Math.max(...parts.map(part => part.dy + part.h));
+    const img = { w, h, px: new Uint8Array(w * h * 4) };
+    for (const part of parts) {
+        const sheet = sheetFor(part.sheet);
+        for (let row = 0; row < part.h; row++) {
+            const start = ((part.y + row) * sheet.w + part.x) * 4;
+            img.px.set(
+                sheet.px.subarray(start, start + part.w * 4),
+                ((part.dy + row) * w + part.dx) * 4
+            );
+        }
+    }
+    if (!spec.rotate) return img;
+    const turned = { w: h, h: w, px: new Uint8Array(w * h * 4) };
+    for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+            const from = (y * w + x) * 4;
+            turned.px.set(img.px.subarray(from, from + 4), (x * turned.w + (h - 1 - y)) * 4);
+        }
+    return turned;
+}
+
+const shelfWidth = 128;
+const placed = {};
+let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
+for (const [name, entry] of Object.entries(FURNITURE)) {
+    const img = assemble(entry);
+    if (cursorX + img.w > shelfWidth)
         [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
-    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y } };
-    cursorX += w + 1;
-    shelfHeight = Math.max(shelfHeight, h);
+    placed[name] = { x: cursorX, y: cursorY, w: img.w, h: img.h, img };
+    cursorX += img.w + 1;
+    shelfHeight = Math.max(shelfHeight, img.h);
 }
 const furniture = {
     w: shelfWidth,
     h: cursorY + shelfHeight,
     px: new Uint8Array(shelfWidth * (cursorY + shelfHeight) * 4),
 };
-for (const { x, y, w, h, from } of Object.values(placed)) {
-    const sheet = furnitureSheets.get(from.sheet);
-    for (let row = 0; row < h; row++) {
-        const start = ((from.y + row) * sheet.w + from.x) * 4;
+for (const { x, y, w, h, img } of Object.values(placed)) {
+    for (let row = 0; row < h; row++)
         furniture.px.set(
-            sheet.px.subarray(start, start + w * 4),
+            img.px.subarray(row * w * 4, (row + 1) * w * 4),
             ((y + row) * furniture.w + x) * 4
         );
-    }
 }
 encode('public/house/limezu-furniture.png', furniture);
 writeFileSync(

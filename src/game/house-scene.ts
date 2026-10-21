@@ -612,7 +612,7 @@ export class HouseScene extends Phaser.Scene {
 
   /** Where a piece of decor draws, in world pixels. */
   private decorRect(item: Decor) {
-    if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y)
+    if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y, item.area?.w, item.area?.h)
     const size = item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }
     return { x: item.x * TILE, y: item.y * TILE, ...size }
   }

@@ -9,14 +9,14 @@ const K = {
   mirror: 400,
   paintings: [340, 341, 342, 367, 368, 369],
   landscapes: [343, 370, 397],
-  runnerH: { left: 243, mid: 244, right: 245 },
 }
 
 export type Decor =
   | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
   | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
   /** A Modern Interiors sprite standing on one tile; tall ones rise over the tile above. */
-  | { kind: 'limezu'; sprite: LimezuSprite; x: number; y: number; solid: boolean }
+  /** A Modern Interiors sprite centred over `area` tiles (one by default). */
+  | { kind: 'limezu'; sprite: LimezuSprite; x: number; y: number; solid: boolean; area?: { w: number; h: number } }
 
 export interface Interactable {
   id: string
@@ -71,6 +71,9 @@ export function furnishHouse(): Furnishings {
     decor.push({ kind: 'kenney', frame, x, y, solid })
   const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
     decor.push({ kind: 'limezu', sprite, x, y, solid })
+  /** Rugs lie flat under everything, centred over their area. */
+  const rug = (sprite: LimezuSprite, x: number, y: number, w: number, h: number) =>
+    decor.push({ kind: 'limezu', sprite, x, y, solid: false, area: { w, h } })
   const prop = (name: PropName, x: number, y: number, solid = true) => {
     const item: Decor = { kind: 'prop', prop: name, x, y, solid }
     decor.push(item)
@@ -81,9 +84,11 @@ export function furnishHouse(): Furnishings {
   const paintings = [...K.paintings, ...K.landscapes]
 
   // Rugs first: decor is drawn in order, and furniture stands on them.
-  prop('rugbed', 14, 7, false)
-  prop('rugstudy', 18, 15, false)
-  prop('rugliving', 2, 4, false)
+  rug('rugBeige', 14, 7, 5, 2)
+  rug('rugPurple', 18, 15, 4, 4)
+  rug('rugTerracotta', 2, 4, 6, 4)
+  rug('runnerPurple', 12, 14, 4, 1)
+  rug('doormatGrey', 9, 19, 2, 1)
 
   // --- Living room (5 × 5m) -----------------------------------------------------
   // Two street windows either side of a terracotta chimney breast; the TV hangs on
@@ -156,7 +161,6 @@ export function furnishHouse(): Furnishings {
     tiles: prop('guestbook', 10, 18),
     action: { type: 'panel', panel: 'guestbook' },
   })
-  prop('doormat', 9, 19, false)
   limezu('fern', 8, 19)
   interactables.push({
     id: 'front-door',
@@ -169,10 +173,6 @@ export function furnishHouse(): Furnishings {
   })
 
   // --- Corridor (2 × 1m) --------------------------------------------------------
-  kenney(K.runnerH.left, 12, 14)
-  kenney(K.runnerH.mid, 13, 14)
-  kenney(K.runnerH.mid, 14, 14)
-  kenney(K.runnerH.right, 15, 14)
   kenney(paintings[0], 12, 12)
   kenney(paintings[4], 13, 12)
 

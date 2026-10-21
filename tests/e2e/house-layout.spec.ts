@@ -81,7 +81,10 @@ test.describe('House layout', () => {
     const reachable = reachableFromFrontDoor()
     const exposed = furnishHouse()
       .decor.filter((item) => item.kind === 'limezu')
-      .filter((item) => limezuRect(item.sprite, item.x, item.y).h > TILE + 4 && reachable.has(key({ x: item.x, y: item.y - 1 })))
+      .filter((item) => {
+        const overhang = item.y * TILE - limezuRect(item.sprite, item.x, item.y, item.area?.w, item.area?.h).y
+        return overhang > 4 && reachable.has(key({ x: item.x, y: item.y - 1 }))
+      })
       .map((item) => `${item.sprite} at ${item.x},${item.y}`)
     expect(exposed).toEqual([])
   })

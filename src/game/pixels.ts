@@ -365,7 +365,6 @@ export function drawSideDoorway(ctx: Ctx, ox: number, oy: number, left: FloorKin
 // down, so their height reads against the 2.5m wall behind them.
 
 export type PropName =
-  | 'doormat'
   | 'console'
   | 'coatstand'
   | 'boots'
@@ -379,14 +378,12 @@ export type PropName =
   | 'floorlamp'
   | 'camerastand'
   | 'drums'
-  | 'rugstudy'
   | 'chimney'
   | 'tv'
   | 'recordplayer'
   | 'cattoy'
   | 'sofa'
   | 'coffeetable'
-  | 'rugliving'
   | 'diningtable'
   | 'chair'
   | 'chairup'
@@ -402,7 +399,6 @@ export type PropName =
   | 'nightstand'
   | 'alarmclock'
   | 'wardrobeside'
-  | 'rugbed'
   | 'toilet'
   | 'basin'
   | 'shower'
@@ -411,7 +407,6 @@ export type PropName =
   | 'cafechair'
 
 export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
-  doormat: { w: 32, h: 16 }, // 1m × 0.5m
   console: { w: 16, h: 32 }, // 0.5m deep × 1m long, against the side wall
   coatstand: { w: 16, h: 32 },
   boots: { w: 16, h: 16 },
@@ -425,14 +420,12 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   floorlamp: { w: 16, h: 32 },
   camerastand: { w: 16, h: 32 },
   drums: { w: 32, h: 32 }, // an electronic kit is about 1m × 1m
-  rugstudy: { w: 64, h: 48 },
   chimney: { w: 64, h: 32 }, // a 2m terracotta chimney breast
   tv: { w: 64, h: 48 }, // 55" screen over a 2m media unit
   recordplayer: { w: 16, h: 32 }, // a 1m sideboard along a side wall with the turntable on top
   cattoy: { w: 16, h: 16 },
   sofa: { w: 64, h: 32 }, // 3-seater, 2m × 0.9m
   coffeetable: { w: 32, h: 16 },
-  rugliving: { w: 96, h: 64 }, // 3m × 2m
   diningtable: { w: 48, h: 32 }, // seats four
   chair: { w: 16, h: 16 },
   chairup: { w: 16, h: 16 },
@@ -448,7 +441,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   nightstand: { w: 16, h: 16 },
   alarmclock: { w: 16, h: 16 }, // a nightstand with the alarm clock on it
   wardrobeside: { w: 16, h: 64 }, // 2m of wardrobe along a side wall, seen from above
-  rugbed: { w: 80, h: 32 },
   toilet: { w: 16, h: 32 },
   basin: { w: 16, h: 32 },
   shower: { w: 32, h: 32 }, // 1m × 1m tray
@@ -480,24 +472,6 @@ function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
   for (let dy = -r; dy <= r; dy++) {
     const half = Math.round(Math.sqrt(r * r - dy * dy))
     rect(ctx, cx - half, cy + dy, half * 2, 1, color)
-  }
-}
-
-function drawRug(ctx: Ctx, ox: number, oy: number, w: number, h: number, c: { edge: string; field: string; trim: string }) {
-  rect(ctx, ox + 2, oy, w - 4, h, c.edge)
-  rect(ctx, ox + 3, oy + 1, w - 6, h - 2, c.field)
-  rect(ctx, ox + 6, oy + 4, w - 12, h - 8, c.trim)
-  rect(ctx, ox + 7, oy + 5, w - 14, h - 10, c.field)
-  const cx = ox + w / 2
-  const cy = oy + h / 2
-  const size = Math.min(8, Math.floor(h / 2) - 6)
-  for (let i = 0; i < size; i++) {
-    rect(ctx, cx - i, cy - size + i, i * 2, 1, c.trim)
-    rect(ctx, cx - i, cy + size - 1 - i, i * 2, 1, c.trim)
-  }
-  for (let y = oy + 3; y < oy + h - 3; y += 3) {
-    rect(ctx, ox, y, 2, 1, c.trim)
-    rect(ctx, ox + w - 2, y, 2, 1, c.trim)
   }
 }
 
@@ -564,12 +538,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
     // --- Entrance hall --------------------------------------------------------
-    case 'doormat': {
-      r(1, 3, 30, 11, '#3a2a20')
-      r(2, 4, 28, 9, '#5c4a3a')
-      for (let y = 5; y < 12; y += 2) r(3, y, 26, 1, '#4c3c2f')
-      break
-    }
     case 'console': {
       // A narrow table along the side wall: the day's post, and a framed plan of the flat.
       r(1, 0, 14, 31, PALETTE.ink)
@@ -812,9 +780,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(19, 26, 1, 3, PALETTE.red)
       break
     }
-    case 'rugstudy':
-      drawRug(ctx, ox, oy, 64, 48, { edge: '#5c1f24', field: '#8e2f35', trim: '#c9a227' })
-      break
     // --- Living room ----------------------------------------------------------
     case 'chimney': {
       // A limewashed terracotta chimney breast standing proud of the wall, from
@@ -916,9 +881,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(11, 10, 1, 1, '#e05a48')
       break
     }
-    case 'rugliving':
-      drawRug(ctx, ox, oy, 96, 64, { edge: '#7a4a33', field: '#ebe0c9', trim: '#b75d3c' })
-      break
     case 'diningtable': {
       r(1, 1, 46, 26, PALETTE.ink)
       r(2, 2, 44, 22, PALETTE.wood)
@@ -1091,9 +1053,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(13, 1, 1, 62, PALETTE.shadow)
       break
     }
-    case 'rugbed':
-      drawRug(ctx, ox, oy, 80, 32, { edge: '#5f7a64', field: '#8fae95', trim: '#f4ecd8' })
-      break
     // --- Bathroom ---------------------------------------------------------------
     case 'toilet': {
       r(3, 7, 10, 9, PALETTE.ink)
