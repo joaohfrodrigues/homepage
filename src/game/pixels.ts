@@ -397,6 +397,8 @@ export type PropName =
   | 'fridge'
   | 'kcounter'
   | 'khob'
+  | 'burners'
+  | 'magnets'
   | 'litterbox'
   | 'bed'
   | 'nightstand'
@@ -443,6 +445,8 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   fridge: { w: 16, h: 32 },
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
   khob: { w: 16, h: 16 },
+  burners: { w: 16, h: 16 },
+  magnets: { w: 16, h: 16 },
   litterbox: { w: 16, h: 16 },
   bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
   nightstand: { w: 16, h: 16 },
@@ -1015,6 +1019,37 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
         r(cx, cy, 1, 1, '#1b1b20')
       }
       r(5, 7, 1, 1, '#e05a48')
+      break
+    }
+    case 'burners': {
+      // A black glass hob set into the grey counter top.
+      r(2, 1, 11, 14, '#1b1b20')
+      r(2, 1, 11, 1, '#3a3a44')
+      for (const [cx, cy] of [
+        [4, 4],
+        [10, 4],
+        [4, 11],
+        [10, 11],
+      ] as const) {
+        disc(ctx, ox + cx, oy + cy, 2, '#3a3a44')
+        r(cx, cy, 1, 1, '#1b1b20')
+      }
+      r(7, 7, 1, 1, '#e05a48')
+      break
+    }
+    case 'magnets': {
+      // Trip magnets and a photo stuck on the fridge door.
+      for (const [x, y, color] of [
+        [3, 1, PALETTE.red],
+        [9, 2, '#3f6b8a'],
+        [4, 6, PALETTE.tape],
+        [10, 8, '#4f7a3a'],
+        [3, 12, '#c9a227'],
+      ] as const) {
+        r(x, y, 2, 2, color)
+      }
+      r(6, 9, 4, 4, PALETTE.paper)
+      r(7, 10, 2, 2, '#3f6b8a')
       break
     }
     case 'litterbox': {

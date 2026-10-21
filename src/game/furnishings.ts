@@ -125,27 +125,28 @@ export function furnishHouse(): Furnishings {
   limezu('tallBush', 10, 3)
 
   // --- Kitchen (3 × 2.5m) -------------------------------------------------------
-  // An L of counters on the two walls without doors: sink and coffee machine
-  // along the north wall, the hob on the west wall away from the sink, and the
-  // fridge at the end of the run by the pocket door, with floor in front of it.
-  prop('counter', 1, 14)
-  prop('sink', 2, 14)
+  // An L of grey counters on the two walls without doors: the hob on the long
+  // west run, the sink and coffee machine on the short north run, and the fridge
+  // at its end by the pocket door, with floor in front of it.
+  limezu('sideCounter', 1, 14, { h: 6 })
+  prop('burners', 1, 16)
+  limezu('kettle', 1, 18, { dy: -4 })
+  limezu('counterLeft', 2, 14)
+  limezu('counterRight', 3, 14)
+  limezu('sink', 2, 14, { dx: 4, dy: -14 })
   interactables.push({
     id: 'coffee',
     label: 'Coffee machine — pull a bica',
-    tiles: prop('coffeecounter', 3, 14),
+    tiles: limezu('espressoMachine', 3, 14, { dx: 1, dy: -14 }),
     action: { type: 'panel', panel: 'bica' },
   })
   interactables.push({
     id: 'fridge',
     label: 'Fridge magnets — where was this taken?',
-    tiles: prop('fridge', 4, 14),
+    tiles: limezu('fridgeSilver', 4, 14),
     action: { type: 'panel', panel: 'geoguess' },
   })
-  prop('kcounter', 1, 16)
-  prop('khob', 1, 17)
-  prop('kcounter', 1, 18)
-  prop('kcounter', 1, 19)
+  prop('magnets', 4, 14, false, -8)
   interactables.push({
     id: 'litterbox',
     label: 'Clean Zeno’s litter box',

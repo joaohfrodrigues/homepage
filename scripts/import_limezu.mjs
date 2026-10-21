@@ -335,7 +335,42 @@ const FURNITURE = {
     wardrobeWhite: ['4_Bedroom', 128, 1575, 31, 41],
     nightstandTeak: ['4_Bedroom', 112, 164, 16, 24],
     seaPainting: ['1_Generic', 66, 219, 28, 13],
+    // Kitchen: grey counter tops on cabinet fronts recoloured from wood to grey
+    counterLeft: {
+        parts: [
+            ['12_Kitchen', 80, 103, 16, 9, 0, 0],
+            ['12_Kitchen', 48, 128, 16, 15, 0, 9, 'grey'],
+        ],
+    },
+    counterRight: {
+        parts: [
+            ['12_Kitchen', 96, 103, 16, 9, 0, 0],
+            ['12_Kitchen', 64, 128, 16, 15, 0, 9, 'grey'],
+        ],
+    },
+    // The run along the west wall, seen from above, ending in a cabinet front.
+    sideCounter: {
+        parts: [
+            ['12_Kitchen', 112, 64, 16, 24, 0, 0],
+            ['12_Kitchen', 112, 88, 16, 16, 0, 24],
+            ['12_Kitchen', 112, 88, 16, 16, 0, 40],
+            ['12_Kitchen', 112, 88, 16, 16, 0, 56],
+            ['12_Kitchen', 112, 88, 16, 16, 0, 72],
+            ['12_Kitchen', 112, 112, 16, 16, 0, 88, 'grey'],
+        ],
+    },
+    sink: ['12_Kitchen', 133, 129, 24, 14],
+    espressoMachine: ['12_Kitchen', 241, 475, 14, 19],
+    kettle: ['12_Kitchen', 197, 483, 11, 10],
+    fridgeSilver: ['12_Kitchen', 176, 375, 16, 36],
 };
+
+/** Turns a wood colour into the kitchen's grey, keeping its shading. */
+function greyPixel(px, i) {
+    if (px[i] + px[i + 1] + px[i + 2] < 200) return;
+    const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    [px[i], px[i + 1], px[i + 2]] = [lum * 0.72, lum * 0.72, lum * 0.88].map(Math.round);
+}
 
 /** Scales a colour towards black, leaving the pack's dark outline alone. */
 function darkenPixel(px, i, amount) {
@@ -349,7 +384,16 @@ function spriteParts(entry) {
         const [sheet, x, y, w, h, darken] = entry;
         return { parts: [{ sheet, x, y, w, h, dx: 0, dy: 0 }], w, h, darken };
     }
-    const parts = entry.parts.map(([sheet, x, y, w, h, dx, dy]) => ({ sheet, x, y, w, h, dx, dy }));
+    const parts = entry.parts.map(([sheet, x, y, w, h, dx, dy, recolor]) => ({
+        sheet,
+        x,
+        y,
+        w,
+        h,
+        dx,
+        dy,
+        recolor,
+    }));
     const w = Math.max(...parts.map(part => part.dx + part.w));
     const h = Math.max(...parts.map(part => part.dy + part.h));
     return { parts, w, h, darken: entry.darken };
@@ -389,6 +433,7 @@ for (const { x, y, parts, darken } of Object.values(placed)) {
                 const to = ((y + part.dy + row) * furniture.w + x + part.dx + col) * 4;
                 furniture.px.set(sheet.px.subarray(from, from + 4), to);
                 if (darken) darkenPixel(furniture.px, to, darken);
+                if (part.recolor === 'grey') greyPixel(furniture.px, to);
             }
         }
     }
