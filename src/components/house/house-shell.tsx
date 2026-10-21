@@ -137,6 +137,7 @@ export function HouseShell({ data, children }: Props) {
         if (action.id === 'joao') updateStats((stats) => stats.chats++)
         else if (action.id === 'bathroom') updateStats((stats) => stats.knocks++)
         else if (action.id === 'zeno') updateStats((stats) => stats.pets++)
+        else if (action.id === 'litterbox-dirty') updateStats((stats) => stats.scoops++)
       }),
     ]
     window.addEventListener('pagehide', flushStats)

@@ -67,9 +67,10 @@ test.describe('House layout', () => {
     expect(blocked).toEqual([])
   })
 
-  test('Zeno can reach all his favourite spots', () => {
+  test('Zeno can reach all his favourite spots, his toy and his litter box', () => {
     const reachable = reachableByZeno()
-    const missed = furnishHouse().zeno.spots.filter((spot) => !reachable.has(key(spot)))
+    const { spots, toy, litterBox } = furnishHouse().zeno
+    const missed = [...spots, toy, litterBox].filter((spot) => !reachable.has(key(spot)))
     expect(missed).toEqual([])
   })
 })

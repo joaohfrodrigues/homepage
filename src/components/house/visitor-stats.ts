@@ -24,6 +24,7 @@ export interface VisitorStats {
   chats: number
   knocks: number
   pets: number
+  scoops: number
   naps: number
   outfits: number
 }
@@ -45,6 +46,7 @@ function emptyStats(): VisitorStats {
     chats: 0,
     knocks: 0,
     pets: 0,
+    scoops: 0,
     naps: 0,
     outfits: 0,
   }

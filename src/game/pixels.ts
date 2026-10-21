@@ -1493,3 +1493,11 @@ export function drawHeart(ctx: Ctx) {
     }
   })
 }
+
+/** Three wavy fumes, 9x8, that rise off Zeno's litter box until it's cleaned. */
+export function drawStink(ctx: Ctx) {
+  const rows = ['.g..g..g.', 'g..g..g..', '.g..g..g.', '..g..g..g', '.g..g..g.', 'g..g..g..', '.g..g..g.', '..g..g..g']
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) if (row[x] === 'g') rect(ctx, x, y, 1, 1, '#8fa35a')
+  })
+}

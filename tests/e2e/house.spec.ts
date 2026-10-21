@@ -50,6 +50,9 @@ test.describe('House', () => {
   })
 
   test('hobby items open themed windows with the existing cards', async ({ page }) => {
+    // In dev, the first visit after a change compiles the hobby route, which
+    // can outlast the default 30s on its own.
+    test.slow()
     await page.goto('/hobbies/running')
     const overlay = page.getByRole('dialog', { name: 'Running' })
     await expect(overlay).toBeVisible()

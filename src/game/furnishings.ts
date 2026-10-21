@@ -36,6 +36,10 @@ export interface Furnishings {
     perches: Point[]
     /** Favourite places he trots off to and sits in for a while. */
     spots: Point[]
+    /** Where his toy mouse starts; he bats it around the flat from there. */
+    toy: Point
+    /** His litter box, visited every few minutes. */
+    litterBox: Point
   }
 }
 
@@ -96,7 +100,6 @@ export function furnishHouse(): Furnishings {
   prop('chairup', 3, 12, false)
   // The right-hand side stays clear: it's the way in from the hall.
   prop('recordplayer', 10, 5)
-  prop('cattoy', 7, 10, false)
   kenney(K.plant, 1, 3, true)
   kenney(K.plantSmall, 10, 3, true)
 
@@ -122,7 +125,12 @@ export function furnishHouse(): Furnishings {
   prop('khob', 1, 17)
   prop('kcounter', 1, 18)
   prop('kcounter', 1, 19)
-  prop('litterbox', 6, 19)
+  interactables.push({
+    id: 'litterbox',
+    label: 'Clean Zeno’s litter box',
+    tiles: prop('litterbox', 6, 19),
+    action: { type: 'dialogue', id: 'litterbox-clean' },
+  })
 
   // --- Entrance hall (1.5 × 3.5m), open to the living room ------------------------
   topicItem('running', prop('medalstand', 8, 13))
@@ -247,8 +255,6 @@ export function furnishHouse(): Furnishings {
         { x: 6, y: 19 }, // the litter box
       ],
       spots: [
-        { x: 6, y: 19 }, // litter box
-        { x: 7, y: 10 }, // his toy mouse
         { x: 5, y: 8 }, // sofa
         { x: 16, y: 5 }, // bed
         { x: 8, y: 3 }, // under the street window
@@ -256,6 +262,8 @@ export function furnishHouse(): Furnishings {
         { x: 19, y: 16 }, // the study rug
         { x: 4, y: 16 }, // waiting by the fridge
       ],
+      toy: { x: 7, y: 10 },
+      litterBox: { x: 6, y: 19 },
     },
   }
 }

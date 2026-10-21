@@ -196,6 +196,7 @@ export function GuestbookPanel({ onClose }: Props) {
             <Stat value={stats.chats} label="chats with João" />
             <Stat value={stats.knocks} label="knocks on the bathroom door" />
             <Stat value={stats.pets} label="pets for Zeno" />
+            <Stat value={stats.scoops} label="litter boxes scooped" />
             <Stat value={stats.naps} label="naps until evening" />
             <Stat value={stats.outfits} label="outfit changes" />
           </div>

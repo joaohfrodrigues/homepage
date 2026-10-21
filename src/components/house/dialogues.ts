@@ -104,6 +104,16 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
             lines: ['Zeno, the tuxedo cat, bumps his head into your hand.', 'Prrrrrrrr…'],
             choices: [{ label: 'Scratch behind the ears', kind: 'close' }],
           }
+    case 'litterbox-dirty':
+      return {
+        lines: ['You scoop out Zeno’s litter box. He watches from a safe distance, faintly offended.'],
+        choices: [{ label: 'All fresh again', kind: 'close' }],
+      }
+    case 'litterbox-clean':
+      return {
+        lines: ['Zeno’s litter box is spotless. For now.'],
+        choices: [{ label: 'Leave it be', kind: 'close' }],
+      }
     case 'balcony':
       return house.night
         ? {
