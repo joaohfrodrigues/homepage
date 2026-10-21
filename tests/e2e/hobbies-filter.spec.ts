@@ -67,7 +67,7 @@ test.describe('/hobbies — category filter', () => {
     await page.getByRole('button', { name: 'Photography', exact: true }).click()
 
     await expect(page.getByText('Sony A6600', { exact: true })).toBeVisible()
-    await expect(page.getByText('Sony SEL50F18F 50mm f1.8', { exact: true })).toBeVisible()
+    await expect(page.getByText('Sony SEL50F18', { exact: true })).toBeVisible()
     await expect(page.getByText('Hoka Clifton 10', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Roland TD-02KV', { exact: true })).toHaveCount(0)
   })

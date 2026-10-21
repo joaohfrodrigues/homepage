@@ -35,13 +35,13 @@ export function PhotoGrid({ photos, onPhotoClick }: Props) {
   return (
     <RowsPhotoAlbum
       photos={albumPhotos}
-      spacing={8}
+      spacing={12}
       targetRowHeight={(width) => (width < 640 ? 170 : width < 1024 ? 220 : 260)}
       onClick={({ index }) => onPhotoClick(index)}
       componentsProps={{
         button: {
           className:
-            'group overflow-hidden rounded-sm bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            'pixel-card group overflow-hidden focus:outline-none',
         },
       }}
       render={{

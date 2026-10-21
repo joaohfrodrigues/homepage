@@ -2,8 +2,6 @@ import { METRES_PER_TILE, type RoomId } from '@/game/layout'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
-/** Best scores the kitchen games kept on their own before the guestbook existed. */
-const LEGACY_KEYS = { bica: 'house:bica-best', geoguess: 'house:geoguess-best' }
 
 export type BicaResult = 'perfect' | 'good' | 'under' | 'over'
 
@@ -64,9 +62,6 @@ function load(): VisitorStats {
     if (saved) {
       const parsed = JSON.parse(saved) as Partial<VisitorStats>
       Object.assign(stats, parsed, { bicas: { ...stats.bicas, ...parsed.bicas }, rooms: { ...parsed.rooms } })
-    } else {
-      stats.bicaBestStreak = Number(window.localStorage.getItem(LEGACY_KEYS.bica)) || 0
-      stats.geoBest = Number(window.localStorage.getItem(LEGACY_KEYS.geoguess)) || 0
     }
   } catch {
     // Private mode or a mangled entry: start a fresh page.
@@ -81,8 +76,6 @@ function save() {
   if (!cache) return
   try {
     window.localStorage.setItem(STATS_KEY, JSON.stringify(cache))
-    window.localStorage.removeItem(LEGACY_KEYS.bica)
-    window.localStorage.removeItem(LEGACY_KEYS.geoguess)
   } catch {
     // Private mode: the guestbook lasts until the tab closes.
   }

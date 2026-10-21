@@ -30,7 +30,8 @@ export function TextTile({
   return (
     <div
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-lg bg-muted p-5 transition-transform duration-500 ease-out group-hover:scale-[1.02]',
+        // A faint two-tone dither on parchment, so a card without a photo still reads as pixel art.
+        'relative flex flex-col overflow-hidden bg-[image:repeating-conic-gradient(rgb(42_34_51/0.05)_0_25%,transparent_0_50%)] bg-[length:6px_6px] p-4',
         CARD_ASPECT_RATIO,
         canReveal && 'cursor-pointer'
       )}
@@ -39,19 +40,15 @@ export function TextTile({
       <div className="mt-auto">
         <p
           className={cn(
-            'font-serif leading-tight tracking-tight',
+            'font-pixel leading-tight',
             titleSizeClass(title, showDescription),
             showDescription ? 'line-clamp-2' : 'line-clamp-4'
           )}
         >
           {title}
         </p>
-        {meta && (
-          <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">{meta}</p>
-        )}
-        {showDescription && (
-          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{description}</p>
-        )}
+        {meta && <p className="font-pixel mt-1 text-xs uppercase tracking-widest text-[#8e2a20]">{meta}</p>}
+        {showDescription && <p className="mt-2 line-clamp-2 text-xs text-[#6d6359]">{description}</p>}
       </div>
     </div>
   )

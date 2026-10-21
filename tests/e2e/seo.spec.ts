@@ -30,6 +30,12 @@ test.describe('SEO', () => {
     await expect(page.locator('meta[property="og:image"]')).toHaveCount(1)
   })
 
+  test('favicon route responds with a PNG', async ({ request }) => {
+    const response = await request.get('/icon')
+    expect(response.status()).toBe(200)
+    expect(response.headers()['content-type']).toContain('image/png')
+  })
+
   test('home page has Person JSON-LD', async ({ page }) => {
     await page.goto('/')
     const jsonLd = await page.locator('script[type="application/ld+json"]').textContent()

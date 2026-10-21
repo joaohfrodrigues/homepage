@@ -22,11 +22,6 @@ export interface Topic {
   href: string
   /** Keystatic hobby slugs whose events and gear fill this topic's window. */
   hobbies?: string[]
-  /**
-   * True when `href` opens as a window inside the house. Otherwise the item
-   * describes itself and links out to the classic page until it moves in.
-   */
-  inHouse: boolean
 }
 
 export const TOPICS: Topic[] = [
@@ -37,7 +32,6 @@ export const TOPICS: Topic[] = [
     title: 'Trips & photography',
     look: 'A big map of Europe on the study wall, pinned wherever the camera came along.',
     href: '/photography',
-    inHouse: true,
   },
   {
     id: 'writing',
@@ -46,7 +40,6 @@ export const TOPICS: Topic[] = [
     title: 'Writing & projects',
     look: 'Shelves of notebooks and printouts: articles, and the side projects behind them.',
     href: '/writing',
-    inHouse: true,
   },
   {
     id: 'home-server',
@@ -55,7 +48,6 @@ export const TOPICS: Topic[] = [
     title: 'Home server series',
     look: 'A Raspberry Pi and its disk enclosure blink away at the end of the desk: media center, VPN gateway and secure tunnel, all written up in a series.',
     href: '/writing/projects/raspberry-pi',
-    inHouse: true,
   },
   {
     id: 'camera',
@@ -65,7 +57,6 @@ export const TOPICS: Topic[] = [
     look: 'A Sony a6600 on its tripod by the window, with the 35mm and 50mm f/1.8 lenses on the shelf.',
     href: '/hobbies/photography',
     hobbies: ['photography'],
-    inHouse: true,
   },
   {
     id: 'watching',
@@ -75,7 +66,6 @@ export const TOPICS: Topic[] = [
     look: 'The TV, still warm. A sticky note lists everything recent that scored 8/10 or more.',
     href: '/hobbies/watching',
     hobbies: ['film', 'series'],
-    inHouse: true,
   },
   {
     id: 'drums',
@@ -85,7 +75,6 @@ export const TOPICS: Topic[] = [
     look: 'A Roland TD-02KV electronic kit, ready for the next gig with 404s.',
     href: '/hobbies/drums',
     hobbies: ['drums'],
-    inHouse: true,
   },
   {
     id: 'running',
@@ -95,7 +84,6 @@ export const TOPICS: Topic[] = [
     look: 'Race medals and a bib hang by the door, above a well-worn pair of Hoka Cliftons.',
     href: '/hobbies/running',
     hobbies: ['running'],
-    inHouse: true,
   },
   {
     id: 'hiking',
@@ -105,7 +93,6 @@ export const TOPICS: Topic[] = [
     look: 'A backpack on the coat stand by the door and muddy boots below it — they have been up Pico.',
     href: '/hobbies/hiking',
     hobbies: ['hiking'],
-    inHouse: true,
   },
 ]
 

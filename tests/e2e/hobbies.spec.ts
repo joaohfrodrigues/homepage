@@ -6,6 +6,15 @@ test.describe('/hobbies', () => {
     await expect(page.getByRole('heading', { name: 'Hobbies', level: 1 })).toBeVisible()
   })
 
+  test('opens as a window over the house that links to each hobby window', async ({ page }) => {
+    await page.goto('/hobbies')
+    await expect(page.getByRole('dialog', { name: 'Hobbies' })).toBeVisible()
+
+    await page.getByRole('navigation', { name: 'Hobby windows' }).getByRole('link', { name: /Running/ }).click()
+    await expect(page).toHaveURL(/\/hobbies\/running$/)
+    await expect(page.getByRole('heading', { name: 'Running', level: 1 })).toBeVisible()
+  })
+
   // Every hobby entry has showOnLandingPage: false — they exist only so
   // gear/events/watch items can reference them, and never render their own card.
   test('never renders a hobby-level card for any category', async ({ page }) => {
@@ -39,6 +48,6 @@ test.describe('/hobbies', () => {
   }) => {
     await page.goto('/hobbies')
     await expect(page.getByText('Sony A6600', { exact: true })).toBeVisible()
-    await expect(page.getByText('Sony SEL50F18F 50mm f1.8', { exact: true })).toBeVisible()
+    await expect(page.getByText('Sony SEL50F18', { exact: true })).toBeVisible()
   })
 })

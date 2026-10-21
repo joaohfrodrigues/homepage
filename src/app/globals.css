@@ -1,11 +1,9 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Maps CSS custom properties (some set by next/font, some below) to Tailwind
    theme tokens. Must be `inline` — a plain @theme would re-declare
-   `--font-serif` etc. at :root in terms of themselves, since next/font's
+   `--font-pixel` at :root in terms of themselves, since next/font's
    `variable` option uses the same names as Tailwind's font-family namespace. */
 @theme inline {
     --color-border: hsl(var(--border));
@@ -23,8 +21,6 @@
     --color-muted-foreground: hsl(var(--muted-foreground));
     --color-accent: hsl(var(--accent));
     --color-accent-foreground: hsl(var(--accent-foreground));
-    --color-brand: hsl(var(--brand));
-    --color-brand-foreground: hsl(var(--brand-foreground));
     --color-popover: hsl(var(--popover));
     --color-popover-foreground: hsl(var(--popover-foreground));
     --color-card: hsl(var(--card));
@@ -34,19 +30,7 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
-    --font-serif: var(--font-serif), ui-serif, Georgia, serif;
     --font-pixel: var(--font-pixel-digits), var(--font-pixel), ui-monospace, monospace;
-    --font-lego: var(--font-lego), ui-sans-serif, sans-serif;
-    --font-lego-thick: var(--font-lego-thick), ui-sans-serif, sans-serif;
-}
-
-@utility container {
-    margin-inline: auto;
-    padding-inline: 2rem;
-
-    @media (width >= theme(--breakpoint-2xl)) {
-        max-width: 1400px;
-    }
 }
 
 @layer base {
@@ -71,32 +55,6 @@
         --input: 0 0% 89.8%;
         --ring: 0 0% 3.9%;
         --radius: 0.5rem;
-        --brand: 355 70% 45%;
-        --brand-foreground: 0 0% 98%;
-    }
-
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --brand: 355 65% 58%;
-        --brand-foreground: 0 0% 9%;
     }
 }
 
@@ -110,11 +68,6 @@
 }
 
 @layer components {
-    /* Legothick.ttf has no lowercase or accented glyphs — always pair it with uppercase */
-    .heading-lego {
-        @apply font-lego-thick uppercase tracking-tight;
-    }
-
     /* RPG-style window used by everything layered over the house: a stepped
        ink / brass / ink border built from spread shadows so the corners stay
        square, like the pixel art underneath. */
@@ -126,6 +79,38 @@
             0 0 0 5px #c9a227,
             0 0 0 8px #2a2233,
             0 14px 0 8px rgb(0 0 0 / 0.35);
+    }
+
+    /* Cards share the windows' vocabulary: square corners, an ink outline and a
+       hard offset shadow instead of rounded corners and blur. A card that is a
+       link or button, or sits directly inside a .group link, lifts on hover. */
+    .pixel-card {
+        position: relative;
+        background: #efe3c8;
+        color: #2a2233;
+        box-shadow:
+            0 0 0 2px #2a2233,
+            5px 5px 0 0 rgb(42 34 51 / 0.3);
+        transition:
+            transform 120ms steps(2),
+            box-shadow 120ms steps(2);
+    }
+
+    :is(a, button).pixel-card:hover,
+    .group:hover > .pixel-card {
+        transform: translate(-2px, -2px);
+        box-shadow:
+            0 0 0 2px #2a2233,
+            7px 7px 0 0 rgb(42 34 51 / 0.3);
+    }
+
+    :is(a, button).pixel-card:focus-visible,
+    .group:focus-visible > .pixel-card {
+        outline: none;
+        box-shadow:
+            0 0 0 2px #2a2233,
+            0 0 0 4px #c9a227,
+            7px 7px 0 0 rgb(42 34 51 / 0.3);
     }
 
     .pixel-button {
