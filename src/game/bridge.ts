@@ -1,4 +1,4 @@
-import type { RoomId } from './layout'
+import type { Direction, RoomId } from './layout'
 import type { Outfit } from './pixels'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
@@ -44,6 +44,10 @@ interface UiEvents {
   inputEnabled: boolean
   /** Trigger whatever the player is currently facing (HUD button / touch). */
   interactFacing: undefined
+  /** The on-screen D-pad direction being held, or null once it's let go. */
+  padDirection: Direction | null
+  /** Whether tapping the floor walks there (off while the on-screen pad is in use). */
+  tapToMove: boolean
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit

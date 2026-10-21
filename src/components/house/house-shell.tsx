@@ -2,11 +2,12 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { BookOpen, Gamepad2, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, type Outfit } from '@/game/pixels'
 import { getHobbyTopic } from '@/game/topics'
+import { cn } from '@/lib/utils'
 import type { HouseData } from '@/lib/house'
 import { BicaPanel } from './bica-panel'
 import { DialogueBox } from './dialogue-box'
@@ -14,15 +15,26 @@ import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogue
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
+import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
 
 const OUTFIT_KEY = 'house:outfit'
+/** 'tap' when a touch visitor switched the on-screen pad off for tap-to-walk. */
+const CONTROLS_KEY = 'house:controls'
 
 /** The house starts at night between 8pm and 7am, visitor's local time. */
 function isNightNow(): boolean {
   const hour = new Date().getHours()
   return hour >= 20 || hour < 7
+}
+
+function readPadPreference(): boolean {
+  try {
+    return window.localStorage.getItem(CONTROLS_KEY) !== 'tap'
+  } catch {
+    return true
+  }
 }
 
 function readOutfit(): Outfit {
@@ -77,6 +89,9 @@ export function HouseShell({ data, children }: Props) {
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
   )
+  // Touch screens walk with the on-screen pad unless the visitor switched to tapping the floor.
+  const [padPreferred, setPadPreferred] = useState(() => typeof window !== 'undefined' && readPadPreference())
+  const usePad = coarsePointer && padPreferred
 
   const overlayOpen = pathname !== '/'
   const inputEnabled = !overlayOpen && dialogue === null && panel === null
@@ -156,6 +171,21 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
+
+  useEffect(() => {
+    if (ready) bridge.ui.emit('tapToMove', !usePad)
+  }, [bridge, ready, usePad])
+
+  const togglePad = useCallback(() => {
+    setPadPreferred((on) => {
+      try {
+        window.localStorage.setItem(CONTROLS_KEY, on ? 'tap' : 'pad')
+      } catch {
+        // Private mode: the choice lasts until the tab closes.
+      }
+      return !on
+    })
+  }, [])
 
   // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
@@ -252,6 +282,18 @@ export function HouseShell({ data, children }: Props) {
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
             <div className="flex gap-2">
+              {coarsePointer && (
+                <button
+                  type="button"
+                  className={cn('pixel-button pointer-events-auto', usePad && 'text-[#e8c95a]')}
+                  onClick={togglePad}
+                  aria-pressed={usePad}
+                  aria-label="On-screen controls"
+                  title={usePad ? 'Switch to tapping the floor to walk' : 'Switch to the on-screen pad'}
+                >
+                  <Gamepad2 size={14} />
+                </button>
+              )}
               <button
                 type="button"
                 className="pixel-button pointer-events-auto"
@@ -276,10 +318,18 @@ export function HouseShell({ data, children }: Props) {
             </div>
           </div>
 
+          {inputEnabled && usePad && <TouchControls bridge={bridge} actionLabel={hint?.label ?? null} />}
+
           {inputEnabled && hint && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6">
-              {hint.hover ? (
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6',
+                usePad && 'bottom-40',
+              )}
+            >
+              {hint.hover || usePad ? (
                 <div className="font-pixel bg-[#2a2233]/90 px-3 py-1.5 text-sm shadow-[0_3px_0_#120e18]">
+                  {usePad && <kbd className="mr-1.5 bg-[#8e2a20] px-1.5 text-xs text-[#f4ecd8]">A</kbd>}
                   {hint.label}
                 </div>
               ) : (
@@ -296,9 +346,16 @@ export function HouseShell({ data, children }: Props) {
           )}
 
           {inputEnabled && !hint && showControls && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6">
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6',
+                usePad && 'bottom-40',
+              )}
+            >
               <div className="font-pixel max-w-md bg-[#2a2233]/90 px-4 py-2 text-center text-sm shadow-[0_3px_0_#120e18]">
-                {coarsePointer
+                {usePad
+                  ? 'Drag on the left side to walk, press A to look at things.'
+                  : coarsePointer
                   ? 'Tap the floor to walk, tap things to look at them.'
                   : 'Walk with WASD or the arrow keys (or click the floor). E to interact, M for the directory, G for the guestbook.'}
               </div>
