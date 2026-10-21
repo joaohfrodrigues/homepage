@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { decorTiles, furnishHouse } from '../../src/game/furnishings'
+import { furnishHouse, propTiles } from '../../src/game/furnishings'
 import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point } from '../../src/game/layout'
 import { limezuRect } from '../../src/game/limezu-furniture'
 
@@ -17,7 +17,8 @@ function solidFurniture(): Set<string> {
   const solid = new Set<string>()
   for (const item of furnishHouse().decor) {
     if (!item.solid) continue
-    decorTiles(item).forEach((tile) => solid.add(key(tile)))
+    const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+    tiles.forEach((tile) => solid.add(key(tile)))
   }
   return solid
 }
@@ -80,11 +81,7 @@ test.describe('House layout', () => {
     const reachable = reachableFromFrontDoor()
     const exposed = furnishHouse()
       .decor.filter((item) => item.kind === 'limezu')
-      .filter((item) => {
-        const overhang = item.y * TILE - limezuRect(item).y
-        const behind = decorTiles(item).filter((t) => t.y === item.y).map((t) => ({ x: t.x, y: t.y - 1 }))
-        return overhang > 6 && behind.some((t) => reachable.has(key(t)))
-      })
+      .filter((item) => limezuRect(item.sprite, item.x, item.y).h > TILE + 4 && reachable.has(key({ x: item.x, y: item.y - 1 })))
       .map((item) => `${item.sprite} at ${item.x},${item.y}`)
     expect(exposed).toEqual([])
   })

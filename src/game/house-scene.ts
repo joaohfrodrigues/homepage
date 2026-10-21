@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { HouseBridge, Hint, InteractAction } from './bridge'
-import { decorTiles, furnishHouse, type Decor, type Furnishings, type Interactable } from './furnishings'
+import { furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
   MAP_HEIGHT,
@@ -17,7 +17,7 @@ import {
   type Point,
   type RoomId,
 } from './layout'
-import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect, type LimezuSprite } from './limezu-furniture'
+import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import {
@@ -106,7 +106,6 @@ const ZENO_PLAY_GAP_MS: [number, number] = [60_000, 120_000]
 const ZENO_LITTER_GAP_MS: [number, number] = [120_000, 240_000]
 /** People leave chairs to visitors and cats; João stays off them. */
 const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
-const CHAIR_SPRITES = new Set<LimezuSprite>(['chairFacingEast', 'chairFacingWest'])
 
 const between = ([min, max]: [number, number]) => min + Math.random() * (max - min)
 
@@ -502,10 +501,9 @@ export class HouseScene extends Phaser.Scene {
       }
     }
     for (const item of this.furnishings.decor) {
-      if (item.kind === 'prop' && CHAIR_PROPS.has(item.prop)) decorTiles(item).forEach((t) => this.chairs.add(key(t)))
-      if (item.kind === 'limezu' && CHAIR_SPRITES.has(item.sprite)) decorTiles(item).forEach((t) => this.chairs.add(key(t)))
+      if (item.kind === 'prop' && CHAIR_PROPS.has(item.prop)) propTiles(item).forEach((t) => this.chairs.add(key(t)))
       if (!item.solid) continue
-      const tiles = decorTiles(item)
+      const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
     for (const object of this.furnishings.interactables) {
@@ -614,9 +612,9 @@ export class HouseScene extends Phaser.Scene {
 
   /** Where a piece of decor draws, in world pixels. */
   private decorRect(item: Decor) {
-    if (item.kind === 'limezu') return limezuRect(item)
+    if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y)
     const size = item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }
-    return { x: item.x * TILE, y: item.y * TILE + (item.kind === 'prop' ? (item.dy ?? 0) : 0), ...size }
+    return { x: item.x * TILE, y: item.y * TILE, ...size }
   }
 
   /** Draws a piece of decor onto a canvas whose top-left is world point (ox, oy). */
@@ -633,6 +631,9 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
+  private decorTiles(item: Decor): Point[] {
+    return item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+  }
 
   /**
    * Interaction cues: for every interactable, trace the silhouette of the
@@ -652,7 +653,7 @@ export class HouseScene extends Phaser.Scene {
     for (const object of this.furnishings.interactables) {
       const keys = new Set(object.tiles.map(key))
       const parts = this.furnishings.decor.filter(
-        (item) => item.solid && decorTiles(item).some((tile) => keys.has(key(tile))),
+        (item) => item.solid && this.decorTiles(item).some((tile) => keys.has(key(tile))),
       )
       const rects =
         parts.length > 0

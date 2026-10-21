@@ -17,8 +17,8 @@
  * Furniture: named sprites cut from the pack's 16x16 theme sheets, packed into
  * public/house/limezu-furniture.png with a manifest in src/game/limezu-furniture.json.
  */
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 
@@ -298,13 +298,8 @@ console.log(
 // ---------------------------------------------------------------------------
 // Furniture
 
-/**
- * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, plus
- * an optional `darken` factor that turns the pack's mid woods into walnut. A
- * `parts` entry assembles one sprite from several pieces offset by [dx, dy].
- */
+/** Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels. */
 const FURNITURE = {
-    // Plants
     palm: ['1_Generic', 212, 408, 23, 31],
     pottedTree: ['1_Generic', 215, 457, 18, 31],
     leafyPlant: ['1_Generic', 133, 905, 22, 30],
@@ -315,127 +310,36 @@ const FURNITURE = {
     sprig: ['1_Generic', 227, 984, 9, 13],
     topiary: ['1_Generic', 115, 1040, 10, 14],
     snakePlant: ['2_LivingRoom', 2, 86, 12, 14],
-    // Living room
-    sofaFacingEast: ['2_LivingRoom', 145, 582, 22, 42],
-    sofaFacingWest: ['2_LivingRoom', 121, 582, 22, 42],
-    flatTv: ['23_Television_and_Film_Studio', 161, 17, 46, 21],
-    coffeeTable: ['1_Generic', 221, 561, 22, 21],
-    diningTable: ['12_Kitchen', 105, 240, 30, 41],
-    chairFacingEast: ['12_Kitchen', 98, 177, 13, 21],
-    chairFacingWest: ['12_Kitchen', 81, 209, 13, 21],
-    floorLamp: ['2_LivingRoom', 193, 200, 13, 33],
-    // Bedroom
-    bedTeakGrey: {
-        // A teak headboard with white pillows on a grey cover and footboard.
-        parts: [
-            ['4_Bedroom', 96, 928, 32, 16, 0, 0],
-            ['4_Bedroom', 32, 944, 32, 22, 0, 16],
-        ],
-    },
-    wardrobeWhite: ['4_Bedroom', 128, 1575, 31, 41],
-    nightstandTeak: ['4_Bedroom', 112, 164, 16, 24],
-    seaPainting: ['1_Generic', 66, 219, 28, 13],
-    // Kitchen: grey counter tops on cabinet fronts recoloured from wood to grey
-    counterLeft: {
-        parts: [
-            ['12_Kitchen', 80, 103, 16, 9, 0, 0],
-            ['12_Kitchen', 48, 128, 16, 15, 0, 9, 'grey'],
-        ],
-    },
-    counterRight: {
-        parts: [
-            ['12_Kitchen', 96, 103, 16, 9, 0, 0],
-            ['12_Kitchen', 64, 128, 16, 15, 0, 9, 'grey'],
-        ],
-    },
-    // The run along the west wall, seen from above, ending in a cabinet front.
-    sideCounter: {
-        parts: [
-            ['12_Kitchen', 112, 64, 16, 24, 0, 0],
-            ['12_Kitchen', 112, 88, 16, 16, 0, 24],
-            ['12_Kitchen', 112, 88, 16, 16, 0, 40],
-            ['12_Kitchen', 112, 88, 16, 16, 0, 56],
-            ['12_Kitchen', 112, 88, 16, 16, 0, 72],
-            ['12_Kitchen', 112, 112, 16, 16, 0, 88, 'grey'],
-        ],
-    },
-    sink: ['12_Kitchen', 133, 129, 24, 14],
-    espressoMachine: ['12_Kitchen', 241, 475, 14, 19],
-    kettle: ['12_Kitchen', 197, 483, 11, 10],
-    fridgeSilver: ['12_Kitchen', 176, 375, 16, 36],
 };
 
-/** Turns a wood colour into the kitchen's grey, keeping its shading. */
-function greyPixel(px, i) {
-    if (px[i] + px[i + 1] + px[i + 2] < 200) return;
-    const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-    [px[i], px[i + 1], px[i + 2]] = [lum * 0.72, lum * 0.72, lum * 0.88].map(Math.round);
-}
-
-/** Scales a colour towards black, leaving the pack's dark outline alone. */
-function darkenPixel(px, i, amount) {
-    if (px[i] + px[i + 1] + px[i + 2] < 200) return;
-    for (let k = 0; k < 3; k++) px[i + k] = Math.round(px[i + k] * amount);
-}
-
-/** Every sprite as a list of parts; a plain entry is one part, a `parts` entry is assembled. */
-function spriteParts(entry) {
-    if (Array.isArray(entry)) {
-        const [sheet, x, y, w, h, darken] = entry;
-        return { parts: [{ sheet, x, y, w, h, dx: 0, dy: 0 }], w, h, darken };
-    }
-    const parts = entry.parts.map(([sheet, x, y, w, h, dx, dy, recolor]) => ({
-        sheet,
-        x,
-        y,
-        w,
-        h,
-        dx,
-        dy,
-        recolor,
-    }));
-    const w = Math.max(...parts.map(part => part.dx + part.w));
-    const h = Math.max(...parts.map(part => part.dy + part.h));
-    return { parts, w, h, darken: entry.darken };
-}
-
 const furnitureSheets = new Map();
-const sheetFor = sheet => {
+const shelfWidth = 128;
+const placed = {};
+let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
+for (const [name, [sheet, x, y, w, h]] of Object.entries(FURNITURE)) {
     if (!furnitureSheets.has(sheet)) {
         const file = readdirSync(THEMES).find(f => f.startsWith(`${sheet}_`));
         furnitureSheets.set(sheet, decode(join(THEMES, file)));
     }
-    return furnitureSheets.get(sheet);
-};
-const shelfWidth = 128;
-const placed = {};
-let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
-for (const [name, entry] of Object.entries(FURNITURE)) {
-    const sprite = spriteParts(entry);
-    if (cursorX + sprite.w > shelfWidth)
+    if (cursorX + w > shelfWidth)
         [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
-    placed[name] = { ...sprite, x: cursorX, y: cursorY };
-    cursorX += sprite.w + 1;
-    shelfHeight = Math.max(shelfHeight, sprite.h);
+    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y } };
+    cursorX += w + 1;
+    shelfHeight = Math.max(shelfHeight, h);
 }
 const furniture = {
     w: shelfWidth,
     h: cursorY + shelfHeight,
     px: new Uint8Array(shelfWidth * (cursorY + shelfHeight) * 4),
 };
-for (const { x, y, parts, darken } of Object.values(placed)) {
-    for (const part of parts) {
-        const sheet = sheetFor(part.sheet);
-        for (let row = 0; row < part.h; row++) {
-            for (let col = 0; col < part.w; col++) {
-                const from = ((part.y + row) * sheet.w + part.x + col) * 4;
-                if (!sheet.px[from + 3]) continue; // later parts layer over earlier ones
-                const to = ((y + part.dy + row) * furniture.w + x + part.dx + col) * 4;
-                furniture.px.set(sheet.px.subarray(from, from + 4), to);
-                if (darken) darkenPixel(furniture.px, to, darken);
-                if (part.recolor === 'grey') greyPixel(furniture.px, to);
-            }
-        }
+for (const { x, y, w, h, from } of Object.values(placed)) {
+    const sheet = furnitureSheets.get(from.sheet);
+    for (let row = 0; row < h; row++) {
+        const start = ((from.y + row) * sheet.w + from.x) * 4;
+        furniture.px.set(
+            sheet.px.subarray(start, start + w * 4),
+            ((y + row) * furniture.w + x) * 4
+        );
     }
 }
 encode('public/house/limezu-furniture.png', furniture);
@@ -453,7 +357,7 @@ console.log(
     `packed ${Object.keys(placed).length} furniture sprites into public/house/limezu-furniture.png`
 );
 
-// Match the repo's formatting so re-running the import leaves no diff noise.
+// Match the pre-commit hook's formatting so re-running the import leaves no diff noise.
 execFileSync(
     'npx',
     [
@@ -464,7 +368,5 @@ execFileSync(
         'src/game/character-pieces.json',
         'src/game/limezu-furniture.json',
     ],
-    {
-        stdio: 'ignore',
-    }
+    { stdio: 'ignore' }
 );

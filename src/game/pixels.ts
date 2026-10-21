@@ -397,8 +397,6 @@ export type PropName =
   | 'fridge'
   | 'kcounter'
   | 'khob'
-  | 'burners'
-  | 'magnets'
   | 'litterbox'
   | 'bed'
   | 'nightstand'
@@ -445,8 +443,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   fridge: { w: 16, h: 32 },
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
   khob: { w: 16, h: 16 },
-  burners: { w: 16, h: 16 },
-  magnets: { w: 16, h: 16 },
   litterbox: { w: 16, h: 16 },
   bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
   nightstand: { w: 16, h: 16 },
@@ -1021,37 +1017,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(5, 7, 1, 1, '#e05a48')
       break
     }
-    case 'burners': {
-      // A black glass hob set into the grey counter top.
-      r(2, 1, 11, 14, '#1b1b20')
-      r(2, 1, 11, 1, '#3a3a44')
-      for (const [cx, cy] of [
-        [4, 4],
-        [10, 4],
-        [4, 11],
-        [10, 11],
-      ] as const) {
-        disc(ctx, ox + cx, oy + cy, 2, '#3a3a44')
-        r(cx, cy, 1, 1, '#1b1b20')
-      }
-      r(7, 7, 1, 1, '#e05a48')
-      break
-    }
-    case 'magnets': {
-      // Trip magnets and a photo stuck on the fridge door.
-      for (const [x, y, color] of [
-        [3, 1, PALETTE.red],
-        [9, 2, '#3f6b8a'],
-        [4, 6, PALETTE.tape],
-        [10, 8, '#4f7a3a'],
-        [3, 12, '#c9a227'],
-      ] as const) {
-        r(x, y, 2, 2, color)
-      }
-      r(6, 9, 4, 4, PALETTE.paper)
-      r(7, 10, 2, 2, '#3f6b8a')
-      break
-    }
     case 'litterbox': {
       // An open tray of sand, so whatever Zeno leaves in it is plain to see.
       r(1, 3, 14, 12, PALETTE.ink)
@@ -1100,13 +1065,17 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'alarmclock': {
-      // Just the clock: it stands on the bedside table.
+      r(2, 5, 12, 10, PALETTE.ink)
+      r(3, 6, 10, 8, PALETTE.wood)
+      r(3, 9, 10, 1, PALETTE.woodDark)
+      r(7, 11, 2, 1, PALETTE.brass)
       r(4, 0, 8, 6, PALETTE.ink)
       r(5, 1, 6, 4, '#1b1b20')
       r(5, 2, 2, 1, '#e04434')
       r(8, 2, 2, 1, '#e04434')
       r(4, 0, 1, 1, PALETTE.brass)
       r(11, 0, 1, 1, PALETTE.brass)
+      r(2, 15, 12, 1, PALETTE.shadow)
       break
     }
     case 'wardrobeside': {
