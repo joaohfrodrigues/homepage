@@ -296,8 +296,12 @@ console.log(
 // ---------------------------------------------------------------------------
 // Furniture
 
-/** Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels. */
+/**
+ * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, plus
+ * an optional `darken` factor that turns the pack's mid woods into walnut.
+ */
 const FURNITURE = {
+    // Plants
     palm: ['1_Generic_16x16', 212, 408, 23, 31],
     pottedTree: ['1_Generic_16x16', 215, 457, 18, 31],
     leafyPlant: ['1_Generic_16x16', 133, 905, 22, 30],
@@ -308,18 +312,33 @@ const FURNITURE = {
     sprig: ['1_Generic_16x16', 227, 984, 9, 13],
     topiary: ['1_Generic_16x16', 115, 1040, 10, 14],
     snakePlant: ['2_LivingRoom_16x16', 2, 86, 12, 14],
+    // Living room
+    sofaFacingEast: ['2_LivingRoom_16x16', 145, 582, 22, 42],
+    sofaFacingWest: ['2_LivingRoom_16x16', 121, 582, 22, 42],
+    flatTv: ['23_Television_and_Film_Studio', 161, 17, 46, 21],
+    coffeeTable: ['1_Generic_16x16', 221, 561, 22, 21],
+    diningTable: ['1_Generic_16x16', 13, 545, 38, 37],
+    chairFacingEast: ['12_Kitchen_16x16', 82, 177, 13, 21],
+    chairFacingWest: ['12_Kitchen_16x16', 97, 209, 13, 21],
+    floorLamp: ['2_LivingRoom_16x16', 193, 200, 13, 33],
 };
+
+/** Scales a colour towards black, leaving the pack's dark outline alone. */
+function darkenPixel(px, i, amount) {
+    if (px[i] + px[i + 1] + px[i + 2] < 200) return;
+    for (let k = 0; k < 3; k++) px[i + k] = Math.round(px[i + k] * amount);
+}
 
 const furnitureSheets = new Map();
 const shelfWidth = 128;
 const placed = {};
 let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
-for (const [name, [sheet, x, y, w, h]] of Object.entries(FURNITURE)) {
+for (const [name, [sheet, x, y, w, h, darken]] of Object.entries(FURNITURE)) {
     if (!furnitureSheets.has(sheet))
         furnitureSheets.set(sheet, decode(join(THEMES, `${sheet}.png`)));
     if (cursorX + w > shelfWidth)
         [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
-    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y } };
+    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y }, darken };
     cursorX += w + 1;
     shelfHeight = Math.max(shelfHeight, h);
 }
@@ -328,14 +347,13 @@ const furniture = {
     h: cursorY + shelfHeight,
     px: new Uint8Array(shelfWidth * (cursorY + shelfHeight) * 4),
 };
-for (const { x, y, w, h, from } of Object.values(placed)) {
+for (const { x, y, w, h, from, darken } of Object.values(placed)) {
     const sheet = furnitureSheets.get(from.sheet);
     for (let row = 0; row < h; row++) {
         const start = ((from.y + row) * sheet.w + from.x) * 4;
-        furniture.px.set(
-            sheet.px.subarray(start, start + w * 4),
-            ((y + row) * furniture.w + x) * 4
-        );
+        const to = ((y + row) * furniture.w + x) * 4;
+        furniture.px.set(sheet.px.subarray(start, start + w * 4), to);
+        if (darken) for (let i = to; i < to + w * 4; i += 4) darkenPixel(furniture.px, i, darken);
     }
 }
 encode('public/house/limezu-furniture.png', furniture);

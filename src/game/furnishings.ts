@@ -1,6 +1,6 @@
 import type { InteractAction } from './bridge'
 import type { Point } from './layout'
-import type { LimezuSprite } from './limezu-furniture'
+import type { LimezuPlacement, LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
 
@@ -15,8 +15,8 @@ const K = {
 export type Decor =
   | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
   | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
-  /** A Modern Interiors sprite standing on one tile; tall ones rise over the tile above. */
-  | { kind: 'limezu'; sprite: LimezuSprite; x: number; y: number; solid: boolean }
+  /** A Modern Interiors sprite on a footprint of tiles; tall ones rise over the tiles above. */
+  | ({ kind: 'limezu'; solid: boolean } & LimezuPlacement)
 
 export interface Interactable {
   id: string
@@ -55,6 +55,13 @@ export function propTiles(decor: Extract<Decor, { kind: 'prop' }>): Point[] {
   return tilesOf(decor.x, decor.y, size.w / 16, size.h / 16)
 }
 
+/** The tiles a piece of decor covers. */
+export function decorTiles(decor: Decor): Point[] {
+  if (decor.kind === 'prop') return propTiles(decor)
+  if (decor.kind === 'limezu') return tilesOf(decor.x, decor.y, decor.w, decor.h)
+  return [{ x: decor.x, y: decor.y }]
+}
+
 /** Opening a topic goes straight into its window. */
 export function topicAction(id: TopicId): InteractAction {
   return { type: 'navigate', href: getTopic(id).href }
@@ -69,8 +76,17 @@ export function furnishHouse(): Furnishings {
   const interactables: Interactable[] = []
   const kenney = (frame: number, x: number, y: number, solid = false) =>
     decor.push({ kind: 'kenney', frame, x, y, solid })
-  const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
-    decor.push({ kind: 'limezu', sprite, x, y, solid })
+  /** Places a pack sprite on a w x h footprint; returns the footprint's tiles. */
+  const limezu = (
+    sprite: LimezuSprite,
+    x: number,
+    y: number,
+    { w = 1, h = 1, dx = 0, dy = 0, solid = true }: { w?: number; h?: number; dx?: number; dy?: number; solid?: boolean } = {},
+  ) => {
+    const item: Decor = { kind: 'limezu', sprite, x, y, w, h, dx, dy, solid }
+    decor.push(item)
+    return decorTiles(item)
+  }
   const prop = (name: PropName, x: number, y: number, solid = true) => {
     const item: Decor = { kind: 'prop', prop: name, x, y, solid }
     decor.push(item)
@@ -83,23 +99,25 @@ export function furnishHouse(): Furnishings {
   // Rugs first: decor is drawn in order, and furniture stands on them.
   prop('rugbed', 14, 7, false)
   prop('rugstudy', 18, 15, false)
-  prop('rugliving', 2, 4, false)
+  prop('rugliving', 3, 4, false)
 
   // --- Living room (5 × 5m) -----------------------------------------------------
-  // Two street windows either side of a terracotta chimney breast; the TV hangs on
-  // it, so the sofa faces the soft north light rather than having it behind the screen.
+  // Two street windows either side of a terracotta chimney breast with the TV
+  // hung on it. Two sofas face each other across the coffee table, side-on to
+  // the screen, so the light from the windows falls across them rather than on it.
   prop('chimney', 4, 1, false)
-  topicItem('watching', prop('tv', 4, 1))
-  prop('coffeetable', 5, 5)
-  prop('sofa', 4, 7)
-  prop('floorlamp', 3, 7)
-  // Dining behind the sofa, by the kitchen's pocket door: two steps from the hob.
-  // Chairs can be walked over (pulled out of the way); tables and sofas can't.
-  prop('diningtable', 1, 10)
-  prop('chair', 1, 9, false)
-  prop('chair', 3, 9, false)
-  prop('chairup', 1, 12, false)
-  prop('chairup', 3, 12, false)
+  topicItem('watching', limezu('flatTv', 4, 1, { w: 4, h: 2, dy: -6 }))
+  limezu('sofaFacingEast', 3, 4, { w: 2, h: 3 })
+  limezu('coffeeTable', 5, 5, { w: 2, h: 2 })
+  limezu('sofaFacingWest', 7, 4, { w: 2, h: 3 })
+  limezu('floorLamp', 9, 3, { h: 2 })
+  // Dining by the kitchen's pocket door: two steps from the hob. Chairs can be
+  // walked over (pulled out of the way); the table can't.
+  limezu('diningTable', 2, 10, { w: 3, h: 2, dy: 3 })
+  limezu('chairFacingEast', 1, 10, { solid: false })
+  limezu('chairFacingEast', 1, 11, { solid: false })
+  limezu('chairFacingWest', 5, 10, { solid: false })
+  limezu('chairFacingWest', 5, 11, { solid: false })
   // The right-hand side stays clear: it's the way in from the hall.
   prop('recordplayer', 10, 5)
   limezu('leafyPlant', 1, 3)
@@ -252,12 +270,12 @@ export function furnishHouse(): Furnishings {
     zeno: {
       start: { x: 7, y: 11 },
       perches: [
-        ...[4, 5, 6, 7].map((x) => ({ x, y: 8 })), // the sofa seat
+        ...[3, 4, 7, 8].flatMap((x) => [5, 6].map((y) => ({ x, y }))), // the sofa seats
         ...[15, 16, 17].flatMap((x) => [4, 5, 6].map((y) => ({ x, y }))), // the duvet
         { x: 6, y: 19 }, // the litter box
       ],
       spots: [
-        { x: 5, y: 8 }, // sofa
+        { x: 4, y: 5 }, // sofa
         { x: 16, y: 5 }, // bed
         { x: 8, y: 3 }, // under the street window
         { x: 22, y: 7 }, // balcony
