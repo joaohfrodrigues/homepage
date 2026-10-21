@@ -17,7 +17,8 @@ import {
   type Point,
   type RoomId,
 } from './layout'
-import { isOnMap, projectToMap } from './map-projection'
+import { fitView, isOnMap, projectToMap } from './map-projection'
+import { LAND_URL, renderMap, type LandData } from './world-map'
 import {
   LIGHT_SOURCES,
   MAP_WALL,
@@ -192,7 +193,7 @@ export class HouseScene extends Phaser.Scene {
       frameHeight: 16,
       spacing: 1,
     })
-    this.load.image('europe-wall', '/house/europe-map-wall.png')
+    this.load.json('world-land', LAND_URL)
   }
 
   create() {
@@ -373,14 +374,15 @@ export class HouseScene extends Phaser.Scene {
   private drawWallMap(ctx: CanvasRenderingContext2D) {
     const frame = this.propAt('wallmap')
     if (!frame) return
-    const map = this.textures.get('europe-wall').getSourceImage() as HTMLImageElement
+    const land = this.cache.json.get('world-land') as LandData | undefined
     const ox = frame.x * TILE + MAP_WALL.x
     const oy = frame.y * TILE + MAP_WALL.y
-    ctx.drawImage(map, ox, oy, MAP_WALL.w, MAP_WALL.h)
-    for (const trip of this.cfg.trips) {
-      const stop = trip.stops[0]
-      if (!stop || !isOnMap(stop.lat, stop.lon)) continue
-      const pos = projectToMap(stop.lat, stop.lon)
+    const firstStops = this.cfg.trips.map((trip) => trip.stops[0]).filter((stop) => stop && isOnMap(stop.lat, stop.lon))
+    // Framed around every trip, like the full-size travel map.
+    const view = fitView(firstStops, MAP_WALL.w / MAP_WALL.h)
+    if (land) ctx.putImageData(renderMap(land, view, MAP_WALL.w, MAP_WALL.h), ox, oy)
+    for (const stop of firstStops) {
+      const pos = projectToMap(stop.lat, stop.lon, view)
       const px = ox + Math.round(pos.x * (MAP_WALL.w - 1))
       const py = oy + Math.round(pos.y * (MAP_WALL.h - 1))
       ctx.fillStyle = '#2a2233'

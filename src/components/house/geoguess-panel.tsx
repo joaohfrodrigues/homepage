@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useRef, useState } from 'react'
-import { distanceKm, projectToMap, unprojectFromMap } from '@/game/map-projection'
+import { useCallback, useState } from 'react'
+import { distanceKm, fitView, isInView, projectToMap, unprojectFromMap, type LatLon } from '@/game/map-projection'
 import type { GeoPhoto } from '@/lib/photos'
 import { PanelWindow } from './panel-window'
 import { PinIcon } from './travel-map'
 import { readStats, updateStats } from './visitor-stats'
+import { MAP_ASPECT, WorldMap, mapPosition, useMapView } from './world-map'
 
 interface Props {
   photos: GeoPhoto[]
@@ -39,18 +40,19 @@ function score(km: number): number {
 export function GeoGuessPanel({ photos, onClose }: Props) {
   const [round, setRound] = useState(() => pickRound(photos))
   const [index, setIndex] = useState(0)
-  const [guess, setGuess] = useState<{ x: number; y: number } | null>(null)
+  const [guess, setGuess] = useState<LatLon | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [scores, setScores] = useState<number[]>([])
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
   const [best, setBest] = useState(() => readStats().geoBest)
-  const mapRef = useRef<HTMLDivElement>(null)
+  const { view, setView, fitted } = useMapView(photos)
 
   const finished = scores.length === ROUNDS && revealed && index === ROUNDS - 1
   const photo = round[index]
   const total = scores.reduce((sum, s) => sum + s, 0)
-  const actual = photo ? projectToMap(photo.lat, photo.lon) : null
-  const km = photo && guess ? distanceKm(unprojectFromMap(guess.x, guess.y), photo) : null
+  const actual = photo ? projectToMap(photo.lat, photo.lon, view) : null
+  const guessAt = guess ? projectToMap(guess.lat, guess.lon, view) : null
+  const km = photo && guess ? distanceKm(guess, photo) : null
 
   const confirm = useCallback(() => {
     if (!guess || revealed || km === null) return
@@ -58,6 +60,10 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
     const nextScores = [...scores, points]
     setScores(nextScores)
     setRevealed(true)
+    // Pull back far enough to show both the guess and the answer.
+    if (!isInView(guess.lat, guess.lon, view) || !isInView(photo.lat, photo.lon, view)) {
+      setView(fitView([guess, photo], MAP_ASPECT))
+    }
     const sum = nextScores.length === ROUNDS ? nextScores.reduce((a, b) => a + b, 0) : null
     if (sum !== null && sum > best) setBest(sum)
     updateStats((stats) => {
@@ -70,7 +76,7 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
         stats.geoBest = Math.max(stats.geoBest, sum)
       }
     })
-  }, [guess, revealed, km, scores, best])
+  }, [guess, revealed, km, scores, best, view, setView, photo])
 
   function next() {
     setGuess(null)
@@ -86,10 +92,9 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
     setRevealed(false)
   }
 
-  function placePin(e: React.MouseEvent) {
-    if (revealed || !mapRef.current) return
-    const rect = mapRef.current.getBoundingClientRect()
-    setGuess({ x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height })
+  function placePin(x: number, y: number) {
+    if (revealed) return
+    setGuess(unprojectFromMap(x, y, view))
   }
 
   // Keyboard play: arrows nudge the pin (starting from the middle), Enter confirms.
@@ -109,10 +114,8 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
     const move = moves[e.key]
     if (!move || revealed) return
     e.preventDefault()
-    setGuess((g) => {
-      const from = g ?? { x: 0.6, y: 0.6 }
-      return { x: Math.min(1, Math.max(0, from.x + move[0])), y: Math.min(1, Math.max(0, from.y + move[1])) }
-    })
+    const from = guessAt ?? { x: 0.5, y: 0.5 }
+    setGuess(unprojectFromMap(Math.min(1, Math.max(0, from.x + move[0])), Math.min(1, Math.max(0, from.y + move[1])), view))
   }
 
   if (photos.length === 0) {
@@ -143,29 +146,22 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
           className="aspect-[4/3] w-full border-4 border-[#2a2233] bg-[#2a2233] object-cover"
         />
         <div>
-          <div
-            ref={mapRef}
+          <WorldMap
+            view={view}
+            fitted={fitted}
+            onViewChange={setView}
+            onMapClick={placePin}
             role="application"
             tabIndex={0}
-            aria-label="Map of Europe. Click, or use the arrow keys, to place your guess; Enter to confirm."
-            onClick={placePin}
+            aria-label="World map. Click, or use the arrow keys, to place your guess; Enter to confirm; + and - to zoom."
             onKeyDown={onMapKey}
-            className="relative w-full cursor-crosshair border-4 border-[#2a2233] outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]"
-            style={{ aspectRatio: '176 / 100' }}
+            className="cursor-crosshair outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/house/europe-map.png"
-              alt=""
-              className="absolute inset-0 h-full w-full"
-              style={{ imageRendering: 'pixelated' }}
-              draggable={false}
-            />
-            {revealed && guess && actual && (
-              <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
+            {revealed && guessAt && actual && (
+              <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
                 <line
-                  x1={guess.x * 100}
-                  y1={guess.y * 100}
+                  x1={guessAt.x * 100}
+                  y1={guessAt.y * 100}
                   x2={actual.x * 100}
                   y2={actual.y * 100}
                   stroke="#2a2233"
@@ -175,24 +171,24 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
                 />
               </svg>
             )}
-            {guess && (
+            {guessAt && (
               <span
                 className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 border-2 border-[#2a2233] bg-[#f4ecd8]"
-                style={{ left: `${guess.x * 100}%`, top: `${guess.y * 100}%` }}
+                style={mapPosition(guessAt)}
                 aria-hidden
               />
             )}
             {revealed && actual && (
               <span
                 className="pointer-events-none absolute -translate-x-1/2 -translate-y-full"
-                style={{ left: `${actual.x * 100}%`, top: `${actual.y * 100}%` }}
+                style={mapPosition(actual)}
                 aria-hidden
               >
                 <PinIcon />
               </span>
             )}
-          </div>
-          <p className="mt-2 text-xs text-[#6d6359]">Click the map (or use the arrow keys) to drop your guess.</p>
+          </WorldMap>
+          <p className="mt-2 text-xs text-[#6d6359]">Click the map (or use the arrow keys) to drop your guess. Drag to pan; pinch or Ctrl/⌘-scroll to zoom.</p>
         </div>
       </div>
 
