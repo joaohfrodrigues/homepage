@@ -20,11 +20,6 @@ const pixelDigits = localFont({
     { prop: 'size-adjust', value: '130%' },
   ],
 })
-const lego = localFont({ src: '../../public/fonts/LEGO.ttf', variable: '--font-lego' })
-const legoThick = localFont({
-  src: '../../public/fonts/Legothick.ttf',
-  variable: '--font-lego-thick',
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -57,7 +52,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${pixel.variable} ${pixelDigits.variable} ${lego.variable} ${legoThick.variable}`}>
+    <html lang="en" className={`${lora.variable} ${pixel.variable} ${pixelDigits.variable}`}>
       <head>
         <link
           rel="stylesheet"
