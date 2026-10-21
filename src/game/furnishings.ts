@@ -14,7 +14,8 @@ const K = {
 
 export type Decor =
   | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
-  | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
+  /** A hand-drawn prop; `dy` nudges it up or down in pixels (a clock on a table). */
+  | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean; dy?: number }
   /** A Modern Interiors sprite on a footprint of tiles; tall ones rise over the tiles above. */
   | ({ kind: 'limezu'; solid: boolean } & LimezuPlacement)
 
@@ -87,8 +88,8 @@ export function furnishHouse(): Furnishings {
     decor.push(item)
     return decorTiles(item)
   }
-  const prop = (name: PropName, x: number, y: number, solid = true) => {
-    const item: Decor = { kind: 'prop', prop: name, x, y, solid }
+  const prop = (name: PropName, x: number, y: number, solid = true, dy = 0) => {
+    const item: Decor = { kind: 'prop', prop: name, x, y, solid, dy }
     decor.push(item)
     return propTiles(item)
   }
@@ -195,25 +196,27 @@ export function furnishHouse(): Furnishings {
   kenney(paintings[4], 13, 12)
 
   // --- Bedroom (4 × 4m) ---------------------------------------------------------
-  interactables.push({
-    id: 'bed',
-    label: 'Bed — take a nap',
-    tiles: prop('bed', 15, 2),
-    action: { type: 'dialogue', id: 'bed' },
-  })
-  prop('nightstand', 14, 3)
-  interactables.push({
-    id: 'alarm',
-    label: 'Alarm clock',
-    tiles: prop('alarmclock', 18, 3),
-    action: { type: 'dialogue', id: 'alarm' },
-  })
-  kenney(K.landscapes[2], 16, 1)
+  // The wardrobe and the bed share the stretch of north wall between the windows,
+  // with a bedside table and the alarm clock under the east window.
   interactables.push({
     id: 'wardrobe',
     label: 'Wardrobe — change outfit',
-    tiles: prop('wardrobeside', 12, 4),
+    tiles: limezu('wardrobeWhite', 14, 3, { w: 2 }),
     action: { type: 'panel', panel: 'wardrobe' },
+  })
+  limezu('seaPainting', 16, 1, { w: 2, solid: false })
+  interactables.push({
+    id: 'bed',
+    label: 'Bed — take a nap',
+    tiles: limezu('bedTeakGrey', 16, 3, { w: 2, h: 2 }),
+    action: { type: 'dialogue', id: 'bed' },
+  })
+  limezu('nightstandTeak', 18, 3)
+  interactables.push({
+    id: 'alarm',
+    label: 'Alarm clock',
+    tiles: prop('alarmclock', 18, 3, true, -9),
+    action: { type: 'dialogue', id: 'alarm' },
   })
   limezu('snakePlant', 12, 10)
 
@@ -271,12 +274,12 @@ export function furnishHouse(): Furnishings {
       start: { x: 7, y: 11 },
       perches: [
         ...[3, 4, 7, 8].flatMap((x) => [5, 6].map((y) => ({ x, y }))), // the sofa seats
-        ...[15, 16, 17].flatMap((x) => [4, 5, 6].map((y) => ({ x, y }))), // the duvet
+        ...[16, 17].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 6, y: 19 }, // the litter box
       ],
       spots: [
         { x: 4, y: 5 }, // sofa
-        { x: 16, y: 5 }, // bed
+        { x: 16, y: 4 }, // bed
         { x: 8, y: 3 }, // under the street window
         { x: 22, y: 7 }, // balcony
         { x: 19, y: 16 }, // the study rug

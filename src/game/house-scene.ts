@@ -616,7 +616,7 @@ export class HouseScene extends Phaser.Scene {
   private decorRect(item: Decor) {
     if (item.kind === 'limezu') return limezuRect(item)
     const size = item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }
-    return { x: item.x * TILE, y: item.y * TILE, ...size }
+    return { x: item.x * TILE, y: item.y * TILE + (item.kind === 'prop' ? (item.dy ?? 0) : 0), ...size }
   }
 
   /** Draws a piece of decor onto a canvas whose top-left is world point (ox, oy). */

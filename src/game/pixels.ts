@@ -1065,17 +1065,13 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'alarmclock': {
-      r(2, 5, 12, 10, PALETTE.ink)
-      r(3, 6, 10, 8, PALETTE.wood)
-      r(3, 9, 10, 1, PALETTE.woodDark)
-      r(7, 11, 2, 1, PALETTE.brass)
+      // Just the clock: it stands on the bedside table.
       r(4, 0, 8, 6, PALETTE.ink)
       r(5, 1, 6, 4, '#1b1b20')
       r(5, 2, 2, 1, '#e04434')
       r(8, 2, 2, 1, '#e04434')
       r(4, 0, 1, 1, PALETTE.brass)
       r(11, 0, 1, 1, PALETTE.brass)
-      r(2, 15, 12, 1, PALETTE.shadow)
       break
     }
     case 'wardrobeside': {

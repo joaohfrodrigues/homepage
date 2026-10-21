@@ -300,7 +300,8 @@ console.log(
 
 /**
  * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, plus
- * an optional `darken` factor that turns the pack's mid woods into walnut.
+ * an optional `darken` factor that turns the pack's mid woods into walnut. A
+ * `parts` entry assembles one sprite from several pieces offset by [dx, dy].
  */
 const FURNITURE = {
     // Plants
@@ -323,6 +324,17 @@ const FURNITURE = {
     chairFacingEast: ['12_Kitchen', 98, 177, 13, 21],
     chairFacingWest: ['12_Kitchen', 81, 209, 13, 21],
     floorLamp: ['2_LivingRoom', 193, 200, 13, 33],
+    // Bedroom
+    bedTeakGrey: {
+        // A teak headboard with white pillows on a grey cover and footboard.
+        parts: [
+            ['4_Bedroom', 96, 928, 32, 16, 0, 0],
+            ['4_Bedroom', 32, 944, 32, 22, 0, 16],
+        ],
+    },
+    wardrobeWhite: ['4_Bedroom', 128, 1575, 31, 41],
+    nightstandTeak: ['4_Bedroom', 112, 164, 16, 24],
+    seaPainting: ['1_Generic', 66, 219, 28, 13],
 };
 
 /** Scales a colour towards black, leaving the pack's dark outline alone. */
@@ -331,33 +343,54 @@ function darkenPixel(px, i, amount) {
     for (let k = 0; k < 3; k++) px[i + k] = Math.round(px[i + k] * amount);
 }
 
+/** Every sprite as a list of parts; a plain entry is one part, a `parts` entry is assembled. */
+function spriteParts(entry) {
+    if (Array.isArray(entry)) {
+        const [sheet, x, y, w, h, darken] = entry;
+        return { parts: [{ sheet, x, y, w, h, dx: 0, dy: 0 }], w, h, darken };
+    }
+    const parts = entry.parts.map(([sheet, x, y, w, h, dx, dy]) => ({ sheet, x, y, w, h, dx, dy }));
+    const w = Math.max(...parts.map(part => part.dx + part.w));
+    const h = Math.max(...parts.map(part => part.dy + part.h));
+    return { parts, w, h, darken: entry.darken };
+}
+
 const furnitureSheets = new Map();
-const shelfWidth = 128;
-const placed = {};
-let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
-for (const [name, [sheet, x, y, w, h, darken]] of Object.entries(FURNITURE)) {
+const sheetFor = sheet => {
     if (!furnitureSheets.has(sheet)) {
         const file = readdirSync(THEMES).find(f => f.startsWith(`${sheet}_`));
         furnitureSheets.set(sheet, decode(join(THEMES, file)));
     }
-    if (cursorX + w > shelfWidth)
+    return furnitureSheets.get(sheet);
+};
+const shelfWidth = 128;
+const placed = {};
+let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
+for (const [name, entry] of Object.entries(FURNITURE)) {
+    const sprite = spriteParts(entry);
+    if (cursorX + sprite.w > shelfWidth)
         [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
-    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y }, darken };
-    cursorX += w + 1;
-    shelfHeight = Math.max(shelfHeight, h);
+    placed[name] = { ...sprite, x: cursorX, y: cursorY };
+    cursorX += sprite.w + 1;
+    shelfHeight = Math.max(shelfHeight, sprite.h);
 }
 const furniture = {
     w: shelfWidth,
     h: cursorY + shelfHeight,
     px: new Uint8Array(shelfWidth * (cursorY + shelfHeight) * 4),
 };
-for (const { x, y, w, h, from, darken } of Object.values(placed)) {
-    const sheet = furnitureSheets.get(from.sheet);
-    for (let row = 0; row < h; row++) {
-        const start = ((from.y + row) * sheet.w + from.x) * 4;
-        const to = ((y + row) * furniture.w + x) * 4;
-        furniture.px.set(sheet.px.subarray(start, start + w * 4), to);
-        if (darken) for (let i = to; i < to + w * 4; i += 4) darkenPixel(furniture.px, i, darken);
+for (const { x, y, parts, darken } of Object.values(placed)) {
+    for (const part of parts) {
+        const sheet = sheetFor(part.sheet);
+        for (let row = 0; row < part.h; row++) {
+            for (let col = 0; col < part.w; col++) {
+                const from = ((part.y + row) * sheet.w + part.x + col) * 4;
+                if (!sheet.px[from + 3]) continue; // later parts layer over earlier ones
+                const to = ((y + part.dy + row) * furniture.w + x + part.dx + col) * 4;
+                furniture.px.set(sheet.px.subarray(from, from + 4), to);
+                if (darken) darkenPixel(furniture.px, to, darken);
+            }
+        }
     }
 }
 encode('public/house/limezu-furniture.png', furniture);
