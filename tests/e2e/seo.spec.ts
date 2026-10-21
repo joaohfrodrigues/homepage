@@ -30,6 +30,16 @@ test.describe('SEO', () => {
     await expect(page.locator('meta[property="og:image"]')).toHaveCount(1)
   })
 
+  test('pages without a cover share the fingerprinted house snapshot', async ({ page, request }) => {
+    await page.goto('/about')
+    const image = page.locator('meta[property="og:image"]')
+    await expect(image).toHaveAttribute('content', /\/_next\/static\/media\/og-image\.[^/]+\.png$/)
+    const path = new URL((await image.getAttribute('content'))!).pathname
+    const response = await request.get(path)
+    expect(response.status()).toBe(200)
+    expect(response.headers()['content-type']).toContain('image/png')
+  })
+
   test('favicon route responds with a PNG', async ({ request }) => {
     const response = await request.get('/icon')
     expect(response.status()).toBe(200)

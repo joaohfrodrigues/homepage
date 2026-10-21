@@ -1,3 +1,5 @@
+import ogImage from '@/assets/og-image.png'
+
 export const SITE_URL = 'https://joaohfrodrigues.com'
 export const SITE_NAME = 'João Rodrigues'
 export const AUTHOR_NAME = 'João Rodrigues'
@@ -8,7 +10,14 @@ export const LINKEDIN_URL = 'https://www.linkedin.com/in/joaohfrodrigues/'
 
 export const SOCIAL_LINKS = [GITHUB_URL, UNSPLASH_URL, LINKEDIN_URL]
 
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/opengraph-image`
+// The house snapshot from scripts/og_snapshot.mjs. Importing it fingerprints
+// its URL, so link previews (WhatsApp caches hard) refetch it when it changes.
+export const DEFAULT_OG_IMAGE = {
+  url: ogImage.src,
+  width: ogImage.width,
+  height: ogImage.height,
+  alt: 'The living room of João’s pixel-art house',
+}
 
 export function buildOpenGraphMetadata({
   type,
@@ -25,7 +34,7 @@ export function buildOpenGraphMetadata({
   url: string
   publishedTime?: string
 }) {
-  const images = [image || DEFAULT_OG_IMAGE]
+  const images = image ? [image] : [DEFAULT_OG_IMAGE]
   return {
     openGraph: {
       type,
