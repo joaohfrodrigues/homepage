@@ -4,13 +4,6 @@ import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
 
-/** Frame indices into the Kenney "Roguelike Indoors" sheet (27 columns). */
-const K = {
-  mirror: 400,
-  paintings: [340, 341, 342, 367, 368, 369],
-  landscapes: [343, 370, 397],
-}
-
 export type Decor =
   | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
   | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
@@ -74,8 +67,6 @@ export function topicAction(id: TopicId): InteractAction {
 export function furnishHouse(): Furnishings {
   const decor: Decor[] = []
   const interactables: Interactable[] = []
-  const kenney = (frame: number, x: number, y: number, solid = false) =>
-    decor.push({ kind: 'kenney', frame, x, y, solid })
   const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
     decor.push({ kind: 'limezu', sprite, x, y, solid })
   /** A solid pack sprite over a w x h area; returns its tiles. */
@@ -94,7 +85,6 @@ export function furnishHouse(): Furnishings {
   }
   const topicItem = (id: TopicId, tiles: Point[]) =>
     interactables.push({ id, label: getTopic(id).item, tiles, action: topicAction(id) })
-  const paintings = [...K.paintings, ...K.landscapes]
 
   // Rugs first: decor is drawn in order, and furniture stands on them.
   rug('rugTerracotta', 3, 3, 5, 4)
@@ -184,10 +174,6 @@ export function furnishHouse(): Furnishings {
     action: { type: 'dialogue', id: 'front-door' },
   })
 
-  // --- Corridor (2 × 1m) --------------------------------------------------------
-  kenney(paintings[0], 11, 10)
-  kenney(paintings[4], 12, 10)
-
   // --- Bedroom (3 × 3m) ---------------------------------------------------------
   // A double bed against the north wall between two bedside tables, the
   // wardrobe along the west wall under the window.
@@ -204,7 +190,6 @@ export function furnishHouse(): Furnishings {
     tiles: prop('alarmclock', 16, 3),
     action: { type: 'dialogue', id: 'alarm' },
   })
-  kenney(K.landscapes[2], 15, 1)
   interactables.push({
     id: 'wardrobe',
     label: 'Wardrobe — change outfit',
