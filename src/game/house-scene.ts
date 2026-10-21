@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { HouseBridge, Hint, InteractAction } from './bridge'
+import type { HouseBridge, Hint, InteractAction, VisitTarget } from './bridge'
 import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
@@ -1323,15 +1323,52 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private teleport(roomId: RoomId) {
-    const room = getRoom(roomId)
-    const spawn = room.spawn
+    this.placeGuest(getRoom(roomId).spawn, this.spawnFacing(roomId))
+  }
+
+  /**
+   * Stands the guest beside an interactable (or João), facing it, then tells
+   * React they've arrived so it can open the matching page or panel. Of the
+   * free tiles around it, one in the item's own room and below it comes first,
+   * so the guest faces up at it like a visitor walking in.
+   */
+  private visit(targetId: VisitTarget) {
+    const target: Target | null =
+      targetId === 'joao'
+        ? { kind: 'npc' }
+        : (() => {
+            const object = this.furnishings.interactables.find((o) => o.id === targetId)
+            return object ? { kind: 'object', object } : null
+          })()
+    const arrive = () => this.cfg.bridge.game.emit('arrived', targetId)
+    if (!target) return arrive()
+    const tiles = this.targetTiles(target)
+    const room = roomOf(tiles)
+    const free = this.neighbours(tiles).filter(
+      (tile) => !this.solid.has(key(tile)) && !(target.kind === 'npc' && key(tile) === key(this.npc.tile)),
+    )
+    const rank = (tile: Point) =>
+      (room && roomAt(tile.x, tile.y)?.id !== room.id ? 10 : 0) +
+      { up: 0, left: 1, right: 1, down: 2 }[this.directionToward(tile, tiles)]
+    const spot = free.sort((a, b) => rank(a) - rank(b))[0]
+    if (!spot) return arrive()
+    this.placeGuest(spot, this.directionToward(spot, tiles), () => {
+      if (target.kind === 'npc') {
+        const opposite: Record<Direction, Direction> = { up: 'down', down: 'up', left: 'right', right: 'left' }
+        this.face(this.npc, opposite[this.player.facing])
+      }
+      arrive()
+    })
+  }
+
+  /** Moves the guest to `spot` behind a quick fade (a cut under reduced motion). */
+  private placeGuest(spot: Point, facing: Direction, onPlaced?: () => void) {
     this.path = []
     this.pendingTarget = null
-    this.cameras.main.fadeOut(140, 20, 18, 28)
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      // Shoo João out of the way if he's standing on the spawn tile.
-      if (this.npc.tile.x === spawn.x && this.npc.tile.y === spawn.y) {
-        const free = this.neighbours([spawn]).find((t) => this.isWalkable(t.x, t.y, this.npc))
+    const move = () => {
+      // Shoo João out of the way if he's standing on the spot.
+      if (this.npc.tile.x === spot.x && this.npc.tile.y === spot.y) {
+        const free = this.neighbours([spot]).find((t) => this.isWalkable(t.x, t.y, this.npc))
         if (free) {
           this.npc.tile = free
           this.npc.sprite.setPosition(free.x * TILE + TILE / 2, (free.y + 1) * TILE)
@@ -1339,8 +1376,8 @@ export class HouseScene extends Phaser.Scene {
         }
       }
       // Zeno too: he just jumps aside.
-      if (this.zeno.tile.x === spawn.x && this.zeno.tile.y === spawn.y && !this.zeno.moving && !this.zenoInBox) {
-        const free = this.neighbours([spawn]).find((t) => this.zenoCanWalk(t.x, t.y))
+      if (this.zeno.tile.x === spot.x && this.zeno.tile.y === spot.y && !this.zeno.moving && !this.zenoInBox) {
+        const free = this.neighbours([spot]).find((t) => this.zenoCanWalk(t.x, t.y))
         if (free) {
           this.zeno.tile = free
           this.zeno.sprite.setPosition(free.x * TILE + TILE / 2, (free.y + 1) * TILE).setDepth(10 + free.y / 100)
@@ -1348,17 +1385,21 @@ export class HouseScene extends Phaser.Scene {
           this.zenoPlaying = false
         }
       }
-      this.player.tile = { ...spawn }
-      this.player.sprite.setPosition(spawn.x * TILE + TILE / 2, (spawn.y + 1) * TILE)
-      this.player.sprite.setDepth(10 + spawn.y / 100)
-      this.player.facing = this.spawnFacing(roomId)
+      this.player.tile = { ...spot }
+      this.player.sprite.setPosition(spot.x * TILE + TILE / 2, (spot.y + 1) * TILE)
+      this.player.sprite.setDepth(10 + spot.y / 100)
+      this.player.facing = facing
       this.setIdle(this.player)
       this.cameras.main.centerOn(this.player.sprite.x, this.player.sprite.y)
-      this.cameras.main.fadeIn(180, 20, 18, 28)
+      if (!this.reducedMotion) this.cameras.main.fadeIn(180, 20, 18, 28)
       this.currentRoom = null
       this.updateRoom()
       this.updateHint()
-    })
+      onPlaced?.()
+    }
+    if (this.reducedMotion) return move()
+    this.cameras.main.fadeOut(140, 20, 18, 28)
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, move)
   }
 
   // -------------------------------------------------------------------------
@@ -1421,6 +1462,7 @@ export class HouseScene extends Phaser.Scene {
     const { ui } = this.cfg.bridge
     this.unsubscribers.push(
       ui.on('teleport', (room) => this.teleport(room)),
+      ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('interactFacing', () => this.interactFacing()),

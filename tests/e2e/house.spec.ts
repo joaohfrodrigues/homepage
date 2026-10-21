@@ -2,6 +2,10 @@ import { test, expect, type Page } from '@playwright/test'
 import { furnishHouse } from '../../src/game/furnishings'
 import { TILE, type Point } from '../../src/game/layout'
 
+/** The directory's subject list, which it opens with. */
+const subjects = (page: Page) =>
+  page.getByRole('dialog', { name: 'What are you after?' }).getByRole('navigation', { name: 'Subjects' })
+
 test.describe('House', () => {
   // These tests are about the house itself, so skip the first-visit welcome card.
   test.beforeEach(async ({ page }) => {
@@ -19,18 +23,48 @@ test.describe('House', () => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory).toBeVisible()
-    await directory.getByRole('button', { name: /^Study/ }).click()
+    await directory.getByRole('button', { name: 'Go to the study' }).click()
     await expect(directory).not.toBeVisible()
     await expect(page.getByText('Study', { exact: true })).toBeVisible()
+  })
+
+  for (const size of [
+    { name: 'desktop', width: 1440, height: 900 },
+    { name: 'phone', width: 375, height: 812 },
+  ]) {
+    test(`the directory opens on subjects, all on screen (${size.name})`, async ({ page }) => {
+      await page.setViewportSize(size)
+      await page.goto('/')
+      await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+      await page.getByRole('button', { name: /Directory/ }).click()
+      const list = subjects(page)
+      await expect(list.getByRole('link', { name: /^Trips & photography/ })).toContainText('Study · Wall map')
+      // The whole list fits without scrolling; the floor plan waits below it.
+      await expect(list.getByRole('listitem').first()).toBeInViewport({ ratio: 1 })
+      await expect(list.getByRole('listitem').last()).toBeInViewport({ ratio: 1 })
+    })
+  }
+
+  test('a subject walks the guest to its item, where they stand once the page closes', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('link', { name: /^Trips & photography/ }).click()
+    await expect(page.getByRole('dialog', { name: 'Travel map' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL('/')
+    await expect(page.getByText('Study', { exact: true })).toBeVisible()
+    // Standing at the wall map and facing it, so it's the thing to interact with.
+    await expect(page.getByRole('button', { name: 'E Wall map' })).toBeVisible()
   })
 
   test('the floor plan reaches the balcony off the bedroom and keeps the bathroom shut', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory.getByLabel('Bathroom (occupied)')).toBeVisible()
     await expect(directory.getByRole('button', { name: 'Go to the bathroom' })).toHaveCount(0)
     await directory.getByRole('button', { name: 'Go to the balcony' }).click()
@@ -60,8 +94,8 @@ test.describe('House', () => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    const directory = page.getByRole('dialog', { name: 'Where to?' })
-    await directory.getByRole('link', { name: /About João/ }).click()
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
+    await directory.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: /^About João/ }).click()
     const about = page.getByRole('dialog', { name: 'About João' })
     await expect(about).toBeVisible()
     await expect(directory).not.toBeVisible()
@@ -89,7 +123,7 @@ test.describe('House', () => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory).toBeVisible()
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
     await page.keyboard.press('Escape')
@@ -113,7 +147,7 @@ test.describe('House', () => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    await page.getByRole('button', { name: 'Pull a bica Coffee machine' }).click()
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
     await bica.getByRole('button', { name: 'Start the pull' }).click()
     await bica.getByRole('button', { name: 'Stop!' }).click()
@@ -121,7 +155,7 @@ test.describe('House', () => {
     await page.keyboard.press('Escape')
 
     await page.keyboard.press('m')
-    await page.getByRole('button', { name: 'Where was this taken? Fridge magnets' }).click()
+    await subjects(page).getByRole('button', { name: /^Where was this taken\?/ }).click()
     const guess = page.getByRole('dialog', { name: 'Where was this taken?' })
     await guess.getByRole('application').click({ position: { x: 100, y: 60 } })
     await guess.getByRole('button', { name: 'Guess' }).click()
@@ -132,7 +166,7 @@ test.describe('House', () => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
-    await page.getByRole('button', { name: 'Pull a bica Coffee machine' }).click()
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
     await bica.getByRole('button', { name: 'Start the pull' }).click()
     await bica.getByRole('button', { name: 'Stop!' }).click()
@@ -160,11 +194,11 @@ test.describe('Welcome card', () => {
     await expect(card.getByRole('link', { name: 'Films & series' })).toHaveAttribute('href', '/hobbies/watching')
     // The house waits behind the card: M doesn't open the directory yet.
     await page.keyboard.press('m')
-    await expect(page.getByRole('dialog', { name: 'Where to?' })).not.toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'What are you after?' })).not.toBeVisible()
     await card.getByRole('button', { name: 'Explore the house' }).click()
     await expect(card).not.toBeVisible()
     await page.keyboard.press('m')
-    await expect(page.getByRole('dialog', { name: 'Where to?' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'What are you after?' })).toBeVisible()
 
     await page.reload()
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
