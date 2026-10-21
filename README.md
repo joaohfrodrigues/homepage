@@ -49,10 +49,10 @@ interact with <kbd>E</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd>, or click the f
 on it. <kbd>M</kbd> opens the directory and <kbd>G</kbd> the guestbook. The directory lists the
 site's subjects and things to do (with the room and item each lives at), then a floor plan to jump
 to a room; picking a subject stands you next to its item before the page opens, so closing it leaves
-you there. On touch screens you tap: the floor to walk, a thing or person to walk over and interact.
-A switch in the top bar swaps in an on-screen joystick with an A button that names what it will do;
-tapping things still works with it on, and the choice is remembered in `localStorage`. Furniture and
-people open the site's sections:
+you there. On touch screens, dragging anywhere brings up a joystick under your thumb, and tapping
+the floor walks there. Tapping a thing or person walks you up to it; a second tap (or one tap if
+you're already facing it) uses it, so nothing opens by surprise. Furniture and people open the
+site's sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV) and João himself.

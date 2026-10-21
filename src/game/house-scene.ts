@@ -179,7 +179,8 @@ export class HouseScene extends Phaser.Scene {
   private queuedInteract = false
   /** Held on the touch D-pad; read alongside the keyboard each frame. */
   private padDirection: Direction | null = null
-  private tapToMove = true
+  /** Whether reaching `pendingTarget` uses it (a click) or only faces it (a first touch tap). */
+  private pendingUse = true
   /** Keys pressed before this (e.g. Enter on a dialogue choice) belong to React. */
   private inputEnabledAt = 0
   private hoverTarget: Target | null = null
@@ -303,7 +304,7 @@ export class HouseScene extends Phaser.Scene {
       const target = this.pendingTarget
       this.pendingTarget = null
       this.faceTarget(target)
-      this.interact(target)
+      if (this.pendingUse) this.interact(target)
       return
     }
 
@@ -1260,25 +1261,41 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private handleTap(pointer: Phaser.Input.Pointer) {
+    this.tapTile({ x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }, !pointer.wasTouch)
+  }
+
+  /** A tap from the touch layer, in client coordinates. */
+  private handleTouchTap(clientX: number, clientY: number) {
+    const box = this.game.canvas.getBoundingClientRect()
+    const world = this.cameras.main.getWorldPoint(clientX - box.left, clientY - box.top)
+    this.tapTile({ x: Math.floor(world.x / TILE), y: Math.floor(world.y / TILE) }, false)
+  }
+
+  /**
+   * Walks to a tapped floor tile, or up to a tapped thing. A click uses the
+   * thing straight away; a touch tap only walks up and faces it, so nothing
+   * opens by surprise, and the next tap on it (now faced) uses it.
+   */
+  private tapTile(tile: Point, use: boolean) {
     if (!this.inputEnabled) return
-    const tile = { x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }
     const target = this.pointerTargetAt(tile)
-    // With the on-screen pad the stick does the walking, but tapping a thing still goes to it.
-    if (pointer.wasTouch && !this.tapToMove && !target) return
 
     if (target) {
       const tiles = this.targetTiles(target)
       const adjacent = this.neighbours(tiles)
       const isAdjacent = adjacent.some((t) => t.x === this.player.tile.x && t.y === this.player.tile.y)
       if (isAdjacent && !this.player.moving) {
+        const facing = this.targetAt(this.facingTile())
+        const alreadyFacing = facing !== null && this.sameTarget(facing, target)
         this.faceTarget(target)
-        this.interact(target)
+        if (use || alreadyFacing) this.interact(target)
         return
       }
       const path = this.findPath(adjacent)
       if (path) {
         this.path = path
         this.pendingTarget = target
+        this.pendingUse = use
       }
       return
     }
@@ -1289,6 +1306,11 @@ export class HouseScene extends Phaser.Scene {
       this.path = path
       this.pendingTarget = null
     }
+  }
+
+  private sameTarget(a: Target, b: Target): boolean {
+    if (a.kind === 'object' && b.kind === 'object') return a.object.id === b.object.id
+    return a.kind === b.kind
   }
 
   private handleHover(pointer: Phaser.Input.Pointer) {
@@ -1467,17 +1489,11 @@ export class HouseScene extends Phaser.Scene {
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
-        // A quick tap that lifts before the next frame still takes one step.
+        // A quick flick that lets go before the next frame still takes one step.
         if (direction) this.queuedStep = direction
         this.padDirection = direction
       }),
-      ui.on('tapToMove', (enabled) => {
-        this.tapToMove = enabled
-        if (!enabled) {
-          this.path = []
-          this.pendingTarget = null
-        }
-      }),
+      ui.on('tapAt', ({ x, y }) => this.handleTouchTap(x, y)),
       ui.on('inputEnabled', (enabled) => {
         this.inputEnabled = enabled
         this.input.keyboard!.enabled = enabled
