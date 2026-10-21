@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { furnishHouse, propTiles } from '../../src/game/furnishings'
-import { MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, isFloorCell, type Point } from '../../src/game/layout'
+import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point } from '../../src/game/layout'
+import { limezuRect } from '../../src/game/limezu-furniture'
 
 // Pure checks on the floor plan and furniture: no browser needed.
 
@@ -72,5 +73,16 @@ test.describe('House layout', () => {
     const { spots, toy, litterBox } = furnishHouse().zeno
     const missed = [...spots, toy, litterBox].filter((spot) => !reachable.has(key(spot)))
     expect(missed).toEqual([])
+  })
+
+  test('tall pack furniture only rises over tiles nobody stands on', () => {
+    // Furniture is baked under the characters, so someone standing behind a tall
+    // plant would be drawn over its leaves. A few pixels of overhang is fine.
+    const reachable = reachableFromFrontDoor()
+    const exposed = furnishHouse()
+      .decor.filter((item) => item.kind === 'limezu')
+      .filter((item) => limezuRect(item.sprite, item.x, item.y).h > TILE + 4 && reachable.has(key({ x: item.x, y: item.y - 1 })))
+      .map((item) => `${item.sprite} at ${item.x},${item.y}`)
+    expect(exposed).toEqual([])
   })
 })

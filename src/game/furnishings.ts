@@ -1,12 +1,11 @@
 import type { InteractAction } from './bridge'
 import type { Point } from './layout'
+import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
 
 /** Frame indices into the Kenney "Roguelike Indoors" sheet (27 columns). */
 const K = {
-  plant: 16,
-  plantSmall: 17,
   mirror: 400,
   paintings: [340, 341, 342, 367, 368, 369],
   landscapes: [343, 370, 397],
@@ -16,6 +15,8 @@ const K = {
 export type Decor =
   | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
   | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
+  /** A Modern Interiors sprite standing on one tile; tall ones rise over the tile above. */
+  | { kind: 'limezu'; sprite: LimezuSprite; x: number; y: number; solid: boolean }
 
 export interface Interactable {
   id: string
@@ -68,6 +69,8 @@ export function furnishHouse(): Furnishings {
   const interactables: Interactable[] = []
   const kenney = (frame: number, x: number, y: number, solid = false) =>
     decor.push({ kind: 'kenney', frame, x, y, solid })
+  const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
+    decor.push({ kind: 'limezu', sprite, x, y, solid })
   const prop = (name: PropName, x: number, y: number, solid = true) => {
     const item: Decor = { kind: 'prop', prop: name, x, y, solid }
     decor.push(item)
@@ -99,8 +102,8 @@ export function furnishHouse(): Furnishings {
   prop('chairup', 3, 12, false)
   // The right-hand side stays clear: it's the way in from the hall.
   prop('recordplayer', 10, 5)
-  kenney(K.plant, 1, 3, true)
-  kenney(K.plantSmall, 10, 3, true)
+  limezu('leafyPlant', 1, 3)
+  limezu('tallBush', 10, 3)
 
   // --- Kitchen (3 × 2.5m) -------------------------------------------------------
   // An L of counters on the two walls without doors: sink and coffee machine
@@ -154,7 +157,7 @@ export function furnishHouse(): Furnishings {
     action: { type: 'panel', panel: 'guestbook' },
   })
   prop('doormat', 9, 19, false)
-  kenney(K.plantSmall, 8, 19, true)
+  limezu('fern', 8, 19)
   interactables.push({
     id: 'front-door',
     label: 'Front door',
@@ -194,13 +197,13 @@ export function furnishHouse(): Furnishings {
     tiles: prop('wardrobeside', 12, 4),
     action: { type: 'panel', panel: 'wardrobe' },
   })
-  kenney(K.plantSmall, 12, 10, true)
+  limezu('snakePlant', 12, 10)
 
   // --- Balcony (1 × 4m) ---------------------------------------------------------
   prop('cafetable', 22, 4)
   prop('cafechair', 22, 5, false)
-  kenney(K.plant, 21, 3, true)
-  kenney(K.plantSmall, 22, 10, true)
+  limezu('palm', 21, 3)
+  limezu('topiary', 22, 10)
   interactables.push({
     id: 'balcony',
     label: 'Railing — look out over Lisbon',
@@ -239,7 +242,7 @@ export function furnishHouse(): Furnishings {
   prop('floorlamp', 17, 15)
   topicItem('drums', prop('drums', 17, 17))
   topicItem('camera', prop('camerastand', 20, 18))
-  kenney(K.plantSmall, 22, 19, true)
+  limezu('pottedTree', 22, 19)
 
   return {
     decor,

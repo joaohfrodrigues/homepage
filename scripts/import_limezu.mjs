@@ -1,18 +1,21 @@
 /**
- * Pack the house's character pieces from LimeZu's Modern Interiors pack.
+ * Pack the art the house uses from LimeZu's Modern Interiors pack.
  *
  * Usage:
- *     node scripts/import_characters.mjs ~/path/to/moderninteriors-win
+ *     node scripts/import_limezu.mjs ~/path/to/moderninteriors-win
  *
- * The pack's Character Generator pieces (bodies, eyes, outfits, hairstyles,
+ * The pack's licence allows using the art but not redistributing it, so only
+ * these small atlases are committed — never the pack itself. Credit: limezu.itch.io
+ *
+ * Characters: the pack's Character Generator pieces (bodies, eyes, outfits, hairstyles,
  * accessories) share one sprite-sheet layout and stack in that order. Only the
  * idle and walk rows of the pieces picked below are kept, packed into
  * public/house/characters.png, with a manifest in src/game/character-pieces.json.
- * The pack's licence allows using the art but not redistributing it, so only
- * this small atlas is committed — never the pack itself. Credit: limezu.itch.io
- *
  * Each piece's sheet has 16x32 frames. Row 1 is idle and row 2 is walk, each
  * 6 frames per direction in the order right, up, left, down.
+ *
+ * Furniture: named sprites cut from the pack's 16x16 theme sheets, packed into
+ * public/house/limezu-furniture.png with a manifest in src/game/limezu-furniture.json.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -20,10 +23,11 @@ import { deflateSync, inflateSync } from 'node:zlib';
 
 const PACK = process.argv[2];
 if (!PACK) {
-    console.error('usage: node scripts/import_characters.mjs <moderninteriors folder>');
+    console.error('usage: node scripts/import_limezu.mjs <moderninteriors folder>');
     process.exit(1);
 }
 const GENERATOR = join(PACK, '2_Characters/Character_Generator');
+const THEMES = join(PACK, '1_Interiors/16x16/Theme_Sorter');
 
 const FRAME_W = 16;
 const FRAME_H = 32;
@@ -287,4 +291,64 @@ encode('public/house/characters.png', atlas);
 writeFileSync('src/game/character-pieces.json', JSON.stringify(manifest, null, 2) + '\n');
 console.log(
     `packed ${slots.length} pieces into public/house/characters.png (${atlas.w}x${atlas.h})`
+);
+
+// ---------------------------------------------------------------------------
+// Furniture
+
+/** Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels. */
+const FURNITURE = {
+    palm: ['1_Generic_16x16', 212, 408, 23, 31],
+    pottedTree: ['1_Generic_16x16', 215, 457, 18, 31],
+    leafyPlant: ['1_Generic_16x16', 133, 905, 22, 30],
+    tallBush: ['1_Generic_16x16', 113, 908, 14, 29],
+    smallBush: ['1_Generic_16x16', 97, 914, 14, 23],
+    fern: ['1_Generic_16x16', 224, 1011, 15, 19],
+    bigFern: ['1_Generic_16x16', 240, 1021, 16, 25],
+    sprig: ['1_Generic_16x16', 227, 984, 9, 13],
+    topiary: ['1_Generic_16x16', 115, 1040, 10, 14],
+    snakePlant: ['2_LivingRoom_16x16', 2, 86, 12, 14],
+};
+
+const furnitureSheets = new Map();
+const shelfWidth = 128;
+const placed = {};
+let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
+for (const [name, [sheet, x, y, w, h]] of Object.entries(FURNITURE)) {
+    if (!furnitureSheets.has(sheet))
+        furnitureSheets.set(sheet, decode(join(THEMES, `${sheet}.png`)));
+    if (cursorX + w > shelfWidth)
+        [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
+    placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y } };
+    cursorX += w + 1;
+    shelfHeight = Math.max(shelfHeight, h);
+}
+const furniture = {
+    w: shelfWidth,
+    h: cursorY + shelfHeight,
+    px: new Uint8Array(shelfWidth * (cursorY + shelfHeight) * 4),
+};
+for (const { x, y, w, h, from } of Object.values(placed)) {
+    const sheet = furnitureSheets.get(from.sheet);
+    for (let row = 0; row < h; row++) {
+        const start = ((from.y + row) * sheet.w + from.x) * 4;
+        furniture.px.set(
+            sheet.px.subarray(start, start + w * 4),
+            ((y + row) * furniture.w + x) * 4
+        );
+    }
+}
+encode('public/house/limezu-furniture.png', furniture);
+writeFileSync(
+    'src/game/limezu-furniture.json',
+    JSON.stringify(
+        Object.fromEntries(
+            Object.entries(placed).map(([name, { x, y, w, h }]) => [name, { x, y, w, h }])
+        ),
+        null,
+        2
+    ) + '\n'
+);
+console.log(
+    `packed ${Object.keys(placed).length} furniture sprites into public/house/limezu-furniture.png`
 );

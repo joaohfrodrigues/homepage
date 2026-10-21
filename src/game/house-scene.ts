@@ -17,6 +17,7 @@ import {
   type Point,
   type RoomId,
 } from './layout'
+import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import {
@@ -206,6 +207,7 @@ export class HouseScene extends Phaser.Scene {
     })
     this.load.json('world-land', LAND_URL)
     this.load.image('house-characters', CHARACTERS_URL)
+    this.load.image('limezu-furniture', LIMEZU_FURNITURE_URL)
   }
 
   create() {
@@ -366,16 +368,7 @@ export class HouseScene extends Phaser.Scene {
       }
     }
 
-    const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
-    for (const item of this.furnishings.decor) {
-      if (item.kind === 'kenney') {
-        const sx = (item.frame % KENNEY_COLUMNS) * 17
-        const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
-        ctx.drawImage(sheet, sx, sy, 16, 16, item.x * TILE, item.y * TILE, 16, 16)
-      } else {
-        drawProp(ctx, item.x * TILE, item.y * TILE, item.prop)
-      }
-    }
+    for (const item of this.furnishings.decor) this.drawDecor(ctx, item, 0, 0)
 
     this.drawWallMap(ctx)
     texture.refresh()
@@ -617,6 +610,27 @@ export class HouseScene extends Phaser.Scene {
   }
 
 
+  /** Where a piece of decor draws, in world pixels. */
+  private decorRect(item: Decor) {
+    if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y)
+    const size = item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }
+    return { x: item.x * TILE, y: item.y * TILE, ...size }
+  }
+
+  /** Draws a piece of decor onto a canvas whose top-left is world point (ox, oy). */
+  private drawDecor(ctx: CanvasRenderingContext2D, item: Decor, ox: number, oy: number) {
+    const { x, y } = this.decorRect(item)
+    if (item.kind === 'prop') drawProp(ctx, x - ox, y - oy, item.prop)
+    else if (item.kind === 'limezu') {
+      drawLimezu(ctx, this.textures.get('limezu-furniture').getSourceImage() as HTMLImageElement, item.sprite, x - ox, y - oy)
+    } else {
+      const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
+      const sx = (item.frame % KENNEY_COLUMNS) * 17
+      const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
+      ctx.drawImage(sheet, sx, sy, 16, 16, x - ox, y - oy, 16, 16)
+    }
+  }
+
   private decorTiles(item: Decor): Point[] {
     return item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
   }
@@ -636,7 +650,6 @@ export class HouseScene extends Phaser.Scene {
     small('cue-sparkle', 7, 7, drawSparkle)
     small('cue-arrow', 7, 6, drawFocusArrow)
 
-    const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
     for (const object of this.furnishings.interactables) {
       const keys = new Set(object.tiles.map(key))
       const parts = this.furnishings.decor.filter(
@@ -644,11 +657,7 @@ export class HouseScene extends Phaser.Scene {
       )
       const rects =
         parts.length > 0
-          ? parts.map((item) => ({
-              x: item.x * TILE,
-              y: item.y * TILE,
-              ...(item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }),
-            }))
+          ? parts.map((item) => this.decorRect(item))
           : object.tiles.map((tile) => ({ x: tile.x * TILE, y: tile.y * TILE, w: TILE, h: TILE }))
       const bx = Math.min(...rects.map((r) => r.x))
       const by = Math.min(...rects.map((r) => r.y))
@@ -668,16 +677,7 @@ export class HouseScene extends Phaser.Scene {
         ctx.fillStyle = '#000'
         ctx.fillRect(0, 0, bounds.w, bounds.h)
       }
-      for (const item of parts) {
-        const ox = item.x * TILE - bx
-        const oy = item.y * TILE - by
-        if (item.kind === 'prop') drawProp(ctx, ox, oy, item.prop)
-        else {
-          const sx = (item.frame % KENNEY_COLUMNS) * 17
-          const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
-          ctx.drawImage(sheet, sx, sy, 16, 16, ox, oy, 16, 16)
-        }
-      }
+      for (const item of parts) this.drawDecor(ctx, item, bx, by)
 
       const { outline, shine } = traceSilhouette(source)
       this.textures.addCanvas(`cue-outline-${object.id}`, outline)

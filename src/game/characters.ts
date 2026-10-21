@@ -1,6 +1,6 @@
 /**
  * The house's people, layered from LimeZu's Modern Interiors character
- * generator pieces (limezu.itch.io). scripts/import_characters.mjs packs the
+ * generator pieces (limezu.itch.io). scripts/import_limezu.mjs packs the
  * picked pieces' idle and walk rows into one atlas plus character-pieces.json.
  * Pieces stack body, eyes, outfit, hair, face, hat, all on the same 16x32 grid.
  */
