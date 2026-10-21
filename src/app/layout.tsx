@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Pixelify_Sans } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
-import { SITE_URL, SITE_NAME } from '@/lib/site-config'
+import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from '@/lib/site-config'
 
 const pixel = Pixelify_Sans({ subsets: ['latin'], variable: '--font-pixel' })
 // Pixelify's digits are hard to read (5 passes for S), so the pixel stack
@@ -32,9 +32,11 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     siteName: SITE_NAME,
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
+    images: [DEFAULT_OG_IMAGE],
   },
 }
 
