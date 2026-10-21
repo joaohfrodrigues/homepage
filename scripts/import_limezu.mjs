@@ -318,20 +318,34 @@ function plainRug(mx, my, cols, bands) {
     return { parts };
 }
 
-/** A 30x16 mat from the same rug: its top eight rows on its bottom eight, so the dither still lines up. */
-function plainMat(mx, my) {
-    return {
-        parts: [
-            ['4_Bedroom', mx, my, 30, 8, 0, 0],
-            ['4_Bedroom', mx, my + 22, 30, 8, 0, 8],
-        ],
-    };
+/**
+ * A bordered modular rug from the Generic sheet grown to (32 + 16 * cols) x (26 + 16 * bands):
+ * its 32x26 piece split down the middle around repeats of the 16-wide slice to its right,
+ * and split across the middle around repeats of the 16-tall slice below it. `thin` keeps
+ * only the top and bottom eight rows, for runners and mats.
+ */
+function borderedRug(mx, my, sliceY, cols, bands, { thin = false } = {}) {
+    const columns = [mx, ...Array(cols).fill(mx + 32), mx + 16];
+    const parts = [];
+    columns.forEach((sx, i) => {
+        const dx = i * 16;
+        const edge = thin ? 8 : 13;
+        parts.push(['1_Generic', sx, my, 16, edge, dx, 0]);
+        if (!thin)
+            for (let b = 0; b < bands; b++)
+                parts.push(['1_Generic', sx, sliceY, 16, 16, dx, 13 + 16 * b]);
+        parts.push(['1_Generic', sx, my + 26 - edge, 16, edge, dx, thin ? 8 : 13 + 16 * bands]);
+    });
+    return { parts };
 }
+
+const TAUPE = [0.78, 0.68, 0.6];
 
 /**
  * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, or
  * { parts: [[sheet, x, y, w, h, dx, dy], ...] } assembled from several pieces,
- * with `rotate: true` to turn the result a quarter turn clockwise.
+ * with `rotate: true` to turn the result a quarter turn clockwise and `tint` to
+ * recolour it from its shading (the dark outline stays).
  */
 const FURNITURE = {
     palm: ['1_Generic', 212, 408, 23, 31],
@@ -347,9 +361,10 @@ const FURNITURE = {
     // Rugs
     rugTerracotta: plainRug(161, 1073, 4, 2),
     rugBeige: ['1_Generic', 3, 706, 43, 28],
-    rugGreyStudy: plainRug(209, 1073, 2, 2),
-    rugGreyCorridor: plainRug(209, 1073, 2, 0),
-    doormatGrey: plainMat(209, 1073),
+    // The pack's blue bordered rug, tinted a dark warm taupe.
+    rugTaupeStudy: { ...borderedRug(48, 403, 432, 2, 2), tint: TAUPE },
+    runnerTaupe: { ...borderedRug(48, 403, 432, 2, 0, { thin: true }), tint: TAUPE },
+    doormatTaupe: { ...borderedRug(48, 403, 432, 0, 0, { thin: true }), tint: TAUPE },
 };
 
 const furnitureSheets = new Map();
@@ -378,6 +393,13 @@ function assemble(entry) {
             );
         }
     }
+    if (spec.tint)
+        for (let i = 0; i < img.px.length; i += 4) {
+            const [r, g, b, a] = img.px.subarray(i, i + 4);
+            if (!a || r + g + b < 150) continue;
+            const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+            spec.tint.forEach((k, c) => (img.px[i + c] = Math.min(255, Math.round(lum * k))));
+        }
     if (!spec.rotate) return img;
     const turned = { w: h, h: w, px: new Uint8Array(w * h * 4) };
     for (let y = 0; y < h; y++)

@@ -85,10 +85,10 @@ export function furnishHouse(): Furnishings {
 
   // Rugs first: decor is drawn in order, and furniture stands on them.
   rug('rugBeige', 14, 7, 5, 2)
-  rug('rugGreyStudy', 18, 15, 4, 4)
+  rug('rugTaupeStudy', 18, 15, 4, 4)
   rug('rugTerracotta', 2, 4, 6, 4)
-  rug('rugGreyCorridor', 12, 13, 4, 2)
-  rug('doormatGrey', 9, 19, 2, 1)
+  rug('runnerTaupe', 12, 13, 4, 2)
+  rug('doormatTaupe', 9, 19, 2, 1)
 
   // --- Living room (5 × 5m) -----------------------------------------------------
   // Two street windows either side of a terracotta chimney breast; the TV hangs on
