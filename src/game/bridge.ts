@@ -1,6 +1,5 @@
 import type { RoomId } from './layout'
 import type { Outfit } from './pixels'
-import type { TopicId } from './topics'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
 export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
@@ -22,7 +21,6 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
-  | `topic:${TopicId}`
 
 /** The interactable the player is facing or hovering, shown in the HUD. */
 export interface Hint {

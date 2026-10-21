@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Lora, Pixelify_Sans } from 'next/font/google'
+import { Pixelify_Sans } from 'next/font/google'
 import localFont from 'next/font/local'
 import './globals.css'
 import { SITE_URL, SITE_NAME } from '@/lib/site-config'
 
-const lora = Lora({ subsets: ['latin'], variable: '--font-serif' })
 const pixel = Pixelify_Sans({ subsets: ['latin'], variable: '--font-pixel' })
 // Pixelify's digits are hard to read (5 passes for S), so the pixel stack
 // takes 0-9 from VT323 instead. The file is subset to the ten digits, and the
@@ -52,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${pixel.variable} ${pixelDigits.variable}`}>
+    <html lang="en" className={`${pixel.variable} ${pixelDigits.variable}`}>
       <head>
         <link
           rel="stylesheet"

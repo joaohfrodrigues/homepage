@@ -1,11 +1,9 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* Maps CSS custom properties (some set by next/font, some below) to Tailwind
    theme tokens. Must be `inline` — a plain @theme would re-declare
-   `--font-serif` etc. at :root in terms of themselves, since next/font's
+   `--font-pixel` at :root in terms of themselves, since next/font's
    `variable` option uses the same names as Tailwind's font-family namespace. */
 @theme inline {
     --color-border: hsl(var(--border));
@@ -23,8 +21,6 @@
     --color-muted-foreground: hsl(var(--muted-foreground));
     --color-accent: hsl(var(--accent));
     --color-accent-foreground: hsl(var(--accent-foreground));
-    --color-brand: hsl(var(--brand));
-    --color-brand-foreground: hsl(var(--brand-foreground));
     --color-popover: hsl(var(--popover));
     --color-popover-foreground: hsl(var(--popover-foreground));
     --color-card: hsl(var(--card));
@@ -34,17 +30,7 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
-    --font-serif: var(--font-serif), ui-serif, Georgia, serif;
     --font-pixel: var(--font-pixel-digits), var(--font-pixel), ui-monospace, monospace;
-}
-
-@utility container {
-    margin-inline: auto;
-    padding-inline: 2rem;
-
-    @media (width >= theme(--breakpoint-2xl)) {
-        max-width: 1400px;
-    }
 }
 
 @layer base {
@@ -69,32 +55,6 @@
         --input: 0 0% 89.8%;
         --ring: 0 0% 3.9%;
         --radius: 0.5rem;
-        --brand: 355 70% 45%;
-        --brand-foreground: 0 0% 98%;
-    }
-
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --brand: 355 65% 58%;
-        --brand-foreground: 0 0% 9%;
     }
 }
 

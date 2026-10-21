@@ -6,7 +6,7 @@ import { DocumentRenderer } from '@keystatic/core/renderer'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ArticleBody({ document }: { document: any[] }) {
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none">
+    <div className="prose prose-neutral max-w-none">
       <DocumentRenderer
         document={document}
         renderers={{

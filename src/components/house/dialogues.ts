@@ -1,5 +1,4 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
-import { getTopic, type TopicId } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -130,15 +129,5 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
             ],
             choices: [{ label: 'Back inside', kind: 'close' }],
           }
-    default: {
-      const topic = getTopic(id.slice('topic:'.length) as TopicId)
-      return {
-        lines: [topic.look],
-        choices: [
-          { label: `${topic.title} →`, kind: 'link', href: topic.href },
-          { label: 'Back', kind: 'close' },
-        ],
-      }
-    }
   }
 }

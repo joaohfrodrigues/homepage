@@ -54,10 +54,9 @@ export function propTiles(decor: Extract<Decor, { kind: 'prop' }>): Point[] {
   return tilesOf(decor.x, decor.y, size.w / 16, size.h / 16)
 }
 
-/** Opening a topic: straight into its window if it lives in the house, else a look first. */
+/** Opening a topic goes straight into its window. */
 export function topicAction(id: TopicId): InteractAction {
-  const topic = getTopic(id)
-  return topic.inHouse ? { type: 'navigate', href: topic.href } : { type: 'dialogue', id: `topic:${id}` }
+  return { type: 'navigate', href: getTopic(id).href }
 }
 
 /**
