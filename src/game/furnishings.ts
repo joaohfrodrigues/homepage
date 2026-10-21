@@ -24,19 +24,19 @@ export interface Interactable {
   action: InteractAction
 }
 
-export interface Label {
-  text: string
-  x: number
-  y: number
-}
-
 export interface Furnishings {
   decor: Decor[]
   interactables: Interactable[]
-  labels: Label[]
   npcStart: Point
   /** João wanders inside this rectangle when nobody is talking to him. */
   npcArea: { x: number; y: number; w: number; h: number }
+  zeno: {
+    start: Point
+    /** Furniture that's solid for people but that Zeno happily walks on. */
+    perches: Point[]
+    /** Favourite places he trots off to and sits in for a while. */
+    spots: Point[]
+  }
 }
 
 function tilesOf(x: number, y: number, w: number, h: number): Point[] {
@@ -63,7 +63,6 @@ export function topicAction(id: TopicId): InteractAction {
 export function furnishHouse(): Furnishings {
   const decor: Decor[] = []
   const interactables: Interactable[] = []
-  const labels: Label[] = []
   const kenney = (frame: number, x: number, y: number, solid = false) =>
     decor.push({ kind: 'kenney', frame, x, y, solid })
   const prop = (name: PropName, x: number, y: number, solid = true) => {
@@ -76,152 +75,187 @@ export function furnishHouse(): Furnishings {
   const paintings = [...K.paintings, ...K.landscapes]
 
   // Rugs first: decor is drawn in order, and furniture stands on them.
-  prop('rugbed', 2, 7, false)
-  prop('rugstudy', 18, 5, false)
-  prop('rugliving', 2, 17, false)
+  prop('rugbed', 14, 7, false)
+  prop('rugstudy', 18, 15, false)
+  prop('rugliving', 2, 4, false)
 
-  // --- Bedroom (4 × 3.5m) -------------------------------------------------------
-  interactables.push({
-    id: 'bed',
-    label: 'Bed — take a nap',
-    tiles: prop('bed', 3, 2),
-    action: { type: 'dialogue', id: 'bed' },
-  })
-  prop('nightstand', 2, 3)
-  interactables.push({
-    id: 'alarm',
-    label: 'Alarm clock',
-    tiles: prop('alarmclock', 6, 3),
-    action: { type: 'dialogue', id: 'alarm' },
-  })
-  interactables.push({
-    id: 'wardrobe',
-    label: 'Wardrobe — change outfit',
-    tiles: prop('wardrobe', 7, 2),
-    action: { type: 'panel', panel: 'wardrobe' },
-  })
-  kenney(K.landscapes[2], 1, 2)
-  kenney(K.plantSmall, 8, 9, true)
+  // --- Living room (5 × 5m) -----------------------------------------------------
+  // Two street windows either side of a terracotta chimney breast; the TV hangs on
+  // it, so the sofa faces the soft north light rather than having it behind the screen.
+  prop('chimney', 4, 1, false)
+  topicItem('watching', prop('tv', 4, 1))
+  prop('coffeetable', 5, 5)
+  prop('sofa', 4, 7)
+  prop('floorlamp', 3, 7)
+  // Dining behind the sofa, by the kitchen's pocket door: two steps from the hob.
+  // Chairs can be walked over (pulled out of the way); tables and sofas can't.
+  prop('diningtable', 1, 10)
+  prop('chair', 1, 9, false)
+  prop('chair', 3, 9, false)
+  prop('chairup', 1, 12, false)
+  prop('chairup', 3, 12, false)
+  // The right-hand side stays clear: it's the way in from the hall.
+  prop('recordplayer', 10, 5)
+  prop('cattoy', 7, 10, false)
+  kenney(K.plant, 1, 3, true)
+  kenney(K.plantSmall, 10, 3, true)
 
-  // --- Bathroom (2 × 3.5m), behind a shut door ------------------------------
-  interactables.push({
-    id: 'bathroom-door',
-    label: 'Bathroom door',
-    tiles: [
-      { x: 11, y: 10 },
-      { x: 12, y: 10 },
-      { x: 11, y: 11 },
-      { x: 12, y: 11 },
-    ],
-    action: { type: 'dialogue', id: 'bathroom' },
-  })
-  prop('toilet', 10, 2)
-  prop('basin', 11, 2)
-  prop('shower', 12, 3)
-  prop('bathmat', 11, 7, false)
-
-  // --- Study (5 × 3.5m) ---------------------------------------------------------
-  topicItem('writing', [15, 16, 17, 18].flatMap((x) => prop('bookshelf', x, 2)))
-  topicItem('trips', prop('wallmap', 19, 1))
-  topicItem('home-server', prop('desk', 22, 2))
-  prop('officechair', 23, 4)
-  prop('armchair', 15, 6)
-  prop('floorlamp', 17, 6)
-  topicItem('camera', prop('camerastand', 24, 5))
-  topicItem('drums', prop('drums', 23, 7))
-  kenney(K.plant, 15, 9, true)
-  kenney(K.plantSmall, 24, 9, true)
-
-  // --- Corridor (1m wide) -------------------------------------------------------
-  kenney(K.runnerH.left, 2, 13)
-  for (let x = 3; x < 23; x++) kenney(K.runnerH.mid, x, 13)
-  kenney(K.runnerH.right, 23, 13)
-  ;[2, 8, 15, 23].forEach((x, i) => kenney(paintings[(i * 2) % paintings.length], x, 11))
-  kenney(K.plant, 1, 12, true)
-  kenney(K.plant, 24, 12, true)
-
-  // --- Living room (6 × 4m) -----------------------------------------------------
-  topicItem('watching', prop('tv', 3, 14))
-  kenney(K.landscapes[0], 9, 15)
-  kenney(K.landscapes[1], 11, 15)
-  prop('coffeetable', 4, 18)
-  prop('sofa', 3, 20)
-  prop('floorlamp', 7, 20)
-  prop('diningtable', 9, 19)
-  prop('chair', 9, 18)
-  prop('chair', 11, 18)
-  prop('chairup', 9, 21)
-  prop('chairup', 11, 21)
-  kenney(K.plant, 1, 16, true)
-  kenney(K.plant, 1, 23, true)
-
-  // --- Kitchen (3 × 4m) ---------------------------------------------------------
-  prop('counter', 19, 15)
+  // --- Kitchen (3 × 2.5m) -------------------------------------------------------
+  // An L of counters on the two walls without doors: sink and coffee machine
+  // along the north wall, the hob on the west wall away from the sink, and the
+  // fridge at the end of the run by the pocket door, with floor in front of it.
+  prop('counter', 1, 14)
+  prop('sink', 2, 14)
   interactables.push({
     id: 'coffee',
     label: 'Coffee machine — pull a bica',
-    tiles: prop('coffeecounter', 20, 15),
+    tiles: prop('coffeecounter', 3, 14),
     action: { type: 'panel', panel: 'bica' },
   })
-  prop('stove', 21, 15)
-  prop('sink', 22, 15)
-  prop('counter', 23, 15)
   interactables.push({
     id: 'fridge',
     label: 'Fridge magnets — where was this taken?',
-    tiles: prop('fridge', 24, 15),
+    tiles: prop('fridge', 4, 14),
     action: { type: 'panel', panel: 'geoguess' },
   })
-  prop('kitchentable', 20, 19)
-  prop('chair', 20, 18)
-  prop('chairup', 21, 21)
-  kenney(K.plantSmall, 24, 23, true)
+  prop('kcounter', 1, 16)
+  prop('khob', 1, 17)
+  prop('kcounter', 1, 18)
+  prop('kcounter', 1, 19)
+  prop('litterbox', 6, 19)
 
-  // --- Entrance hall (2 × 4m) ---------------------------------------------------
-  topicItem('hiking', [...prop('coathooks', 14, 14), ...prop('boots', 14, 16)])
-  topicItem('running', [...prop('medalhanger', 17, 14), ...prop('shoerack', 17, 16)])
-  prop('console', 14, 21)
+  // --- Entrance hall (1.5 × 3.5m), open to the living room ------------------------
+  topicItem('running', prop('medalstand', 8, 13))
+  prop('console', 8, 15)
   interactables.push({
     id: 'letterbox',
     label: 'Post on the console — get in touch',
-    tiles: [{ x: 14, y: 21 }],
+    tiles: [{ x: 8, y: 15 }],
     action: { type: 'dialogue', id: 'letterbox' },
   })
   interactables.push({
     id: 'directory',
     label: 'Floor plan — house directory',
-    tiles: [{ x: 14, y: 22 }],
+    tiles: [{ x: 8, y: 16 }],
     action: { type: 'panel', panel: 'directory' },
   })
+  topicItem('hiking', [...prop('coatstand', 10, 15), ...prop('boots', 10, 17)])
   interactables.push({
     id: 'guestbook',
     label: 'Guestbook — your visit so far',
-    tiles: prop('guestbook', 17, 20),
+    tiles: prop('guestbook', 10, 18),
     action: { type: 'panel', panel: 'guestbook' },
   })
-  prop('doormat', 15, 23, false)
-  kenney(K.plantSmall, 17, 23, true)
+  prop('doormat', 9, 19, false)
+  kenney(K.plantSmall, 8, 19, true)
   interactables.push({
     id: 'front-door',
     label: 'Front door',
     tiles: [
-      { x: 15, y: 24 },
-      { x: 16, y: 24 },
+      { x: 9, y: 20 },
+      { x: 10, y: 20 },
     ],
     action: { type: 'dialogue', id: 'front-door' },
   })
 
-  // Room names over the doorways, read from the corridor.
-  labels.push({ text: 'BEDROOM', x: 5 * 16, y: 10 * 16 + 2 })
-  labels.push({ text: 'OCCUPIED', x: 12 * 16, y: 10 * 16 + 2 })
-  labels.push({ text: 'STUDY', x: 20 * 16, y: 10 * 16 + 2 })
-  labels.push({ text: 'HALL', x: 16 * 16, y: 14 * 16 + 2 })
+  // --- Corridor (2 × 1m) --------------------------------------------------------
+  kenney(K.runnerH.left, 12, 14)
+  kenney(K.runnerH.mid, 13, 14)
+  kenney(K.runnerH.mid, 14, 14)
+  kenney(K.runnerH.right, 15, 14)
+  kenney(paintings[0], 12, 12)
+  kenney(paintings[4], 13, 12)
+
+  // --- Bedroom (4 × 4m) ---------------------------------------------------------
+  interactables.push({
+    id: 'bed',
+    label: 'Bed — take a nap',
+    tiles: prop('bed', 15, 2),
+    action: { type: 'dialogue', id: 'bed' },
+  })
+  prop('nightstand', 14, 3)
+  interactables.push({
+    id: 'alarm',
+    label: 'Alarm clock',
+    tiles: prop('alarmclock', 18, 3),
+    action: { type: 'dialogue', id: 'alarm' },
+  })
+  kenney(K.landscapes[2], 16, 1)
+  interactables.push({
+    id: 'wardrobe',
+    label: 'Wardrobe — change outfit',
+    tiles: prop('wardrobeside', 12, 4),
+    action: { type: 'panel', panel: 'wardrobe' },
+  })
+  kenney(K.plantSmall, 12, 10, true)
+
+  // --- Balcony (1 × 4m) ---------------------------------------------------------
+  prop('cafetable', 22, 4)
+  prop('cafechair', 22, 5, false)
+  kenney(K.plant, 21, 3, true)
+  kenney(K.plantSmall, 22, 10, true)
+  interactables.push({
+    id: 'balcony',
+    label: 'Railing — look out over Lisbon',
+    tiles: [
+      { x: 21, y: 2 },
+      { x: 22, y: 2 },
+      ...[3, 4, 5, 6, 7, 8, 9, 10].map((y) => ({ x: 23, y })),
+    ],
+    action: { type: 'dialogue', id: 'balcony' },
+  })
+
+  // --- Bathroom (2 × 2.5m), behind a shut door ------------------------------
+  interactables.push({
+    id: 'bathroom-door',
+    label: 'Bathroom door',
+    tiles: [
+      { x: 14, y: 15 },
+      { x: 15, y: 15 },
+      { x: 14, y: 16 },
+      { x: 15, y: 16 },
+    ],
+    action: { type: 'dialogue', id: 'bathroom' },
+  })
+  prop('toilet', 12, 16)
+  prop('basin', 13, 16)
+  prop('shower', 14, 20)
+  prop('bathmat', 12, 20, false)
+
+  // --- Study (3 × 3.5m) ---------------------------------------------------------
+  // Entered from the end of the corridor, so its whole north wall is free for
+  // the map and the desk.
+  topicItem('trips', prop('wallmap', 17, 11))
+  topicItem('home-server', prop('desk', 20, 12))
+  prop('officechair', 21, 14, false)
+  topicItem('writing', [...prop('bookshelfside', 22, 15), ...prop('bookshelfside', 22, 17)])
+  prop('floorlamp', 17, 15)
+  topicItem('drums', prop('drums', 17, 17))
+  topicItem('camera', prop('camerastand', 20, 18))
+  kenney(K.plantSmall, 22, 19, true)
 
   return {
     decor,
     interactables,
-    labels,
-    npcStart: { x: 8, y: 17 },
-    npcArea: { x: 1, y: 17, w: 12, h: 7 },
+    npcStart: { x: 2, y: 9 },
+    npcArea: { x: 1, y: 4, w: 10, h: 9 },
+    zeno: {
+      start: { x: 7, y: 11 },
+      perches: [
+        ...[4, 5, 6, 7].map((x) => ({ x, y: 8 })), // the sofa seat
+        ...[15, 16, 17].flatMap((x) => [4, 5, 6].map((y) => ({ x, y }))), // the duvet
+        { x: 6, y: 19 }, // the litter box
+      ],
+      spots: [
+        { x: 6, y: 19 }, // litter box
+        { x: 7, y: 10 }, // his toy mouse
+        { x: 5, y: 8 }, // sofa
+        { x: 16, y: 5 }, // bed
+        { x: 8, y: 3 }, // under the street window
+        { x: 22, y: 7 }, // balcony
+        { x: 19, y: 16 }, // the study rug
+        { x: 4, y: 16 }, // waiting by the fridge
+      ],
+    },
   }
 }

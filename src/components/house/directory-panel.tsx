@@ -34,15 +34,21 @@ function ActionRow({ label, item, onClick }: { label: string; item: string; onCl
   )
 }
 
+/** Each room's walls on the plan: azulejo blue, warm white, terracotta, ochre tile, greens. */
 const ROOM_COLORS: Record<RoomId, string> = {
-  hall: '#e7bfb4',
-  corridor: '#cdb48c',
-  living: '#d9b98c',
-  kitchen: '#d2ccc1',
+  hall: '#b9cbe0',
+  corridor: '#e6dccb',
+  living: '#e9c2a6',
+  kitchen: '#e4d9b8',
   study: '#7f9f88',
   bedroom: '#b9c8b2',
   bathroom: '#c9dbe3',
+  balcony: '#d8d0bd',
 }
+
+/** Open doorways, drawn as plain links between rooms. */
+const LINK_COLOR = '#8a7f70'
+const isLink = (cell: string) => cell === 'D' || cell === 'd'
 
 /** The front-door directory and the M-key minimap: the fast path through the house. */
 export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPanel, onToggleNight, onClose }: Props) {
@@ -151,7 +157,7 @@ function RoomButton({ room, current, onClick }: { room: Room; current: boolean; 
   )
 }
 
-/** The house plan drawn from the same layout the game uses; open rooms are clickable. */
+/** The house plan as room blocks and the doorways between them; open rooms are clickable. */
 function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; onTeleport: (room: RoomId) => void }) {
   return (
     <svg
@@ -223,17 +229,7 @@ function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; on
       })}
       {FLOOR_PLAN.flatMap((row, y) =>
         [...row].map((cell, x) =>
-          cell === 'D' || cell === 'd' || cell === 'F' ? (
-            <rect
-              key={`${x},${y}`}
-              x={x}
-              y={y}
-              width={1}
-              height={1}
-              fill={cell === 'D' ? '#d9b98c' : '#c0392b'}
-              aria-hidden
-            />
-          ) : null,
+          isLink(cell) ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={LINK_COLOR} aria-hidden /> : null,
         ),
       )}
     </svg>

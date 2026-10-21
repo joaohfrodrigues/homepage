@@ -102,7 +102,7 @@ export const TOPICS: Topic[] = [
     room: 'hall',
     item: 'Backpack & boots',
     title: 'Hiking',
-    look: 'A backpack on its hook and muddy boots below it — they have been up Pico.',
+    look: 'A backpack on the coat stand by the door and muddy boots below it — they have been up Pico.',
     href: '/hobbies/hiking',
     hobbies: ['hiking'],
     inHouse: true,

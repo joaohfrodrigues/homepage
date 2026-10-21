@@ -23,6 +23,7 @@ export interface VisitorStats {
   geoWorstKm: number | null
   chats: number
   knocks: number
+  pets: number
   naps: number
   outfits: number
 }
@@ -43,6 +44,7 @@ function emptyStats(): VisitorStats {
     geoWorstKm: null,
     chats: 0,
     knocks: 0,
+    pets: 0,
     naps: 0,
     outfits: 0,
   }
@@ -131,7 +133,7 @@ export function metresWalked(stats: VisitorStats): number {
 }
 
 /** Rooms a visitor can actually walk into (the bathroom stays occupied). */
-export const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom']
+export const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
 
 export interface Achievement {
   id: string
@@ -150,6 +152,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'globetrotter', title: 'Globetrotter', hint: 'Score 4000 in one round of fridge magnets.', earned: (s) => s.geoBest >= 4000 },
   { id: 'couch-to-1k', title: 'Couch to 1K', hint: 'Walk a kilometre around the flat.', earned: (s) => metresWalked(s) >= 1000 },
   { id: 'chatterbox', title: 'Chatterbox', hint: 'Talk to João five times.', earned: (s) => s.chats >= 5 },
+  { id: 'cat-person', title: 'Cat person', hint: 'Pet Zeno five times.', earned: (s) => s.pets >= 5 },
   { id: 'still-occupied', title: 'Still occupied', hint: 'Knock on the bathroom door three times.', earned: (s) => s.knocks >= 3 },
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },

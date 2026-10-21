@@ -94,6 +94,32 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         lines: ['*knock knock*', '“Occupied!”', '…wasn’t João in the living room?'],
         choices: [{ label: 'Better leave it', kind: 'close' }],
       }
+    case 'zeno':
+      return house.night
+        ? {
+            lines: ['Zeno blinks at you slowly from the dark. In cat, that’s a kiss.'],
+            choices: [{ label: 'Blink back', kind: 'close' }],
+          }
+        : {
+            lines: ['Zeno, the tuxedo cat, bumps his head into your hand.', 'Prrrrrrrr…'],
+            choices: [{ label: 'Scratch behind the ears', kind: 'close' }],
+          }
+    case 'balcony':
+      return house.night
+        ? {
+            lines: [
+              'The street lamps are on, and the river is a dark ribbon past the rooftops.',
+              'Somewhere downhill, someone is singing fado.',
+            ],
+            choices: [{ label: 'Listen a while', kind: 'close' }],
+          }
+        : {
+            lines: [
+              'Terracotta rooftops tumble down towards the Tejo.',
+              'A tram squeals round the corner below, and a neighbour’s washing flaps in the breeze.',
+            ],
+            choices: [{ label: 'Back inside', kind: 'close' }],
+          }
     default: {
       const topic = getTopic(id.slice('topic:'.length) as TopicId)
       return {
