@@ -128,6 +128,38 @@
             0 14px 0 8px rgb(0 0 0 / 0.35);
     }
 
+    /* Cards share the windows' vocabulary: square corners, an ink outline and a
+       hard offset shadow instead of rounded corners and blur. A card that is a
+       link or button, or sits directly inside a .group link, lifts on hover. */
+    .pixel-card {
+        position: relative;
+        background: #efe3c8;
+        color: #2a2233;
+        box-shadow:
+            0 0 0 2px #2a2233,
+            5px 5px 0 0 rgb(42 34 51 / 0.3);
+        transition:
+            transform 120ms steps(2),
+            box-shadow 120ms steps(2);
+    }
+
+    :is(a, button).pixel-card:hover,
+    .group:hover > .pixel-card {
+        transform: translate(-2px, -2px);
+        box-shadow:
+            0 0 0 2px #2a2233,
+            7px 7px 0 0 rgb(42 34 51 / 0.3);
+    }
+
+    :is(a, button).pixel-card:focus-visible,
+    .group:focus-visible > .pixel-card {
+        outline: none;
+        box-shadow:
+            0 0 0 2px #2a2233,
+            0 0 0 4px #c9a227,
+            7px 7px 0 0 rgb(42 34 51 / 0.3);
+    }
+
     .pixel-button {
         @apply font-pixel inline-flex items-center gap-2 px-3 py-1.5 text-sm transition-transform;
         background: #2a2233;

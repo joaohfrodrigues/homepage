@@ -32,7 +32,7 @@ export function PhotoImage({
   return (
     <div
       data-testid="photo-card"
-      className={`${className ?? ''} relative bg-muted`}
+      className={`${className ?? ''} relative bg-[#2a2233]`}
       style={style}
     >
       {photo.blurDataURL && (
@@ -51,7 +51,7 @@ export function PhotoImage({
         sizes={SIZES}
         priority={priority}
         onLoad={() => setLoaded(true)}
-        className={`object-cover transition duration-700 ease-out group-hover:scale-[1.03] ${
+        className={`object-cover transition duration-700 ease-out ${
           loaded ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
         }`}
       />
@@ -62,13 +62,13 @@ export function PhotoImage({
 /** Unsplash attribution overlay — fades in on hover. Rendered as album `extras`. */
 export function PhotoOverlay({ photo }: { photo: Photo }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+    <div className="font-pixel pointer-events-none absolute inset-x-0 bottom-0 border-t-2 border-[#2a2233] bg-[#2a2233]/85 px-2 py-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
       <a
         href={photo.photographer.profileUrl || `https://unsplash.com/@${photo.photographer.username}`}
         target="_blank"
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
-        className="pointer-events-auto text-xs text-white/90 hover:text-white hover:underline"
+        className="pointer-events-auto text-xs text-[#f4ecd8] hover:text-[#e8c95a] hover:underline"
       >
         {photo.photographer.name}
       </a>{' '}
@@ -78,7 +78,7 @@ export function PhotoOverlay({ photo }: { photo: Photo }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="pointer-events-auto text-xs text-white/70 hover:text-white/90 hover:underline"
+          className="pointer-events-auto text-xs text-[#f4ecd8]/70 hover:text-[#e8c95a] hover:underline"
         >
           on Unsplash
         </a>

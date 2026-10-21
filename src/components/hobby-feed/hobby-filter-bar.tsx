@@ -33,8 +33,8 @@ export function HobbyFilterBar({
             aria-pressed={isSelected}
             onClick={() => onToggleHobby(slug)}
             className={cn(
-              'rounded-full border border-transparent px-3.5 py-1.5 font-lego text-sm uppercase tracking-wide transition-colors',
-              isSelected ? `${bg} ${text}` : 'border-muted-foreground/30 text-muted-foreground'
+              'font-pixel px-3 py-1 text-sm uppercase tracking-wide transition-colors',
+              isSelected ? `${bg} ${text} shadow-[0_0_0_2px_#2a2233]` : 'text-[#6d6359] shadow-[0_0_0_2px_rgb(42_34_51/0.3)]'
             )}
           >
             {label}
@@ -47,8 +47,10 @@ export function HobbyFilterBar({
         aria-pressed={gearOnly}
         onClick={onToggleGearOnly}
         className={cn(
-          'ml-2 rounded-full border border-transparent px-3.5 py-1.5 font-lego text-sm uppercase tracking-wide transition-colors',
-          gearOnly ? 'bg-foreground text-background' : 'border-muted-foreground/30 text-muted-foreground'
+          'font-pixel ml-2 px-3 py-1 text-sm uppercase tracking-wide transition-colors',
+          gearOnly
+            ? 'bg-[#2a2233] text-[#f4ecd8] shadow-[0_0_0_2px_#2a2233]'
+            : 'text-[#6d6359] shadow-[0_0_0_2px_rgb(42_34_51/0.3)]'
         )}
       >
         Gear only

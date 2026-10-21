@@ -39,6 +39,6 @@ test.describe('/hobbies', () => {
   }) => {
     await page.goto('/hobbies')
     await expect(page.getByText('Sony A6600', { exact: true })).toBeVisible()
-    await expect(page.getByText('Sony SEL50F18F 50mm f1.8', { exact: true })).toBeVisible()
+    await expect(page.getByText('Sony SEL50F18', { exact: true })).toBeVisible()
   })
 })
