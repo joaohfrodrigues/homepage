@@ -120,14 +120,14 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
 
   if (photos.length === 0) {
     return (
-      <PanelWindow eyebrow="Kitchen · fridge magnets" title="Where was this taken?" onClose={onClose}>
+      <PanelWindow eyebrow="Kitchen · Fridge magnets" title="Where was this taken?" onClose={onClose}>
         <p>No geotagged photos yet — check back after the next trip.</p>
       </PanelWindow>
     )
   }
 
   return (
-    <PanelWindow eyebrow="Kitchen · fridge magnets" title="Where was this taken?" onClose={onClose}>
+    <PanelWindow eyebrow="Kitchen · Fridge magnets" title="Where was this taken?" onClose={onClose}>
       <div className="font-pixel mb-3 flex justify-between text-sm text-[#6d6359]">
         <span>
           Photo {index + 1} of {ROUNDS}

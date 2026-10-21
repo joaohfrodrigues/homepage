@@ -13,6 +13,26 @@ interface Props {
 }
 
 /**
+ * Calls `onEscape` when Escape is pressed anywhere, not only while focus is
+ * inside the window: a click on the house outside it drops focus to the body.
+ */
+export function useEscapeKey(onEscape: () => void) {
+  const handler = useRef(onEscape)
+  useEffect(() => {
+    handler.current = onEscape
+  })
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      handler.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+}
+
+/**
  * A pixel window over the house for things that aren't pages: the directory,
  * the wardrobe and the kitchen games. Escape or a click outside closes it.
  */
@@ -22,6 +42,7 @@ export function PanelWindow({ title, eyebrow, onClose, width = 'wide', children 
   useEffect(() => {
     closeRef.current?.focus()
   }, [])
+  useEscapeKey(onClose)
 
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -34,12 +55,6 @@ export function PanelWindow({ title, eyebrow, onClose, width = 'wide', children 
           width === 'wide' ? 'max-w-3xl' : 'max-w-lg',
         )}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.stopPropagation()
-            onClose()
-          }
-        }}
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>

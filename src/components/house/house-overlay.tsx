@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef } from 'react'
 import { ArrowLeft, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useLeaveTo } from './house-navigation'
 
 interface Props {
   title: string
@@ -18,13 +18,16 @@ interface Props {
 /**
  * A page shown as a window over the house. Pages under the (house) route group
  * render their content inside one of these, so every overlay keeps a real,
- * server-rendered URL while the game keeps running underneath.
+ * server-rendered URL while the game keeps running underneath. Escape steps
+ * up to the `back` page when there is one; the close button and a click
+ * outside go straight back to the house.
  */
 export function HouseOverlay({ title, eyebrow, back, width = 'wide', children }: Props) {
-  const router = useRouter()
+  const leaveTo = useLeaveTo()
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const close = useCallback(() => router.push('/', { scroll: false }), [router])
+  const close = useCallback(() => leaveTo('/'), [leaveTo])
+  const backHref = back?.href
 
   useEffect(() => {
     panelRef.current?.focus()
@@ -35,11 +38,11 @@ export function HouseOverlay({ title, eyebrow, back, width = 'wide', children }:
       if (e.key !== 'Escape') return
       // The photo lightbox handles its own Escape; don't close the window under it.
       if (document.querySelector('[data-testid="lightbox"]')) return
-      close()
+      leaveTo(backHref ?? '/')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [close])
+  }, [leaveTo, backHref])
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 sm:items-center sm:p-6" onClick={close}>
@@ -61,6 +64,12 @@ export function HouseOverlay({ title, eyebrow, back, width = 'wide', children }:
               <Link
                 href={back.href}
                 scroll={false}
+                onClick={(e) => {
+                  // Let modified clicks open a new tab as usual.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                  e.preventDefault()
+                  leaveTo(back.href)
+                }}
                 className="font-pixel mb-1 inline-flex items-center gap-1 text-xs text-[#8e2a20] hover:underline"
               >
                 <ArrowLeft size={12} />

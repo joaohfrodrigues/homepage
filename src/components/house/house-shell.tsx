@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Gamepad2, Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { BookOpen, Gamepad2, Map as MapIcon, Moon, Pointer, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
@@ -15,6 +15,7 @@ import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogue
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
+import { HouseNavigationContext } from './house-navigation'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -97,6 +98,33 @@ export function HouseShell({ data, children }: Props) {
   const overlayOpen = pathname !== '/'
   const inputEnabled = !overlayOpen && dialogue === null && panel === null
 
+  // A page opening (from the directory, say) takes the place of any panel, so
+  // closing the page goes straight back to the house.
+  const [shownPathname, setShownPathname] = useState(pathname)
+  if (pathname !== shownPathname) {
+    setShownPathname(pathname)
+    if (overlayOpen) setPanel(null)
+  }
+
+  // The page before this one, to tell whether closing it can just step back.
+  const previousPathname = useRef<string | null>(null)
+  const currentPathname = useRef(pathname)
+  useEffect(() => {
+    if (pathname === currentPathname.current) return
+    previousPathname.current = currentPathname.current
+    currentPathname.current = pathname
+  }, [pathname])
+
+  const leaveTo = useCallback(
+    (href: string) => {
+      if (previousPathname.current === href) router.back()
+      // Replacing keeps the closed page out of history, so Back doesn't reopen it.
+      else if (href === '/') router.replace('/', { scroll: false })
+      else router.push(href, { scroll: false })
+    },
+    [router],
+  )
+
   // Boot Phaser once; it survives navigation between overlay pages.
   useEffect(() => {
     let cancelled = false
@@ -178,6 +206,8 @@ export function HouseShell({ data, children }: Props) {
   }, [bridge, ready, usePad])
 
   const togglePad = useCallback(() => {
+    // Bring the controls tip back so it says how the new mode works.
+    setShowControls(true)
     setPadPreferred((on) => {
       try {
         window.localStorage.setItem(CONTROLS_KEY, on ? 'tap' : 'pad')
@@ -275,7 +305,7 @@ export function HouseShell({ data, children }: Props) {
       {ready && (
         <>
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3 sm:p-4">
-            <div className="font-pixel bg-[#2a2233]/90 px-3 py-1.5 shadow-[0_3px_0_#120e18]">
+            <div className="font-pixel bg-[#2a2233]/90 px-3 py-1.5 whitespace-nowrap shadow-[0_3px_0_#120e18]">
               <span className="flex items-center gap-1.5 text-sm leading-tight sm:text-base">
                 João&rsquo;s house
                 {night ? <Moon size={12} aria-label="Night" /> : <Sun size={12} aria-label="Day" />}
@@ -289,10 +319,13 @@ export function HouseShell({ data, children }: Props) {
                   className={cn('pixel-button pointer-events-auto', usePad && 'text-[#e8c95a]')}
                   onClick={togglePad}
                   aria-pressed={usePad}
-                  aria-label="On-screen controls"
-                  title={usePad ? 'Switch to tapping the floor to walk' : 'Switch to the on-screen pad'}
+                  aria-label="On-screen joystick"
+                  title={usePad ? 'Switch to tapping the floor to walk' : 'Switch to the on-screen joystick'}
                 >
-                  <Gamepad2 size={14} />
+                  {usePad ? <Gamepad2 size={14} /> : <Pointer size={14} />}
+                  <span aria-hidden className="hidden sm:inline">
+                    {usePad ? 'Pad' : 'Tap'}
+                  </span>
                 </button>
               )}
               <button
@@ -371,6 +404,7 @@ export function HouseShell({ data, children }: Props) {
           dialogue={buildDialogue(dialogue, data, { night })}
           onChoose={choose}
           onClose={() => setDialogue(null)}
+          touch={coarsePointer}
         />
       )}
 
@@ -398,7 +432,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
 
-      {children}
+      <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>
   )
 }
