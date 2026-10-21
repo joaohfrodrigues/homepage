@@ -1,15 +1,22 @@
 # joaohfrodrigues.com
 
 João Rodrigues' personal site — photography, writing, and hobbies (music, running, watching).
-The frontend is a Next.js 15 app (App Router, TypeScript, Tailwind CSS, Keystatic CMS); photo data
-and watch items are synced daily by Python ETL pipelines that commit their output straight to
-the repo.
+The home page is a pixel-art apartment you walk around: each room leads to part of the site. The
+frontend is a Next.js 16 app (App Router, TypeScript, Tailwind CSS, Keystatic CMS) with the house
+drawn by Phaser. Photo data and watch items are synced daily by Python ETL pipelines that commit
+their output straight to the repo.
 
 ## 🏗️ Architecture
 
-- **Frontend** (`src/`) - Next.js 15 App Router site, deployed to Vercel. Reads photo data directly
+- **Frontend** (`src/`) - Next.js 16 App Router site, deployed to Vercel. Reads photo data directly
     from `data/photos.db` (via `better-sqlite3`), watch items from the `watchItems` Keystatic
     collection, and other content from `content/` (Markdown/YAML, managed through Keystatic CMS).
+    - **The house** (`src/game/`, `src/components/house/`) - every page under `src/app/(house)/`
+      renders inside the house: a Phaser scene with React panels and dialogue on top. See
+      [The House](#-the-house) below.
+    - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
+      `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side) and `keystatic`
+      (the CMS backend).
 - **ETL pipelines** (`backend/`) - Python scripts that sync data into the repo, each on its own
     daily GitHub Actions schedule:
     - `backend/etl.py` - syncs photos and collections from the Unsplash API into `data/photos.db`
@@ -25,7 +32,55 @@ bun install
 bun run dev
 ```
 
-Visit <http://localhost:3000> to see the site.
+Visit <http://localhost:3000> to see the site, and <http://localhost:3000/keystatic> to edit
+content locally (in production the CMS needs the Keystatic GitHub OAuth variables from
+[.env.example](./.env.example)).
+
+```bash
+bun run lint       # ESLint
+bun run typecheck  # TypeScript, no emit
+bun run build      # production build
+```
+
+## 🏠 The House
+
+The home page is a compact Lisbon flat drawn tile by tile. Walk with the arrow keys/WASD (or the
+on-screen pad or tap-to-walk on touch screens) and interact with <kbd>E</kbd>, <kbd>Space</kbd> or
+<kbd>Enter</kbd>. <kbd>M</kbd> opens the room directory and <kbd>G</kbd> the guestbook. Furniture
+and people open the site's sections:
+
+- **Entrance hall** - running and hiking kit.
+- **Living room** - the TV (film & TV) and João himself.
+- **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
+- **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
+    drums.
+- **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
+
+The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
+plain HTML version for screen readers, crawlers and visitors without JavaScript.
+
+Where things live:
+
+- `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
+    `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
+    React.
+- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
+    and dialogue.
+- `public/house/` - the art: character and furniture atlases cut from LimeZu's
+    [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
+    `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
+
+Scripts that generate those assets (outputs are committed, so only re-run them when changing art):
+
+```bash
+node scripts/import_limezu.mjs ~/path/to/moderninteriors   # repack character/furniture atlases
+python scripts/build_house_map.py ne_50m_land.geojson public/house/world-land.json  # world map
+bun run og                                                  # re-snapshot the share image
+```
+
+The pack's licence forbids redistributing it, so only the packed atlases are committed — never the
+pack itself. `bun run og` needs a running dev server and writes `src/assets/og-image.png`; re-run it
+and commit the PNG whenever the house art changes.
 
 ## 📸 ETL Pipelines - Quick Start
 
@@ -60,13 +115,16 @@ Visit <http://localhost:3000> to see the site.
 3. **Sync photos from Unsplash:**
 
     ```bash
-    python backend/etl.py              # Full sync
-    python backend/etl.py --test       # Test mode (5 photos per collection)
-    python backend/etl.py --max-photos 10  # Limit photos per collection
+    python backend/etl.py                       # Incremental sync (only updated photos)
+    python backend/etl.py --full-load           # Re-sync every photo
+    python backend/etl.py --test                # Test mode (5 photos per collection)
+    python backend/etl.py --max-photos 10       # Limit photos per collection
+    python backend/etl.py --fetch-mode details  # Fetch per-photo details (EXIF, location)
     ```
 
-    This fetches photos and collections from Unsplash, extracts EXIF data for featured photos, and
-    stores everything in `data/photos.db`.
+    This fetches photos and collections from Unsplash and stores everything in `data/photos.db`.
+    `--fetch-mode batch` (the default) is faster but skips per-photo EXIF and location; `details`
+    fetches them for photos that don't have real EXIF yet.
 
 4. **Sync watch history from Plex (optional):**
 
@@ -124,8 +182,14 @@ Vercel then picks up the change on the next deploy.
 
 ## 🛠️ Tech Stack
 
-- **[Next.js](https://nextjs.org/)** - React framework (App Router)
+- **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
+- **[Phaser](https://phaser.io/)** 4 - the house's game engine
+- **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
+- **[Bun](https://bun.sh/)** - JavaScript package manager and script runner
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
+- **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug and
+    bed art for the house (most furniture is hand-drawn in code)
+- **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
 - **[Unsplash API](https://unsplash.com/developers)** - Photo source with CDN
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
@@ -138,9 +202,12 @@ Vercel then picks up the change on the next deploy.
 
 ## 📚 Documentation
 
+- **[CLAUDE.md](./CLAUDE.md)** - Rules for working in the repo (incl. the pre-PR documentation pass)
 - **[backend/README.md](./backend/README.md)** - Database schema and ETL pipeline details
 - **[content/pages/README.md](./content/pages/README.md)** - Managing static content pages
 - **[data/README.md](./data/README.md)** - Database file information
+- **[tests/unit_tests/fixtures/README.md](./tests/unit_tests/fixtures/README.md)** - Unsplash API
+    test fixtures
 
 ## 📁 Project Structure
 
@@ -158,17 +225,33 @@ homepage/
 │   ├── etl.py           # Unsplash sync pipeline
 │   └── plex_etl.py      # Plex watch-items sync pipeline
 ├── content/             # Keystatic-managed content (Markdown/YAML)
+│   ├── articles/            # Writing (Markdoc)
+│   ├── projects/            # Article series
+│   ├── hobbies/             # One file per hobby
+│   ├── events/              # Races, hikes, concerts
+│   ├── gear/                # Cameras, drums, shoes
+│   ├── pages/               # Static pages (About)
 │   └── watch-items/         # One file per synced film/show (editable/hideable)
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
+├── scripts/             # House asset generators (LimeZu import, world map, share image)
 ├── src/                 # Next.js app (App Router)
-│   ├── app/              # Routes and pages
-│   ├── components/       # React components
-│   └── lib/               # Data access, utilities
+│   ├── app/
+│   │   ├── (house)/         # Pages rendered inside the house
+│   │   ├── api/             # photos, watch-poster, keystatic
+│   │   └── keystatic/       # CMS admin UI
+│   ├── assets/           # Imported assets (share image)
+│   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
+│   ├── game/             # Phaser scene, floor plan, furniture, characters
+│   ├── lib/              # Data access, utilities
+│   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
+│   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
+│   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
+├── keystatic.config.ts  # CMS collections
 ├── config.py            # ETL configuration
 └── pyproject.toml       # Python project config
 ```
@@ -179,6 +262,8 @@ homepage/
 pytest -v            # ETL/backend tests
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
+
+CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, `pytest` and `pip-audit`.
 
 ## 🔐 Security
 
