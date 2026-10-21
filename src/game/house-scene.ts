@@ -91,7 +91,6 @@ const KEY_STEPS: Record<string, Direction> = {
   KeyD: 'right',
 }
 
-const KENNEY_COLUMNS = 27
 const PLAYER_STEP_MS = 150
 const NPC_STEP_MS = 260
 const ZENO_STEP_MS = 300
@@ -200,11 +199,6 @@ export class HouseScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('furniture', '/house/furniture.png', {
-      frameWidth: 16,
-      frameHeight: 16,
-      spacing: 1,
-    })
     this.load.json('world-land', LAND_URL)
     this.load.image('house-characters', CHARACTERS_URL)
     this.load.image('limezu-furniture', LIMEZU_FURNITURE_URL)
@@ -613,22 +607,14 @@ export class HouseScene extends Phaser.Scene {
   /** Where a piece of decor draws, in world pixels. */
   private decorRect(item: Decor) {
     if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y, item.area?.w, item.area?.h)
-    const size = item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }
-    return { x: item.x * TILE, y: item.y * TILE, ...size }
+    return { x: item.x * TILE, y: item.y * TILE, ...PROP_SIZES[item.prop] }
   }
 
   /** Draws a piece of decor onto a canvas whose top-left is world point (ox, oy). */
   private drawDecor(ctx: CanvasRenderingContext2D, item: Decor, ox: number, oy: number) {
     const { x, y } = this.decorRect(item)
     if (item.kind === 'prop') drawProp(ctx, x - ox, y - oy, item.prop)
-    else if (item.kind === 'limezu') {
-      drawLimezu(ctx, this.textures.get('limezu-furniture').getSourceImage() as HTMLImageElement, item.sprite, x - ox, y - oy)
-    } else {
-      const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
-      const sx = (item.frame % KENNEY_COLUMNS) * 17
-      const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
-      ctx.drawImage(sheet, sx, sy, 16, 16, x - ox, y - oy, 16, 16)
-    }
+    else drawLimezu(ctx, this.textures.get('limezu-furniture').getSourceImage() as HTMLImageElement, item.sprite, x - ox, y - oy)
   }
 
   /**

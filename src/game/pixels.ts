@@ -1,7 +1,6 @@
 /**
- * Procedurally drawn pixel art for everything the Kenney furniture sheet
- * doesn't cover: floors, wall faces, doors, the house's own props and the
- * characters. Everything draws onto plain canvases so it can be baked into
+ * Procedurally drawn pixel art for the house: floors, wall faces, doors and
+ * the furniture. Everything draws onto plain canvases so it can be baked into
  * Phaser textures (and unit-tested without a WebGL context).
  */
 import type { FloorKind, WallKind } from './layout'
@@ -360,7 +359,7 @@ export function drawSideDoorway(ctx: Ctx, ox: number, oy: number, left: FloorKin
 }
 
 // ---------------------------------------------------------------------------
-// Furniture that isn't in the Kenney sheet, drawn to scale at 1 tile = 50cm.
+// Furniture, drawn to scale at 1 tile = 50cm.
 // Pieces that stand against a north wall are drawn from the wall-face row
 // down, so their height reads against the 2.5m wall behind them.
 

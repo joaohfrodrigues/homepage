@@ -5,7 +5,6 @@ import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
 
 export type Decor =
-  | { kind: 'kenney'; frame: number; x: number; y: number; solid: boolean }
   | { kind: 'prop'; prop: PropName; x: number; y: number; solid: boolean }
   /** A Modern Interiors sprite standing on one tile; tall ones rise over the tile above. */
   /** A Modern Interiors sprite centred over `area` tiles (one by default). */

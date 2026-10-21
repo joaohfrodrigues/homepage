@@ -1,8 +1,8 @@
 /**
  * Furniture sprites from LimeZu's Modern Interiors pack (limezu.itch.io),
- * packed by scripts/import_limezu.mjs. Unlike Kenney tiles they come in their
- * own sizes: each is centred over an area of tiles (one tile unless given), and
- * one taller than its area stands on the area's bottom edge and rises above it.
+ * packed by scripts/import_limezu.mjs. They come in their own sizes: each is
+ * centred over an area of tiles (one tile unless given), and one taller than
+ * its area stands on the area's bottom edge and rises above it.
  */
 import SPRITES from './limezu-furniture.json'
 import { TILE } from './layout'
