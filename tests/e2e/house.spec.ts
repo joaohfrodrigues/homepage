@@ -25,7 +25,7 @@ test.describe('House', () => {
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory).toBeVisible()
-    await directory.getByRole('button', { name: /^Study/ }).click()
+    await directory.getByRole('button', { name: 'Go to the study' }).click()
     await expect(directory).not.toBeVisible()
     await expect(page.getByText('Study', { exact: true })).toBeVisible()
   })

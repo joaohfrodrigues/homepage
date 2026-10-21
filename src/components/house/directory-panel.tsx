@@ -4,10 +4,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, type Room, type RoomId } from '@/game/layout'
+import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, type RoomId } from '@/game/layout'
 import { TOPICS } from '@/game/topics'
 import type { PanelId, VisitTarget } from '@/game/bridge'
-import { cn } from '@/lib/utils'
 import { useEscapeKey } from './panel-window'
 
 interface Props {
@@ -160,22 +159,20 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onCont
     geoguess,
     bica,
     guestbook,
+    wardrobe,
+    bed,
   ]
-  const byRoom: Partial<Record<RoomId, Entry[]>> = {}
-  for (const entry of [...TOPICS.map((t) => topic(t.id)), about, geoguess, bica, wardrobe, bed, contact, guestbook]) {
-    ;(byRoom[entry.room] ??= []).push(entry)
-  }
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-2 sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="directory-title"
-        className="pixel-window relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-4 sm:p-7"
+        className="pixel-window relative max-h-[calc(100dvh-1rem)] w-full max-w-3xl overflow-y-auto p-4 sm:max-h-[90dvh] sm:p-7"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-4 sm:mb-5">
@@ -204,24 +201,12 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onCont
           </ul>
         </nav>
 
-        <section aria-labelledby="directory-rooms" className="mt-8 border-t-2 border-[#d8c8a8] pt-5">
+        <section aria-labelledby="directory-rooms" className="mt-6 border-t-2 border-[#d8c8a8] pt-5">
           <h3 id="directory-rooms" className="font-pixel text-lg">
-            Or go room by room
+            Or jump to a room
           </h3>
           <div className="mx-auto mt-3 max-w-md">
             <FloorPlan currentRoom={currentRoom} onTeleport={onTeleport} />
-          </div>
-          <div className="mt-5 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {ROOMS.filter((room) => room.listed).map((room) => (
-              <section key={room.id}>
-                <RoomButton room={room} current={room.id === currentRoom} onClick={() => onTeleport(room.id)} />
-                <ul className="mt-1 flex flex-col">
-                  {(byRoom[room.id] ?? []).map((entry) => (
-                    <EntryRow key={entry.key} primary={entry.item} secondary={entry.title} entry={entry} onVisit={onVisit} />
-                  ))}
-                </ul>
-              </section>
-            ))}
           </div>
         </section>
         <p className="font-pixel mt-6 text-xs text-[#6d6359]">Tip: press M anywhere in the house to open this.</p>
@@ -234,21 +219,6 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onCont
         </p>
       </div>
     </div>
-  )
-}
-
-function RoomButton({ room, current, onClick }: { room: Room; current: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn('flex w-full flex-col px-3 py-2 text-left hover:bg-[#ebe0c8]', current && 'bg-[#ebe0c8]')}
-    >
-      <span className="font-pixel text-lg">
-        {room.name} {current ? <span className="text-xs text-[#8e2a20]">· you are here</span> : '→'}
-      </span>
-      <span className="text-xs text-[#6d6359]">{room.blurb}</span>
-    </button>
   )
 }
 

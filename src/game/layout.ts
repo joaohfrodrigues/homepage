@@ -72,16 +72,12 @@ export interface Point {
 export interface Room {
   id: RoomId
   name: string
-  /** One line for the directory. */
-  blurb: string
   /** Interior floor tiles, inclusive. */
   rect: { x: number; y: number; w: number; h: number }
   floor: FloorKind
   wall: WallKind
   spawn: Point
   spawnFacing: Direction
-  /** Rooms with something to see get their own entry in the directory list. */
-  listed: boolean
   /** Behind a shut door: shown on the floor plan but not somewhere to teleport. */
   locked?: boolean
 }
@@ -90,91 +86,75 @@ export const ROOMS: Room[] = [
   {
     id: 'hall',
     name: 'Entrance hall',
-    blurb: 'Front door, the post, and the running and hiking kit, open to the living room.',
     rect: { x: 7, y: 11, w: 3, h: 7 },
     floor: 'oak',
     wall: 'azulejo',
     spawn: { x: 8, y: 14 },
     spawnFacing: 'up',
-    listed: true,
   },
   {
     id: 'corridor',
     name: 'Corridor',
-    blurb: 'Bedroom, bathroom and study open off it.',
     rect: { x: 11, y: 11, w: 4, h: 2 },
     floor: 'oak-across',
     wall: 'warmwhite',
     spawn: { x: 12, y: 12 },
     spawnFacing: 'up',
-    listed: false,
   },
   {
     id: 'living',
     name: 'Living room',
-    blurb: 'The TV between the street windows, the dining table — and usually João.',
     rect: { x: 2, y: 3, w: 8, h: 8 },
     floor: 'oak',
     wall: 'warmwhite',
     spawn: { x: 8, y: 9 },
     spawnFacing: 'up',
-    listed: true,
   },
   {
     id: 'kitchen',
     name: 'Kitchen',
-    blurb: 'Pull a bica, or guess where the fridge-magnet photos were taken.',
     rect: { x: 1, y: 13, w: 5, h: 5 },
     floor: 'hydraulic',
     wall: 'metro',
     spawn: { x: 4, y: 15 },
     spawnFacing: 'left',
-    listed: true,
   },
   {
     id: 'study',
     name: 'Study',
-    blurb: 'Wall map, bookshelves, the home server, camera and drums.',
     rect: { x: 16, y: 11, w: 6, h: 7 },
     floor: 'oak',
     wall: 'library',
     spawn: { x: 17, y: 12 },
     spawnFacing: 'up',
-    listed: true,
   },
   {
     id: 'bedroom',
     name: 'Bedroom',
-    blurb: 'Change outfit at the wardrobe, nap until nightfall, or step out onto the balcony.',
     rect: { x: 11, y: 3, w: 6, h: 6 },
     floor: 'oak',
     wall: 'sage',
     spawn: { x: 13, y: 7 },
     spawnFacing: 'up',
-    listed: true,
   },
   {
     id: 'bathroom',
     name: 'Bathroom',
-    blurb: 'Across from the bedroom.',
     rect: { x: 11, y: 15, w: 4, h: 5 },
     floor: 'bath',
     wall: 'bath',
     spawn: { x: 12, y: 17 },
     spawnFacing: 'up',
-    listed: false,
     locked: true,
   },
   {
     id: 'balcony',
     name: 'Balcony',
-    blurb: 'A small balcony off the bedroom, over the street.',
     rect: { x: 18, y: 3, w: 2, h: 4 },
     floor: 'balcony',
     wall: 'railing',
     spawn: { x: 18, y: 5 },
     spawnFacing: 'up',
-    listed: false,
   },
 ]
 
