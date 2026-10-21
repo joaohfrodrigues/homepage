@@ -22,7 +22,7 @@ import { WardrobePanel } from './wardrobe-panel'
 import { WelcomeCard } from './welcome-card'
 
 const OUTFIT_KEY = 'house:outfit'
-/** 'tap' when a touch visitor switched the on-screen pad off for tap-to-walk. */
+/** 'pad' when a touch visitor switched the on-screen joystick on; tapping is the default. */
 const CONTROLS_KEY = 'house:controls'
 /** Set once a visitor has dismissed the first-visit welcome card. */
 const WELCOMED_KEY = 'house:welcomed'
@@ -35,9 +35,10 @@ function isNightNow(): boolean {
 
 function readPadPreference(): boolean {
   try {
-    return window.localStorage.getItem(CONTROLS_KEY) !== 'tap'
+    // Only the switch writes this key, so visitors who never touched it have nothing stored.
+    return window.localStorage.getItem(CONTROLS_KEY) === 'pad'
   } catch {
-    return true
+    return false
   }
 }
 
@@ -102,7 +103,7 @@ export function HouseShell({ data, children }: Props) {
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
   )
-  // Touch screens walk with the on-screen pad unless the visitor switched to tapping the floor.
+  // Touch screens walk by tapping unless the visitor switched the on-screen joystick on.
   const [padPreferred, setPadPreferred] = useState(() => typeof window !== 'undefined' && readPadPreference())
   const usePad = coarsePointer && padPreferred
   // A first visit to the house itself gets a hello; a deep link already knows where it's going.
@@ -381,18 +382,11 @@ export function HouseShell({ data, children }: Props) {
 
           {inputEnabled && usePad && <TouchControls bridge={bridge} actionLabel={hint?.label ?? null} />}
 
-          {inputEnabled && hint && (
-            <div
-              className={cn(
-                'pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6',
-                usePad && 'bottom-40',
-              )}
-            >
-              {hint.hover || usePad ? (
-                <div className="font-pixel bg-[#2a2233]/90 px-3 py-1.5 text-sm shadow-[0_3px_0_#120e18]">
-                  {usePad && <kbd className="mr-1.5 bg-[#8e2a20] px-1.5 text-xs text-[#f4ecd8]">A</kbd>}
-                  {hint.label}
-                </div>
+          {/* With the joystick on, the A button carries the hint itself. */}
+          {inputEnabled && hint && !usePad && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6">
+              {hint.hover ? (
+                <div className="font-pixel bg-[#2a2233]/90 px-3 py-1.5 text-sm shadow-[0_3px_0_#120e18]">{hint.label}</div>
               ) : (
                 <button
                   type="button"
@@ -415,9 +409,9 @@ export function HouseShell({ data, children }: Props) {
             >
               <div className="font-pixel max-w-md bg-[#2a2233]/90 px-4 py-2 text-center text-sm shadow-[0_3px_0_#120e18]">
                 {usePad
-                  ? 'Drag on the left side to walk, press A to look at things.'
+                  ? 'Drag on the left side to walk and press A to look at things, or tap them.'
                   : coarsePointer
-                  ? 'Tap the floor to walk, tap things to look at them.'
+                  ? 'Tap the floor to walk, tap things to look. The hand up top swaps in a joystick.'
                   : 'Walk with WASD or the arrow keys (or click the floor). E to interact, M for the directory, G for the guestbook.'}
               </div>
             </div>

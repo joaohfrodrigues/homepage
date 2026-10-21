@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   bridge: HouseBridge
-  /** What A would do right now, if anything; lights the button up. */
+  /** What A would do right now, if anything; lights the button up and shows beside it. */
   actionLabel: string | null
 }
 
@@ -38,9 +38,10 @@ function clampToBase(dx: number, dy: number) {
 }
 
 /**
- * Floating joystick and A button for touch screens. The stick appears wherever
- * a thumb lands on the left half of the screen and snaps to four directions;
- * everything is translucent so the house shows through.
+ * Opt-in floating joystick and A button for touch screens. The stick appears
+ * wherever a thumb lands on the left half of the screen and snaps to four
+ * directions; the A button names what it will do. Everything is translucent so
+ * the house shows through, and taps on things in the right half still reach it.
  */
 export function TouchControls({ bridge, actionLabel }: Props) {
   const heldRef = useRef<Direction | null>(null)
@@ -125,20 +126,35 @@ export function TouchControls({ bridge, actionLabel }: Props) {
         </div>
       </div>
 
+      {/* The label rides on the button, so the words are as tappable as the A. */}
       <button
         type="button"
         aria-label={actionLabel ? `A: ${actionLabel}` : 'A'}
-        className={cn(
-          'font-pixel pointer-events-auto absolute right-4 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex size-16 touch-none items-center justify-center rounded-full text-xl shadow-[0_3px_0_rgba(18,14,24,0.45)] transition-colors active:translate-y-0.5 active:shadow-none',
-          actionLabel ? 'bg-[#8e2a20]/70 text-[#f4ecd8]' : 'bg-[#2a2233]/45 text-[#f4ecd8]/60',
-        )}
+        className="group font-pixel pointer-events-auto absolute right-4 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex max-w-[calc(50%-1rem)] touch-none items-center gap-2"
         onPointerDown={(e) => {
           e.preventDefault()
           bridge.ui.emit('interactFacing')
         }}
         onContextMenu={(e) => e.preventDefault()}
       >
-        A
+        {actionLabel && (
+          <span
+            aria-hidden
+            className="min-w-0 bg-[#2a2233]/90 px-2.5 py-1.5 text-left text-sm leading-tight text-[#f4ecd8] shadow-[0_3px_0_#120e18]"
+            data-testid="action-label"
+          >
+            {actionLabel}
+          </span>
+        )}
+        <span
+          aria-hidden
+          className={cn(
+            'flex size-16 shrink-0 items-center justify-center rounded-full text-xl shadow-[0_3px_0_rgba(18,14,24,0.45)] transition-colors group-active:translate-y-0.5 group-active:shadow-none',
+            actionLabel ? 'bg-[#8e2a20]/70 text-[#f4ecd8]' : 'bg-[#2a2233]/45 text-[#f4ecd8]/60',
+          )}
+        >
+          A
+        </span>
       </button>
     </div>
   )

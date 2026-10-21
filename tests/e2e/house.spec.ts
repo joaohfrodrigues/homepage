@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { furnishHouse } from '../../src/game/furnishings'
+import { TILE, type Point } from '../../src/game/layout'
 
 test.describe('House', () => {
   // These tests are about the house itself, so skip the first-visit welcome card.
@@ -197,5 +199,112 @@ test.describe('Welcome card', () => {
     await expect(page).toHaveURL('/')
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('dialog', { name: 'Hi, I’m João' })).not.toBeVisible()
+  })
+})
+
+/** Where a map tile's centre sits on screen, read from the house camera (exposed in dev). */
+async function screenPointOf(page: Page, tile: Point) {
+  return page.evaluate(
+    ({ tile, size }) => {
+      const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
+      const scene = game.scene.getScene('house') as {
+        cameras: { main: { worldView: { x: number; y: number }; zoom: number } }
+      }
+      const camera = scene.cameras.main
+      const canvas = document.querySelector('canvas')!.getBoundingClientRect()
+      return {
+        x: canvas.left + ((tile.x + 0.5) * size - camera.worldView.x) * camera.zoom,
+        y: canvas.top + ((tile.y + 0.5) * size - camera.worldView.y) * camera.zoom,
+      }
+    },
+    { tile, size: TILE },
+  )
+}
+
+async function playerTile(page: Page): Promise<Point> {
+  return page.evaluate(() => {
+    const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
+    const { tile } = (game.scene.getScene('house') as { player: { tile: Point } }).player
+    return { x: tile.x, y: tile.y }
+  })
+}
+
+async function tapTile(page: Page, tile: Point) {
+  const { x, y } = await screenPointOf(page, tile)
+  await page.touchscreen.tap(x, y)
+}
+
+// The guestbook stand, two tiles from the hall spawn and right of it: a tap
+// has to walk there before it opens, and it sits outside the joystick's half.
+const guestbookStand = furnishHouse().interactables.find((object) => object.id === 'guestbook')!.tiles[0]
+
+test.describe('House on a touch screen', () => {
+  // Real touch events, so the game sees `pointer.wasTouch` the way a phone would.
+  test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
+  })
+
+  async function boot(page: Page) {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+  }
+
+  test('tapping is the default: no joystick, the floor walks and things open', async ({ page }) => {
+    await boot(page)
+    await expect(page.getByRole('button', { name: 'On-screen joystick' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByTestId('touch-controls')).toHaveCount(0)
+    await expect(page.getByText('Tap the floor to walk')).toBeVisible()
+
+    const start = await playerTile(page)
+    await tapTile(page, { x: start.x, y: start.y - 1 })
+    await expect.poll(() => playerTile(page)).toEqual({ x: start.x, y: start.y - 1 })
+
+    await tapTile(page, guestbookStand)
+    await expect(page.getByRole('dialog', { name: 'Guestbook' })).toBeVisible()
+  })
+
+  test('the joystick is opt-in, remembered, and tapping things still works with it', async ({ page }) => {
+    await boot(page)
+    await page.getByRole('button', { name: 'On-screen joystick' }).tap()
+    await expect(page.getByTestId('touch-controls')).toBeVisible()
+    await expect(page.getByText('Drag on the left side to walk')).toBeVisible()
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'On-screen joystick' })).toHaveAttribute('aria-pressed', 'true', {
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId('touch-controls')).toBeVisible()
+
+    // A tap on the floor no longer walks: the stick does that.
+    const start = await playerTile(page)
+    await tapTile(page, { x: start.x, y: start.y - 1 })
+    await page.waitForTimeout(500)
+    expect(await playerTile(page)).toEqual(start)
+
+    // A tap on a thing still walks to it and opens it.
+    await tapTile(page, guestbookStand)
+    const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    await expect(guestbook).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(guestbook).not.toBeVisible()
+
+    // Now facing the stand, the A button says what it will do, and does it.
+    const a = page.getByRole('button', { name: /^A: Guestbook/ })
+    await expect(page.getByTestId('action-label')).toHaveText(/Guestbook/)
+    await a.tap()
+    await expect(guestbook).toBeVisible()
+  })
+
+  test('switching the joystick back off returns to tapping', async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:controls', 'pad'))
+    await boot(page)
+    const toggle = page.getByRole('button', { name: 'On-screen joystick' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await toggle.tap()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByTestId('touch-controls')).toHaveCount(0)
+    expect(await page.evaluate(() => window.localStorage.getItem('house:controls'))).toBe('tap')
   })
 })
