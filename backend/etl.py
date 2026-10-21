@@ -148,6 +148,7 @@ def _process_user_photos(
     provider: UnsplashProvider,
     username: str,
     existing_photos: dict,
+    *,
     max_photos: int | None,
     full_load: bool,
 ):
@@ -206,6 +207,7 @@ def _process_collections(
     provider: UnsplashProvider,
     photo_ids: set,
     existing_photos: dict,
+    *,
     max_photos: int | None,
     full_load: bool,
 ):
@@ -329,13 +331,20 @@ def sync_data(
         existing_photos = {} if full_load else get_existing_photos_map(conn)
         # Process user photos and collections via extracted helpers
         photo_ids, user_synced, user_skipped = _process_user_photos(
-            conn, provider, username, existing_photos, max_photos, full_load
+            conn, provider, username, existing_photos, max_photos=max_photos, full_load=full_load
         )
         total_photos_synced += user_synced
         total_skipped += user_skipped
 
         collections_synced, collections_photos_synced, collections_photos_skipped = (
-            _process_collections(conn, provider, photo_ids, existing_photos, max_photos, full_load)
+            _process_collections(
+                conn,
+                provider,
+                photo_ids,
+                existing_photos,
+                max_photos=max_photos,
+                full_load=full_load,
+            )
         )
         total_collections_synced += collections_synced
         total_photos_synced += collections_photos_synced
