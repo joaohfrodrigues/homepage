@@ -387,7 +387,6 @@ export type PropName =
   | 'diningtable'
   | 'chair'
   | 'chairup'
-  | 'counter'
   | 'coffeecounter'
   | 'stove'
   | 'sink'
@@ -428,7 +427,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   diningtable: { w: 48, h: 32 }, // seats four
   chair: { w: 16, h: 16 },
   chairup: { w: 16, h: 16 },
-  counter: { w: 16, h: 32 }, // wall cabinet above, 60cm counter below
   coffeecounter: { w: 16, h: 32 },
   stove: { w: 16, h: 32 },
   sink: { w: 16, h: 32 },
@@ -905,9 +903,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       drawChair(ctx, ox, oy, false)
       break
     // --- Kitchen --------------------------------------------------------------
-    case 'counter':
-      drawKitchenUnit(ctx, ox, oy)
-      break
     case 'coffeecounter': {
       drawKitchenUnit(ctx, ox, oy)
       r(4, 9, 8, 8, PALETTE.ink)

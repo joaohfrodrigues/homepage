@@ -359,7 +359,7 @@ const FURNITURE = {
     topiary: ['1_Generic', 115, 1040, 10, 14],
     snakePlant: ['2_LivingRoom', 2, 86, 12, 14],
     // Rugs
-    rugTerracotta: plainRug(161, 1073, 4, 2),
+    rugTerracotta: plainRug(161, 1073, 3, 2),
     rugBeige: ['1_Generic', 3, 706, 43, 28],
     // The pack's blue bordered rug, tinted a dark warm taupe.
     rugTaupeStudy: { ...borderedRug(48, 403, 432, 2, 2), tint: TAUPE },
