@@ -22,6 +22,9 @@ export type DialogueId =
   | 'litterbox-clean'
   | 'litterbox-dirty'
 
+/** Something the directory can take the guest to: an interactable's id, or João himself. */
+export type VisitTarget = string
+
 /** The interactable the player is facing or hovering, shown in the HUD. */
 export interface Hint {
   label: string
@@ -35,12 +38,16 @@ interface GameEvents {
   hint: Hint | null
   room: RoomId
   moved: undefined
+  /** The guest was placed beside what a `visit` asked for (or it couldn't be found). */
+  arrived: VisitTarget
   /** The player took a step (counted for the guestbook). */
   step: undefined
 }
 
 interface UiEvents {
   teleport: RoomId
+  /** Stand the guest next to an item (or João), facing it; answered with `arrived`. */
+  visit: VisitTarget
   inputEnabled: boolean
   /** Trigger whatever the player is currently facing (HUD button / touch). */
   interactFacing: undefined

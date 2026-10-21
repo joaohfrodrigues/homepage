@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookOpen, Gamepad2, Map as MapIcon, Moon, Pointer, Sun } from 'lucide-react'
-import { HouseBridge, type Hint, type InteractAction, type PanelId } from '@/game/bridge'
+import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
@@ -262,6 +262,28 @@ export function HouseShell({ data, children }: Props) {
     [bridge],
   )
 
+  // What to open once the guest reaches the item the directory sent them to.
+  const pendingVisit = useRef<{ target: VisitTarget; then: () => void } | null>(null)
+  useEffect(
+    () =>
+      bridge.game.on('arrived', (target) => {
+        const pending = pendingVisit.current
+        if (pending?.target !== target) return
+        pendingVisit.current = null
+        pending.then()
+      }),
+    [bridge],
+  )
+
+  const visit = useCallback(
+    (target: VisitTarget, then: () => void) => {
+      setPanel(null)
+      pendingVisit.current = { target, then }
+      bridge.ui.emit('visit', target)
+    },
+    [bridge],
+  )
+
   const changeNight = useCallback(
     (on: boolean) => {
       setNight(on)
@@ -436,15 +458,10 @@ export function HouseShell({ data, children }: Props) {
           currentRoom={room}
           night={night}
           onTeleport={teleport}
-          onContact={() => {
-            teleport('hall')
-            setDialogue('letterbox')
-          }}
+          onVisit={visit}
+          onContact={() => setDialogue('letterbox')}
           onPanel={setPanel}
-          onToggleNight={() => {
-            setPanel(null)
-            changeNight(!night)
-          }}
+          onToggleNight={() => changeNight(!night)}
           onClose={() => setPanel(null)}
         />
       )}
