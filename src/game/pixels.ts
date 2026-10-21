@@ -1,7 +1,6 @@
 /**
- * Procedurally drawn pixel art for everything the Kenney furniture sheet
- * doesn't cover: floors, wall faces, doors, the house's own props and the
- * characters. Everything draws onto plain canvases so it can be baked into
+ * Procedurally drawn pixel art for the house: floors, wall faces, doors and
+ * the furniture. Everything draws onto plain canvases so it can be baked into
  * Phaser textures (and unit-tested without a WebGL context).
  */
 import type { FloorKind, WallKind } from './layout'
@@ -360,12 +359,11 @@ export function drawSideDoorway(ctx: Ctx, ox: number, oy: number, left: FloorKin
 }
 
 // ---------------------------------------------------------------------------
-// Furniture that isn't in the Kenney sheet, drawn to scale at 1 tile = 50cm.
+// Furniture, drawn to scale at 1 tile = 50cm.
 // Pieces that stand against a north wall are drawn from the wall-face row
 // down, so their height reads against the 2.5m wall behind them.
 
 export type PropName =
-  | 'doormat'
   | 'console'
   | 'coatstand'
   | 'boots'
@@ -379,18 +377,15 @@ export type PropName =
   | 'floorlamp'
   | 'camerastand'
   | 'drums'
-  | 'rugstudy'
   | 'chimney'
   | 'tv'
   | 'recordplayer'
   | 'cattoy'
   | 'sofa'
   | 'coffeetable'
-  | 'rugliving'
   | 'diningtable'
   | 'chair'
   | 'chairup'
-  | 'counter'
   | 'coffeecounter'
   | 'stove'
   | 'sink'
@@ -398,11 +393,9 @@ export type PropName =
   | 'kcounter'
   | 'khob'
   | 'litterbox'
-  | 'bed'
   | 'nightstand'
   | 'alarmclock'
   | 'wardrobeside'
-  | 'rugbed'
   | 'toilet'
   | 'basin'
   | 'shower'
@@ -411,7 +404,6 @@ export type PropName =
   | 'cafechair'
 
 export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
-  doormat: { w: 32, h: 16 }, // 1m × 0.5m
   console: { w: 16, h: 32 }, // 0.5m deep × 1m long, against the side wall
   coatstand: { w: 16, h: 32 },
   boots: { w: 16, h: 16 },
@@ -425,18 +417,15 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   floorlamp: { w: 16, h: 32 },
   camerastand: { w: 16, h: 32 },
   drums: { w: 32, h: 32 }, // an electronic kit is about 1m × 1m
-  rugstudy: { w: 64, h: 48 },
   chimney: { w: 64, h: 32 }, // a 2m terracotta chimney breast
   tv: { w: 64, h: 48 }, // 55" screen over a 2m media unit
   recordplayer: { w: 16, h: 32 }, // a 1m sideboard along a side wall with the turntable on top
   cattoy: { w: 16, h: 16 },
   sofa: { w: 64, h: 32 }, // 3-seater, 2m × 0.9m
   coffeetable: { w: 32, h: 16 },
-  rugliving: { w: 96, h: 64 }, // 3m × 2m
   diningtable: { w: 48, h: 32 }, // seats four
   chair: { w: 16, h: 16 },
   chairup: { w: 16, h: 16 },
-  counter: { w: 16, h: 32 }, // wall cabinet above, 60cm counter below
   coffeecounter: { w: 16, h: 32 },
   stove: { w: 16, h: 32 },
   sink: { w: 16, h: 32 },
@@ -444,11 +433,9 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
   khob: { w: 16, h: 16 },
   litterbox: { w: 16, h: 16 },
-  bed: { w: 48, h: 80 }, // 160 × 200cm with the headboard on the wall
   nightstand: { w: 16, h: 16 },
   alarmclock: { w: 16, h: 16 }, // a nightstand with the alarm clock on it
   wardrobeside: { w: 16, h: 64 }, // 2m of wardrobe along a side wall, seen from above
-  rugbed: { w: 80, h: 32 },
   toilet: { w: 16, h: 32 },
   basin: { w: 16, h: 32 },
   shower: { w: 32, h: 32 }, // 1m × 1m tray
@@ -480,24 +467,6 @@ function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
   for (let dy = -r; dy <= r; dy++) {
     const half = Math.round(Math.sqrt(r * r - dy * dy))
     rect(ctx, cx - half, cy + dy, half * 2, 1, color)
-  }
-}
-
-function drawRug(ctx: Ctx, ox: number, oy: number, w: number, h: number, c: { edge: string; field: string; trim: string }) {
-  rect(ctx, ox + 2, oy, w - 4, h, c.edge)
-  rect(ctx, ox + 3, oy + 1, w - 6, h - 2, c.field)
-  rect(ctx, ox + 6, oy + 4, w - 12, h - 8, c.trim)
-  rect(ctx, ox + 7, oy + 5, w - 14, h - 10, c.field)
-  const cx = ox + w / 2
-  const cy = oy + h / 2
-  const size = Math.min(8, Math.floor(h / 2) - 6)
-  for (let i = 0; i < size; i++) {
-    rect(ctx, cx - i, cy - size + i, i * 2, 1, c.trim)
-    rect(ctx, cx - i, cy + size - 1 - i, i * 2, 1, c.trim)
-  }
-  for (let y = oy + 3; y < oy + h - 3; y += 3) {
-    rect(ctx, ox, y, 2, 1, c.trim)
-    rect(ctx, ox + w - 2, y, 2, 1, c.trim)
   }
 }
 
@@ -564,12 +533,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
     // --- Entrance hall --------------------------------------------------------
-    case 'doormat': {
-      r(1, 3, 30, 11, '#3a2a20')
-      r(2, 4, 28, 9, '#5c4a3a')
-      for (let y = 5; y < 12; y += 2) r(3, y, 26, 1, '#4c3c2f')
-      break
-    }
     case 'console': {
       // A narrow table along the side wall: the day's post, and a framed plan of the flat.
       r(1, 0, 14, 31, PALETTE.ink)
@@ -812,9 +775,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(19, 26, 1, 3, PALETTE.red)
       break
     }
-    case 'rugstudy':
-      drawRug(ctx, ox, oy, 64, 48, { edge: '#5c1f24', field: '#8e2f35', trim: '#c9a227' })
-      break
     // --- Living room ----------------------------------------------------------
     case 'chimney': {
       // A limewashed terracotta chimney breast standing proud of the wall, from
@@ -916,9 +876,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(11, 10, 1, 1, '#e05a48')
       break
     }
-    case 'rugliving':
-      drawRug(ctx, ox, oy, 96, 64, { edge: '#7a4a33', field: '#ebe0c9', trim: '#b75d3c' })
-      break
     case 'diningtable': {
       r(1, 1, 46, 26, PALETTE.ink)
       r(2, 2, 44, 22, PALETTE.wood)
@@ -945,9 +902,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       drawChair(ctx, ox, oy, false)
       break
     // --- Kitchen --------------------------------------------------------------
-    case 'counter':
-      drawKitchenUnit(ctx, ox, oy)
-      break
     case 'coffeecounter': {
       drawKitchenUnit(ctx, ox, oy)
       r(4, 9, 8, 8, PALETTE.ink)
@@ -1037,22 +991,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     // --- Bedroom ----------------------------------------------------------------
-    case 'bed': {
-      r(0, 2, 48, 14, PALETTE.ink)
-      r(1, 3, 46, 12, PALETTE.wood)
-      r(1, 3, 46, 1, PALETTE.woodHighlight)
-      r(1, 14, 46, 64, PALETTE.ink)
-      r(2, 15, 44, 10, '#f4ecd8')
-      r(5, 16, 16, 7, '#ffffff')
-      r(27, 16, 16, 7, '#ffffff')
-      r(5, 22, 16, 1, '#e3d9c4')
-      r(27, 22, 16, 1, '#e3d9c4')
-      r(2, 25, 44, 52, '#6f8fa8')
-      r(2, 25, 44, 4, '#8fb0c8')
-      for (let y = 33; y < 75; y += 8) r(2, y, 44, 1, '#64829a')
-      r(1, 77, 46, 3, PALETTE.woodDark)
-      break
-    }
     case 'nightstand': {
       r(2, 5, 12, 10, PALETTE.ink)
       r(3, 6, 10, 8, PALETTE.wood)
@@ -1091,9 +1029,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(13, 1, 1, 62, PALETTE.shadow)
       break
     }
-    case 'rugbed':
-      drawRug(ctx, ox, oy, 80, 32, { edge: '#5f7a64', field: '#8fae95', trim: '#f4ecd8' })
-      break
     // --- Bathroom ---------------------------------------------------------------
     case 'toilet': {
       r(3, 7, 10, 9, PALETTE.ink)
@@ -1215,198 +1150,11 @@ export function drawFocusArrow(ctx: Ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// Characters
-
-export type Facing = 'down' | 'up' | 'side'
-export type Step = 'idle' | 'a' | 'b'
-export type CharacterName = 'joao' | 'guest'
-
-/** Characters are a tile wide and 1.5 tiles tall (~1.75m against a 2.5m wall). */
-export const CHAR_H = 24
-
-// k outline · s skin · S skin shade · e eye · h hair · f facial hair
-// c cap · C cap brim · j jacket · J jacket hem · t shirt · m camera
-// p trousers · b shoes
-const BODY: Record<Facing, string[]> = {
-  down: [
-    '................',
-    '.....kkkkkk.....',
-    '....kcccccck....',
-    '...kcccccccck...',
-    '...kCCCCCCCCk...',
-    '...khsssssshk...',
-    '...khsesseshk...',
-    '...khssSSsshk...',
-    '...kffssssffk...',
-    '....kffffffk....',
-    '.....kSSSSk.....',
-    '...kjjjttjjjk...',
-    '..kjjjjttjjjjk..',
-    '..kjjjjmmjjjjk..',
-    '..kjjjjmmjjjjk..',
-    '..kjjjjjjjjjjk..',
-    '..ksjjjjjjjjsk..',
-    '..ksJJJJJJJJsk..',
-    '...kppppppppk...',
-  ],
-  up: [
-    '................',
-    '.....kkkkkk.....',
-    '....kcccccck....',
-    '...kcccccccck...',
-    '...kCccccccCk...',
-    '...khhhhhhhhk...',
-    '...khhhhhhhhk...',
-    '...kshhhhhhsk...',
-    '....khhhhhhk....',
-    '....kSSSSSSk....',
-    '.....kSSSSk.....',
-    '...kjjjjjjjjk...',
-    '..kjjjjjjjjjjk..',
-    '..kjjjjjjjjjjk..',
-    '..kjjjjjjjjjjk..',
-    '..kjjjjjjjjjjk..',
-    '..ksjjjjjjjjsk..',
-    '..ksJJJJJJJJsk..',
-    '...kppppppppk...',
-  ],
-  side: [
-    '................',
-    '.....kkkkk......',
-    '....kccccck.....',
-    '....kcccccck....',
-    '....kcccCCCCCk..',
-    '....khhsssssk...',
-    '....khhssesk....',
-    '....khssssssk...',
-    '....khhfffffk...',
-    '.....kfffffk....',
-    '......kSSk......',
-    '.....kjjjjk.....',
-    '....kjjjjjjk....',
-    '....kjjjjmmk....',
-    '....kjjjjjjk....',
-    '....kjjsjjjk....',
-    '....kjjsjjjk....',
-    '....kJJJJJJk....',
-    '.....kppppk.....',
-  ],
-}
-
-const LEGS: Record<Facing, Record<Step, string[]>> = {
-  down: {
-    idle: ['....kppkkppk....', '....kppkkppk....', '....kppkkppk....', '....kbbkkbbk....', '................'],
-    a: ['....kppkkppk....', '....kppkkppk....', '....kbbkkppk....', '........kbbk....', '................'],
-    b: ['....kppkkppk....', '....kppkkppk....', '....kppkkbbk....', '....kbbk........', '................'],
-  },
-  up: {
-    idle: ['....kppkkppk....', '....kppkkppk....', '....kppkkppk....', '....kbbkkbbk....', '................'],
-    a: ['....kppkkppk....', '....kppkkppk....', '....kbbkkppk....', '........kbbk....', '................'],
-    b: ['....kppkkppk....', '....kppkkppk....', '....kppkkbbk....', '....kbbk........', '................'],
-  },
-  side: {
-    idle: ['.....kppk.......', '.....kppk.......', '.....kppk.......', '.....kbbbk......', '................'],
-    a: ['.....kppk.......', '....kpkkpk......', '...kpk..kpk.....', '..kbbk..kbbk....', '................'],
-    b: ['.....kppk.......', '.....kppk.......', '.....kppk.......', '......kbbbk.....', '................'],
-  },
-}
-
-const CHARACTER_COLORS: Record<CharacterName, Record<string, string>> = {
-  // Grey cap, dark beard, navy jacket over a teal shirt, camera on a strap —
-  // as close to the About photo as 16 pixels allow.
-  joao: {
-    k: '#1d1a22', s: '#f0c8a0', S: '#d9a57c', e: '#1d1a22', h: '#3a2a20', f: '#3a2a20',
-    c: '#a3a8ae', C: '#7a7f86', j: '#2c3c5a', J: '#1f2b42', t: '#2f8f83', m: '#121216',
-    p: '#3a3a44', b: '#24242a',
-  },
-  guest: {
-    k: '#1d1a22', s: '#e8b98f', S: '#cf9c72', e: '#1d1a22', h: '#7a4a28', f: '#e8b98f',
-    c: '#c0392b', C: '#8e2a20', j: '#4f7a3a', J: '#3b5c2b', t: '#f4ecd8', m: '#4f7a3a',
-    p: '#4a4e69', b: '#2b2b33',
-  },
-}
-
-/** The visitor's clothes, picked at the bedroom wardrobe. */
-export interface Outfit {
-  cap: string
-  jacket: string
-  hair: string
-}
-
-export const OUTFIT_OPTIONS: Record<keyof Outfit, { label: string; value: string }[]> = {
-  cap: [
-    { label: 'Red', value: '#c0392b' },
-    { label: 'Navy', value: '#2c3c5a' },
-    { label: 'Mustard', value: '#c9a227' },
-    { label: 'Forest', value: '#3b5c2b' },
-    { label: 'Sky', value: '#5a9fd4' },
-    { label: 'Charcoal', value: '#3a3a44' },
-  ],
-  jacket: [
-    { label: 'Green', value: '#4f7a3a' },
-    { label: 'Red', value: '#a63a40' },
-    { label: 'Denim', value: '#3f6b8a' },
-    { label: 'Ochre', value: '#c08a2b' },
-    { label: 'Plum', value: '#6b4a7a' },
-    { label: 'Grey', value: '#6d6a72' },
-  ],
-  hair: [
-    { label: 'Brown', value: '#7a4a28' },
-    { label: 'Black', value: '#2a2026' },
-    { label: 'Blond', value: '#d8b45a' },
-    { label: 'Ginger', value: '#c0622b' },
-    { label: 'Grey', value: '#a9a4a0' },
-  ],
-}
-
-export const DEFAULT_OUTFIT: Outfit = { cap: '#c0392b', jacket: '#4f7a3a', hair: '#7a4a28' }
-
-function darken(hex: string, amount = 0.72): string {
-  const n = parseInt(hex.slice(1), 16)
-  const channel = (shift: number) => Math.round(((n >> shift) & 0xff) * amount)
-  return `#${[16, 8, 0].map((shift) => channel(shift).toString(16).padStart(2, '0')).join('')}`
-}
-
-function outfitColors(outfit: Outfit): Record<string, string> {
-  return {
-    c: outfit.cap,
-    C: darken(outfit.cap),
-    j: outfit.jacket,
-    J: darken(outfit.jacket),
-    m: outfit.jacket,
-    h: outfit.hair,
-  }
-}
-
-export const FACINGS: Facing[] = ['down', 'up', 'side']
-export const STEPS: Step[] = ['idle', 'a', 'b']
-
-export function drawCharacter(
-  ctx: Ctx,
-  ox: number,
-  oy: number,
-  who: CharacterName,
-  facing: Facing,
-  step: Step,
-  outfit?: Outfit,
-) {
-  const colors = outfit ? { ...CHARACTER_COLORS[who], ...outfitColors(outfit) } : CHARACTER_COLORS[who]
-  // Bob the body down a pixel mid-stride.
-  const bob = step === 'idle' ? 0 : 1
-  const rows = [...BODY[facing], ...LEGS[facing][step]]
-  // Soft shadow under the feet.
-  rect(ctx, ox + 3, oy + CHAR_H - 2, 10, 2, PALETTE.shadow)
-  rows.forEach((row, y) => {
-    const dy = y < BODY[facing].length ? bob : 0
-    for (let x = 0; x < row.length; x++) {
-      const color = colors[row[x]]
-      if (color) rect(ctx, ox + x, oy + y + dy, 1, 1, color)
-    }
-  })
-}
-
-// ---------------------------------------------------------------------------
 // Zeno, the tuxedo cat
+
+/** Zeno faces down, up or side-on; the game flips side frames to face left. */
+export type Facing = 'down' | 'up' | 'side'
+export const FACINGS: Facing[] = ['down', 'up', 'side']
 
 export const CAT_FRAMES = ['down-idle', 'down-a', 'down-b', 'up-idle', 'up-a', 'up-b', 'side-idle', 'side-a', 'side-b', 'sit'] as const
 export type CatFrame = (typeof CAT_FRAMES)[number]

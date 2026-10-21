@@ -137,6 +137,13 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
           ))}
         </div>
         <p className="font-pixel mt-6 text-xs text-[#6d6359]">Tip: press M anywhere in the house to open this.</p>
+        <p className="mt-2 text-xs text-[#6d6359]">
+          Characters, plants, rugs and the bed from{' '}
+          <a href="https://limezu.itch.io/moderninteriors" className="underline" target="_blank" rel="noreferrer">
+            Modern Interiors by LimeZu
+          </a>
+          .
+        </p>
       </div>
     </div>
   )

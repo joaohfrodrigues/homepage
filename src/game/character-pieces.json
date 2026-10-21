@@ -1,0 +1,799 @@
+{
+    "frame": {
+        "w": 16,
+        "h": 32
+    },
+    "slot": {
+        "w": 384,
+        "h": 64
+    },
+    "columns": 4,
+    "eyes": 0,
+    "parts": {
+        "skin": [
+            {
+                "label": "Skin",
+                "variants": [
+                    {
+                        "id": "Body_02",
+                        "slot": 1,
+                        "swatch": "#ffcbb0"
+                    },
+                    {
+                        "id": "Body_03",
+                        "slot": 2,
+                        "swatch": "#ffb893"
+                    },
+                    {
+                        "id": "Body_07",
+                        "slot": 3,
+                        "swatch": "#f0ae80"
+                    },
+                    {
+                        "id": "Body_04",
+                        "slot": 4,
+                        "swatch": "#bb845c"
+                    },
+                    {
+                        "id": "Body_01",
+                        "slot": 5,
+                        "swatch": "#bf8b78"
+                    }
+                ]
+            }
+        ],
+        "hair": [
+            {
+                "label": "Short",
+                "variants": [
+                    {
+                        "id": "Hairstyle_01_01",
+                        "slot": 6,
+                        "swatch": "#cc9659"
+                    },
+                    {
+                        "id": "Hairstyle_01_02",
+                        "slot": 7,
+                        "swatch": "#ba8d5e"
+                    },
+                    {
+                        "id": "Hairstyle_01_03",
+                        "slot": 8,
+                        "swatch": "#866150"
+                    },
+                    {
+                        "id": "Hairstyle_01_04",
+                        "slot": 9,
+                        "swatch": "#6f5449"
+                    },
+                    {
+                        "id": "Hairstyle_01_05",
+                        "slot": 10,
+                        "swatch": "#a2a2a0"
+                    },
+                    {
+                        "id": "Hairstyle_01_06",
+                        "slot": 11,
+                        "swatch": "#898171"
+                    },
+                    {
+                        "id": "Hairstyle_01_07",
+                        "slot": 12,
+                        "swatch": "#647e99"
+                    }
+                ]
+            },
+            {
+                "label": "Spiky",
+                "variants": [
+                    {
+                        "id": "Hairstyle_03_01",
+                        "slot": 13,
+                        "swatch": "#cc9659"
+                    },
+                    {
+                        "id": "Hairstyle_03_02",
+                        "slot": 14,
+                        "swatch": "#ba8d5e"
+                    },
+                    {
+                        "id": "Hairstyle_03_03",
+                        "slot": 15,
+                        "swatch": "#866150"
+                    },
+                    {
+                        "id": "Hairstyle_03_04",
+                        "slot": 16,
+                        "swatch": "#6f5449"
+                    },
+                    {
+                        "id": "Hairstyle_03_05",
+                        "slot": 17,
+                        "swatch": "#a2a2a0"
+                    },
+                    {
+                        "id": "Hairstyle_03_06",
+                        "slot": 18,
+                        "swatch": "#898171"
+                    },
+                    {
+                        "id": "Hairstyle_03_07",
+                        "slot": 19,
+                        "swatch": "#647e99"
+                    }
+                ]
+            },
+            {
+                "label": "Bob",
+                "variants": [
+                    {
+                        "id": "Hairstyle_04_01",
+                        "slot": 20,
+                        "swatch": "#b37b3f"
+                    },
+                    {
+                        "id": "Hairstyle_04_02",
+                        "slot": 21,
+                        "swatch": "#957350"
+                    },
+                    {
+                        "id": "Hairstyle_04_03",
+                        "slot": 22,
+                        "swatch": "#805449"
+                    },
+                    {
+                        "id": "Hairstyle_04_04",
+                        "slot": 23,
+                        "swatch": "#674d49"
+                    },
+                    {
+                        "id": "Hairstyle_04_05",
+                        "slot": 24,
+                        "swatch": "#969695"
+                    },
+                    {
+                        "id": "Hairstyle_04_06",
+                        "slot": 25,
+                        "swatch": "#79746f"
+                    },
+                    {
+                        "id": "Hairstyle_04_07",
+                        "slot": 26,
+                        "swatch": "#566279"
+                    }
+                ]
+            },
+            {
+                "label": "Tousled",
+                "variants": [
+                    {
+                        "id": "Hairstyle_08_01",
+                        "slot": 27,
+                        "swatch": "#b37b3f"
+                    },
+                    {
+                        "id": "Hairstyle_08_02",
+                        "slot": 28,
+                        "swatch": "#957350"
+                    },
+                    {
+                        "id": "Hairstyle_08_03",
+                        "slot": 29,
+                        "swatch": "#805449"
+                    },
+                    {
+                        "id": "Hairstyle_08_04",
+                        "slot": 30,
+                        "swatch": "#674d49"
+                    },
+                    {
+                        "id": "Hairstyle_08_05",
+                        "slot": 31,
+                        "swatch": "#969695"
+                    },
+                    {
+                        "id": "Hairstyle_08_06",
+                        "slot": 32,
+                        "swatch": "#79746f"
+                    },
+                    {
+                        "id": "Hairstyle_08_07",
+                        "slot": 33,
+                        "swatch": "#566279"
+                    }
+                ]
+            },
+            {
+                "label": "Side bob",
+                "variants": [
+                    {
+                        "id": "Hairstyle_10_01",
+                        "slot": 34,
+                        "swatch": "#b37b3f"
+                    },
+                    {
+                        "id": "Hairstyle_10_02",
+                        "slot": 35,
+                        "swatch": "#957350"
+                    },
+                    {
+                        "id": "Hairstyle_10_03",
+                        "slot": 36,
+                        "swatch": "#805449"
+                    },
+                    {
+                        "id": "Hairstyle_10_04",
+                        "slot": 37,
+                        "swatch": "#674d49"
+                    },
+                    {
+                        "id": "Hairstyle_10_05",
+                        "slot": 38,
+                        "swatch": "#969695"
+                    },
+                    {
+                        "id": "Hairstyle_10_06",
+                        "slot": 39,
+                        "swatch": "#79746f"
+                    },
+                    {
+                        "id": "Hairstyle_10_07",
+                        "slot": 40,
+                        "swatch": "#566279"
+                    }
+                ]
+            },
+            {
+                "label": "Buns",
+                "variants": [
+                    {
+                        "id": "Hairstyle_11_01",
+                        "slot": 41,
+                        "swatch": "#b37b3f"
+                    },
+                    {
+                        "id": "Hairstyle_11_02",
+                        "slot": 42,
+                        "swatch": "#957350"
+                    },
+                    {
+                        "id": "Hairstyle_11_03",
+                        "slot": 43,
+                        "swatch": "#805449"
+                    },
+                    {
+                        "id": "Hairstyle_11_04",
+                        "slot": 44,
+                        "swatch": "#674d49"
+                    },
+                    {
+                        "id": "Hairstyle_11_05",
+                        "slot": 45,
+                        "swatch": "#969695"
+                    },
+                    {
+                        "id": "Hairstyle_11_06",
+                        "slot": 46,
+                        "swatch": "#79746f"
+                    },
+                    {
+                        "id": "Hairstyle_11_07",
+                        "slot": 47,
+                        "swatch": "#566279"
+                    }
+                ]
+            },
+            {
+                "label": "Long",
+                "variants": [
+                    {
+                        "id": "Hairstyle_15_01",
+                        "slot": 48,
+                        "swatch": "#b37b3f"
+                    },
+                    {
+                        "id": "Hairstyle_15_02",
+                        "slot": 49,
+                        "swatch": "#957350"
+                    },
+                    {
+                        "id": "Hairstyle_15_03",
+                        "slot": 50,
+                        "swatch": "#805449"
+                    },
+                    {
+                        "id": "Hairstyle_15_04",
+                        "slot": 51,
+                        "swatch": "#674d49"
+                    },
+                    {
+                        "id": "Hairstyle_15_05",
+                        "slot": 52,
+                        "swatch": "#969695"
+                    },
+                    {
+                        "id": "Hairstyle_15_06",
+                        "slot": 53,
+                        "swatch": "#79746f"
+                    },
+                    {
+                        "id": "Hairstyle_15_07",
+                        "slot": 54,
+                        "swatch": "#566279"
+                    }
+                ]
+            },
+            {
+                "label": "Buzz cut",
+                "variants": [
+                    {
+                        "id": "Hairstyle_20_01",
+                        "slot": 55,
+                        "swatch": "#cc9659"
+                    },
+                    {
+                        "id": "Hairstyle_20_02",
+                        "slot": 56,
+                        "swatch": "#ba8d5e"
+                    },
+                    {
+                        "id": "Hairstyle_20_03",
+                        "slot": 57,
+                        "swatch": "#866150"
+                    },
+                    {
+                        "id": "Hairstyle_20_04",
+                        "slot": 58,
+                        "swatch": "#6f5449"
+                    },
+                    {
+                        "id": "Hairstyle_20_05",
+                        "slot": 59,
+                        "swatch": "#a2a2a0"
+                    },
+                    {
+                        "id": "Hairstyle_20_06",
+                        "slot": 60,
+                        "swatch": "#898171"
+                    },
+                    {
+                        "id": "Hairstyle_20_07",
+                        "slot": 61,
+                        "swatch": "#647e99"
+                    }
+                ]
+            }
+        ],
+        "outfit": [
+            {
+                "label": "T-shirt",
+                "variants": [
+                    {
+                        "id": "Outfit_01_01",
+                        "slot": 62,
+                        "swatch": "#9f74a8"
+                    },
+                    {
+                        "id": "Outfit_01_02",
+                        "slot": 63,
+                        "swatch": "#c1d2ee"
+                    },
+                    {
+                        "id": "Outfit_01_03",
+                        "slot": 64,
+                        "swatch": "#d0be9c"
+                    },
+                    {
+                        "id": "Outfit_01_04",
+                        "slot": 65,
+                        "swatch": "#e63f38"
+                    },
+                    {
+                        "id": "Outfit_01_05",
+                        "slot": 66,
+                        "swatch": "#517867"
+                    },
+                    {
+                        "id": "Outfit_01_06",
+                        "slot": 67,
+                        "swatch": "#e4806e"
+                    },
+                    {
+                        "id": "Outfit_01_07",
+                        "slot": 68,
+                        "swatch": "#e480a3"
+                    },
+                    {
+                        "id": "Outfit_01_08",
+                        "slot": 69,
+                        "swatch": "#a29343"
+                    },
+                    {
+                        "id": "Outfit_01_09",
+                        "slot": 70,
+                        "swatch": "#d1f4f1"
+                    },
+                    {
+                        "id": "Outfit_01_10",
+                        "slot": 71,
+                        "swatch": "#a94965"
+                    }
+                ]
+            },
+            {
+                "label": "Jacket",
+                "variants": [
+                    {
+                        "id": "Outfit_02_01",
+                        "slot": 72,
+                        "swatch": "#ae4a52"
+                    },
+                    {
+                        "id": "Outfit_02_02",
+                        "slot": 73,
+                        "swatch": "#985848"
+                    },
+                    {
+                        "id": "Outfit_02_03",
+                        "slot": 74,
+                        "swatch": "#c8b058"
+                    },
+                    {
+                        "id": "Outfit_02_04",
+                        "slot": 75,
+                        "swatch": "#2ec0d9"
+                    }
+                ]
+            },
+            {
+                "label": "Hoodie",
+                "variants": [
+                    {
+                        "id": "Outfit_04_01",
+                        "slot": 76,
+                        "swatch": "#729965"
+                    },
+                    {
+                        "id": "Outfit_04_02",
+                        "slot": 77,
+                        "swatch": "#c78c59"
+                    },
+                    {
+                        "id": "Outfit_04_03",
+                        "slot": 78,
+                        "swatch": "#6e8897"
+                    }
+                ]
+            },
+            {
+                "label": "Sweatshirt",
+                "variants": [
+                    {
+                        "id": "Outfit_10_01",
+                        "slot": 79,
+                        "swatch": "#a1adb7"
+                    },
+                    {
+                        "id": "Outfit_10_02",
+                        "slot": 80,
+                        "swatch": "#6daec3"
+                    },
+                    {
+                        "id": "Outfit_10_03",
+                        "slot": 81,
+                        "swatch": "#b64244"
+                    },
+                    {
+                        "id": "Outfit_10_04",
+                        "slot": 82,
+                        "swatch": "#9d8c8d"
+                    }
+                ]
+            },
+            {
+                "label": "Shirt",
+                "variants": [
+                    {
+                        "id": "Outfit_13_01",
+                        "slot": 83,
+                        "swatch": "#50a7e8"
+                    },
+                    {
+                        "id": "Outfit_13_02",
+                        "slot": 84,
+                        "swatch": "#b4a7e8"
+                    },
+                    {
+                        "id": "Outfit_13_03",
+                        "slot": 85,
+                        "swatch": "#5aa77e"
+                    },
+                    {
+                        "id": "Outfit_13_04",
+                        "slot": 86,
+                        "swatch": "#b1637e"
+                    }
+                ]
+            },
+            {
+                "label": "Polo",
+                "variants": [
+                    {
+                        "id": "Outfit_17_01",
+                        "slot": 87,
+                        "swatch": "#4b9296"
+                    },
+                    {
+                        "id": "Outfit_17_02",
+                        "slot": 88,
+                        "swatch": "#8992d3"
+                    },
+                    {
+                        "id": "Outfit_17_03",
+                        "slot": 89,
+                        "swatch": "#89ccd3"
+                    }
+                ]
+            },
+            {
+                "label": "Flannel",
+                "variants": [
+                    {
+                        "id": "Outfit_23_01",
+                        "slot": 90,
+                        "swatch": "#bda766"
+                    },
+                    {
+                        "id": "Outfit_23_02",
+                        "slot": 91,
+                        "swatch": "#bda7a7"
+                    },
+                    {
+                        "id": "Outfit_23_03",
+                        "slot": 92,
+                        "swatch": "#77bfbf"
+                    },
+                    {
+                        "id": "Outfit_23_04",
+                        "slot": 93,
+                        "swatch": "#77bf71"
+                    }
+                ]
+            },
+            {
+                "label": "Hawaiian",
+                "variants": [
+                    {
+                        "id": "Outfit_24_01",
+                        "slot": 94,
+                        "swatch": "#0092e3"
+                    },
+                    {
+                        "id": "Outfit_24_02",
+                        "slot": 95,
+                        "swatch": "#6dcfc6"
+                    },
+                    {
+                        "id": "Outfit_24_03",
+                        "slot": 96,
+                        "swatch": "#009292"
+                    },
+                    {
+                        "id": "Outfit_24_04",
+                        "slot": 97,
+                        "swatch": "#ad83c6"
+                    }
+                ]
+            }
+        ],
+        "hat": [
+            {
+                "label": "Cap",
+                "variants": [
+                    {
+                        "id": "Accessory_04_Snapback_01",
+                        "slot": 98,
+                        "swatch": "#e63f38"
+                    },
+                    {
+                        "id": "Accessory_04_Snapback_02",
+                        "slot": 99,
+                        "swatch": "#4995e3"
+                    },
+                    {
+                        "id": "Accessory_04_Snapback_03",
+                        "slot": 100,
+                        "swatch": "#74b453"
+                    },
+                    {
+                        "id": "Accessory_04_Snapback_04",
+                        "slot": 101,
+                        "swatch": "#9da3b7"
+                    },
+                    {
+                        "id": "Accessory_04_Snapback_05",
+                        "slot": 102,
+                        "swatch": "#e88dad"
+                    },
+                    {
+                        "id": "Accessory_04_Snapback_06",
+                        "slot": 103,
+                        "swatch": "#bda766"
+                    }
+                ]
+            },
+            {
+                "label": "Beanie",
+                "variants": [
+                    {
+                        "id": "Accessory_11_Beanie_01",
+                        "slot": 104,
+                        "swatch": "#676e8d"
+                    },
+                    {
+                        "id": "Accessory_11_Beanie_02",
+                        "slot": 105,
+                        "swatch": "#a59992"
+                    },
+                    {
+                        "id": "Accessory_11_Beanie_03",
+                        "slot": 106,
+                        "swatch": "#a57992"
+                    },
+                    {
+                        "id": "Accessory_11_Beanie_04",
+                        "slot": 107,
+                        "swatch": "#57969d"
+                    },
+                    {
+                        "id": "Accessory_11_Beanie_05",
+                        "slot": 108,
+                        "swatch": "#a0574c"
+                    }
+                ]
+            },
+            {
+                "label": "Detective",
+                "variants": [
+                    {
+                        "id": "Accessory_08_Detective_Hat_01",
+                        "slot": 109,
+                        "swatch": "#c37759"
+                    },
+                    {
+                        "id": "Accessory_08_Detective_Hat_02",
+                        "slot": 110,
+                        "swatch": "#c36459"
+                    },
+                    {
+                        "id": "Accessory_08_Detective_Hat_03",
+                        "slot": 111,
+                        "swatch": "#b99b8f"
+                    }
+                ]
+            },
+            {
+                "label": "Party hat",
+                "variants": [
+                    {
+                        "id": "Accessory_19_Party_Cone_01",
+                        "slot": 112,
+                        "swatch": "#e63f38"
+                    },
+                    {
+                        "id": "Accessory_19_Party_Cone_02",
+                        "slot": 113,
+                        "swatch": "#cf3f75"
+                    },
+                    {
+                        "id": "Accessory_19_Party_Cone_03",
+                        "slot": 114,
+                        "swatch": "#4aaed9"
+                    },
+                    {
+                        "id": "Accessory_19_Party_Cone_04",
+                        "slot": 115,
+                        "swatch": "#c4e1ee"
+                    }
+                ]
+            }
+        ],
+        "face": [
+            {
+                "label": "Glasses",
+                "variants": [
+                    {
+                        "id": "Accessory_15_Glasses_01",
+                        "slot": 116,
+                        "swatch": "#58616f"
+                    },
+                    {
+                        "id": "Accessory_15_Glasses_02",
+                        "slot": 117,
+                        "swatch": "#c7405a"
+                    },
+                    {
+                        "id": "Accessory_15_Glasses_03",
+                        "slot": 118,
+                        "swatch": "#b81ea4"
+                    },
+                    {
+                        "id": "Accessory_15_Glasses_04",
+                        "slot": 119,
+                        "swatch": "#40a2c7"
+                    },
+                    {
+                        "id": "Accessory_15_Glasses_05",
+                        "slot": 120,
+                        "swatch": "#1eb82f"
+                    },
+                    {
+                        "id": "Accessory_15_Glasses_06",
+                        "slot": 121,
+                        "swatch": "#46465e"
+                    }
+                ]
+            },
+            {
+                "label": "Beard",
+                "variants": [
+                    {
+                        "id": "Accessory_13_Beard_01",
+                        "slot": 122,
+                        "swatch": "#6f5449"
+                    },
+                    {
+                        "id": "Accessory_13_Beard_02",
+                        "slot": 123,
+                        "swatch": "#8a4830"
+                    },
+                    {
+                        "id": "Accessory_13_Beard_03",
+                        "slot": 124,
+                        "swatch": "#a16a3b"
+                    },
+                    {
+                        "id": "Accessory_13_Beard_04",
+                        "slot": 125,
+                        "swatch": "#a69e97"
+                    },
+                    {
+                        "id": "Accessory_13_Beard_05",
+                        "slot": 126,
+                        "swatch": "#666e8c"
+                    }
+                ]
+            },
+            {
+                "label": "Moustache",
+                "variants": [
+                    {
+                        "id": "Accessory_12_Mustache_01",
+                        "slot": 127,
+                        "swatch": "#8a6552"
+                    },
+                    {
+                        "id": "Accessory_12_Mustache_02",
+                        "slot": 128,
+                        "swatch": "#975426"
+                    },
+                    {
+                        "id": "Accessory_12_Mustache_03",
+                        "slot": 129,
+                        "swatch": "#ac7e1e"
+                    },
+                    {
+                        "id": "Accessory_12_Mustache_04",
+                        "slot": 130,
+                        "swatch": "#b3ab9c"
+                    },
+                    {
+                        "id": "Accessory_12_Mustache_05",
+                        "slot": 131,
+                        "swatch": "#7182a2"
+                    }
+                ]
+            }
+        ]
+    }
+}

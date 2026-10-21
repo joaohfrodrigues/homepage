@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser'
 import type { HouseBridge, Hint, InteractAction } from './bridge'
-import { furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
+import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
   MAP_HEIGHT,
@@ -17,19 +17,17 @@ import {
   type Point,
   type RoomId,
 } from './layout'
+import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import {
   LIGHT_SOURCES,
   MAP_WALL,
-  CHAR_H,
   FACINGS,
   PROP_SIZES,
-  STEPS,
   DESK_LEDS,
   CAT_FRAMES,
   drawCat,
-  drawCharacter,
   drawHeart,
   drawPoop,
   drawStink,
@@ -48,11 +46,22 @@ import {
   drawProp,
   drawWallCap,
   drawWallFace,
-  type CharacterName,
   type Facing,
-  type Outfit,
   type PropName,
 } from './pixels'
+import {
+  CHARACTERS_URL,
+  CHARACTER_ANIMS,
+  CHARACTER_DIRECTIONS,
+  CHAR_FRAMES,
+  CHAR_H,
+  CHAR_HEADROOM,
+  CHAR_W,
+  LOOKS,
+  drawCharacter,
+  type CharacterName,
+  type Outfit,
+} from './characters'
 import type { Trip } from '@/lib/photos'
 
 export interface HouseSceneConfig {
@@ -82,7 +91,6 @@ const KEY_STEPS: Record<string, Direction> = {
   KeyD: 'right',
 }
 
-const KENNEY_COLUMNS = 27
 const PLAYER_STEP_MS = 150
 const NPC_STEP_MS = 260
 const ZENO_STEP_MS = 300
@@ -191,12 +199,9 @@ export class HouseScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.spritesheet('furniture', '/house/furniture.png', {
-      frameWidth: 16,
-      frameHeight: 16,
-      spacing: 1,
-    })
     this.load.json('world-land', LAND_URL)
+    this.load.image('house-characters', CHARACTERS_URL)
+    this.load.image('limezu-furniture', LIMEZU_FURNITURE_URL)
   }
 
   create() {
@@ -218,7 +223,7 @@ export class HouseScene extends Phaser.Scene {
       .setDepth(34)
     this.syncNpcLabel()
     this.npcOutline = this.add
-      .sprite(this.npc.sprite.x, this.npc.sprite.y, 'house-chars-outline', 'joao-down-idle')
+      .sprite(this.npc.sprite.x, this.npc.sprite.y, 'house-chars-outline', 'joao-down-idle-0')
       .setOrigin(0.5, 1)
       .setVisible(false)
 
@@ -357,16 +362,7 @@ export class HouseScene extends Phaser.Scene {
       }
     }
 
-    const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
-    for (const item of this.furnishings.decor) {
-      if (item.kind === 'kenney') {
-        const sx = (item.frame % KENNEY_COLUMNS) * 17
-        const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
-        ctx.drawImage(sheet, sx, sy, 16, 16, item.x * TILE, item.y * TILE, 16, 16)
-      } else {
-        drawProp(ctx, item.x * TILE, item.y * TILE, item.prop)
-      }
-    }
+    for (const item of this.furnishings.decor) this.drawDecor(ctx, item, 0, 0)
 
     this.drawWallMap(ctx)
     texture.refresh()
@@ -395,53 +391,57 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
+  /** Every frame of a person's sheet: direction, animation and frame index, in atlas order. */
+  private characterFrames() {
+    return CHARACTER_DIRECTIONS.flatMap((direction) =>
+      CHARACTER_ANIMS.flatMap((anim) =>
+        Array.from({ length: CHAR_FRAMES }, (_, frame) => ({ direction, anim, frame, name: `${direction}-${anim}-${frame}` })),
+      ),
+    )
+  }
+
   private bakeCharacters() {
     const who: CharacterName[] = ['guest', 'joao']
-    const texture = this.textures.createCanvas('house-chars', FACINGS.length * STEPS.length * TILE, who.length * CHAR_H)!
+    const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
+    const frames = this.characterFrames()
+    const texture = this.textures.createCanvas('house-chars', frames.length * CHAR_W, who.length * CHAR_H)!
     const ctx = texture.getContext()
     who.forEach((name, row) => {
-      FACINGS.forEach((facing, fi) => {
-        STEPS.forEach((step, si) => {
-          const col = fi * STEPS.length + si
-          drawCharacter(ctx, col * TILE, row * CHAR_H, name, facing, step, name === 'guest' ? this.cfg.outfit : undefined)
-          texture.add(`${name}-${facing}-${step}`, 0, col * TILE, row * CHAR_H, TILE, CHAR_H)
-        })
+      const look = name === 'guest' ? this.cfg.outfit : LOOKS[name]
+      frames.forEach((f, col) => {
+        drawCharacter(ctx, atlas, col * CHAR_W, row * CHAR_H, look, f.direction, f.anim, f.frame)
+        texture.add(`${name}-${f.name}`, 0, col * CHAR_W, row * CHAR_H, CHAR_W, CHAR_H)
       })
     })
     texture.refresh()
 
     // Matching outline frames (1px larger each side) for João's focus cue.
-    const OUT_W = TILE + 2
+    const OUT_W = CHAR_W + 2
     const OUT_H = CHAR_H + 2
-    const outlines = this.textures.createCanvas('house-chars-outline', FACINGS.length * STEPS.length * OUT_W, who.length * OUT_H)!
+    const outlines = this.textures.createCanvas('house-chars-outline', frames.length * OUT_W, OUT_H)!
     const frame = document.createElement('canvas')
-    frame.width = TILE
+    frame.width = CHAR_W
     frame.height = CHAR_H
     const frameCtx = frame.getContext('2d')!
-    who.forEach((name, row) => {
-      FACINGS.forEach((facing, fi) => {
-        STEPS.forEach((step, si) => {
-          const col = fi * STEPS.length + si
-          frameCtx.clearRect(0, 0, TILE, CHAR_H)
-          drawCharacter(frameCtx, 0, 0, name, facing, step)
-          outlines.getContext().drawImage(traceSilhouette(frame).outline, col * OUT_W, row * OUT_H)
-          outlines.add(`${name}-${facing}-${step}`, 0, col * OUT_W, row * OUT_H, OUT_W, OUT_H)
-        })
-      })
+    frames.forEach((f, col) => {
+      frameCtx.clearRect(0, 0, CHAR_W, CHAR_H)
+      drawCharacter(frameCtx, atlas, 0, 0, LOOKS.joao, f.direction, f.anim, f.frame)
+      outlines.getContext().drawImage(traceSilhouette(frame).outline, col * OUT_W, 0)
+      outlines.add(`joao-${f.name}`, 0, col * OUT_W, 0, OUT_W, OUT_H)
     })
     outlines.refresh()
 
+    // A walk cycle covers two steps; the idle loop is a slow breath.
     for (const name of who) {
-      for (const facing of FACINGS) {
-        this.anims.create({
-          key: `${name}-walk-${facing}`,
-          frames: ['a', 'idle', 'b', 'idle'].map((step) => ({
-            key: 'house-chars',
-            frame: `${name}-${facing}-${step}`,
-          })),
-          frameRate: name === 'guest' ? 10 : 7,
-          repeat: -1,
-        })
+      for (const direction of CHARACTER_DIRECTIONS) {
+        for (const anim of CHARACTER_ANIMS) {
+          this.anims.create({
+            key: `${name}-${anim}-${direction}`,
+            frames: Array.from({ length: CHAR_FRAMES }, (_, i) => ({ key: 'house-chars', frame: `${name}-${direction}-${anim}-${i}` })),
+            frameRate: anim === 'idle' ? 6 : name === 'guest' ? 18 : 11,
+            repeat: -1,
+          })
+        }
       }
     }
   }
@@ -497,7 +497,7 @@ export class HouseScene extends Phaser.Scene {
     for (const item of this.furnishings.decor) {
       if (item.kind === 'prop' && CHAIR_PROPS.has(item.prop)) propTiles(item).forEach((t) => this.chairs.add(key(t)))
       if (!item.solid) continue
-      const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+      const tiles = decorTiles(item)
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
     for (const object of this.furnishings.interactables) {
@@ -593,19 +593,28 @@ export class HouseScene extends Phaser.Scene {
   /** Redraw the visitor's frames in a new outfit from the wardrobe. */
   private repaintGuest(outfit: Outfit) {
     const texture = this.textures.get('house-chars') as Phaser.Textures.CanvasTexture
+    const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
     const ctx = texture.getContext()
     // The guest is the first row of the sheet.
     ctx.clearRect(0, 0, texture.width, CHAR_H)
-    FACINGS.forEach((facing, fi) => {
-      STEPS.forEach((step, si) => {
-        drawCharacter(ctx, (fi * STEPS.length + si) * TILE, 0, 'guest', facing, step, outfit)
-      })
+    this.characterFrames().forEach((f, col) => {
+      drawCharacter(ctx, atlas, col * CHAR_W, 0, outfit, f.direction, f.anim, f.frame)
     })
     texture.refresh()
   }
 
-  private decorTiles(item: Decor): Point[] {
-    return item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+
+  /** Where a piece of decor draws, in world pixels. */
+  private decorRect(item: Decor) {
+    if (item.kind === 'limezu') return limezuRect(item.sprite, item.x, item.y, item.area?.w, item.area?.h)
+    return { x: item.x * TILE, y: item.y * TILE, ...PROP_SIZES[item.prop] }
+  }
+
+  /** Draws a piece of decor onto a canvas whose top-left is world point (ox, oy). */
+  private drawDecor(ctx: CanvasRenderingContext2D, item: Decor, ox: number, oy: number) {
+    const { x, y } = this.decorRect(item)
+    if (item.kind === 'prop') drawProp(ctx, x - ox, y - oy, item.prop)
+    else drawLimezu(ctx, this.textures.get('limezu-furniture').getSourceImage() as HTMLImageElement, item.sprite, x - ox, y - oy)
   }
 
   /**
@@ -623,19 +632,14 @@ export class HouseScene extends Phaser.Scene {
     small('cue-sparkle', 7, 7, drawSparkle)
     small('cue-arrow', 7, 6, drawFocusArrow)
 
-    const sheet = this.textures.get('furniture').getSourceImage() as HTMLImageElement
     for (const object of this.furnishings.interactables) {
       const keys = new Set(object.tiles.map(key))
       const parts = this.furnishings.decor.filter(
-        (item) => item.solid && this.decorTiles(item).some((tile) => keys.has(key(tile))),
+        (item) => item.solid && decorTiles(item).some((tile) => keys.has(key(tile))),
       )
       const rects =
         parts.length > 0
-          ? parts.map((item) => ({
-              x: item.x * TILE,
-              y: item.y * TILE,
-              ...(item.kind === 'prop' ? PROP_SIZES[item.prop] : { w: TILE, h: TILE }),
-            }))
+          ? parts.map((item) => this.decorRect(item))
           : object.tiles.map((tile) => ({ x: tile.x * TILE, y: tile.y * TILE, w: TILE, h: TILE }))
       const bx = Math.min(...rects.map((r) => r.x))
       const by = Math.min(...rects.map((r) => r.y))
@@ -655,16 +659,7 @@ export class HouseScene extends Phaser.Scene {
         ctx.fillStyle = '#000'
         ctx.fillRect(0, 0, bounds.w, bounds.h)
       }
-      for (const item of parts) {
-        const ox = item.x * TILE - bx
-        const oy = item.y * TILE - by
-        if (item.kind === 'prop') drawProp(ctx, ox, oy, item.prop)
-        else {
-          const sx = (item.frame % KENNEY_COLUMNS) * 17
-          const sy = Math.floor(item.frame / KENNEY_COLUMNS) * 17
-          ctx.drawImage(sheet, sx, sy, 16, 16, ox, oy, 16, 16)
-        }
-      }
+      for (const item of parts) this.drawDecor(ctx, item, bx, by)
 
       const { outline, shine } = traceSilhouette(source)
       this.textures.addCanvas(`cue-outline-${object.id}`, outline)
@@ -730,7 +725,7 @@ export class HouseScene extends Phaser.Scene {
         .setDepth(31)
         .setAlpha(still ? 1 : 0.75 + 0.25 * wave)
       arrowX = sprite.x
-      arrowY = sprite.y - CHAR_H - 10
+      arrowY = sprite.y - CHAR_H + CHAR_HEADROOM - 10
     } else if (target?.kind === 'zeno') {
       const sprite = this.zeno.sprite
       this.zenoOutline
@@ -760,7 +755,7 @@ export class HouseScene extends Phaser.Scene {
 
   private addWalker(who: Walker['who'], tile: Point, facing: Direction, texture = 'house-chars'): Walker {
     const sprite = this.add
-      .sprite(tile.x * TILE + TILE / 2, (tile.y + 1) * TILE, texture, `${who}-down-idle`)
+      .sprite(tile.x * TILE + TILE / 2, (tile.y + 1) * TILE, texture, who === 'zeno' ? 'zeno-down-idle' : `${who}-down-idle-0`)
       .setOrigin(0.5, 1)
       .setDepth(10 + tile.y / 100)
     const walker: Walker = { sprite, who, tile: { ...tile }, facing, moving: false }
@@ -768,14 +763,22 @@ export class HouseScene extends Phaser.Scene {
     return walker
   }
 
+  /** Zeno's side frames face right and flip for left; people have a frame set per direction. */
   private spriteFacing(direction: Direction): Facing {
     return direction === 'left' || direction === 'right' ? 'side' : direction
   }
 
   private setIdle(walker: Walker) {
-    walker.sprite.stop()
-    walker.sprite.setFrame(`${walker.who}-${this.spriteFacing(walker.facing)}-idle`)
-    walker.sprite.setFlipX(walker.facing === 'left')
+    if (walker.who === 'zeno') {
+      walker.sprite.stop()
+      walker.sprite.setFrame(`zeno-${this.spriteFacing(walker.facing)}-idle`)
+      walker.sprite.setFlipX(walker.facing === 'left')
+    } else if (this.reducedMotion) {
+      walker.sprite.stop()
+      walker.sprite.setFrame(`${walker.who}-${walker.facing}-idle-0`)
+    } else {
+      walker.sprite.play(`${walker.who}-idle-${walker.facing}`, true)
+    }
   }
 
   private face(walker: Walker, direction: Direction) {
@@ -836,8 +839,9 @@ export class HouseScene extends Phaser.Scene {
   private moveWalker(walker: Walker, target: Point, duration: number, onDone: () => void) {
     walker.moving = true
     walker.tile = { ...target }
-    walker.sprite.setFlipX(walker.facing === 'left')
-    const anim = `${walker.who}-walk-${this.spriteFacing(walker.facing)}`
+    const anim =
+      walker.who === 'zeno' ? `zeno-walk-${this.spriteFacing(walker.facing)}` : `${walker.who}-walk-${walker.facing}`
+    if (walker.who === 'zeno') walker.sprite.setFlipX(walker.facing === 'left')
     if (walker.sprite.anims.currentAnim?.key !== anim || !walker.sprite.anims.isPlaying) {
       walker.sprite.play(anim)
     }
@@ -948,7 +952,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private syncNpcLabel() {
-    this.npcLabel.setPosition(Math.round(this.npc.sprite.x), Math.round(this.npc.sprite.y - CHAR_H - 1))
+    this.npcLabel.setPosition(Math.round(this.npc.sprite.x), Math.round(this.npc.sprite.y - CHAR_H + CHAR_HEADROOM - 1))
   }
 
   // -------------------------------------------------------------------------
