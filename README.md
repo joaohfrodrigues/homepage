@@ -56,6 +56,10 @@ and people open the site's sections:
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
 
+A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
+films & series and About, or a button to explore the house. Dismissing it is remembered in
+`localStorage`, and visitors arriving on a deep link never see it.
+
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 

@@ -94,7 +94,7 @@ export const ROOMS: Room[] = [
     rect: { x: 7, y: 11, w: 3, h: 7 },
     floor: 'oak',
     wall: 'azulejo',
-    spawn: { x: 8, y: 17 },
+    spawn: { x: 8, y: 14 },
     spawnFacing: 'up',
     listed: true,
   },
