@@ -19,7 +19,8 @@ const TICK_MS = 16
 export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
   const [lineIndex, setLineIndex] = useState(0)
   const [shown, setShown] = useState(0)
-  const firstChoiceRef = useRef<HTMLButtonElement>(null)
+  const [selected, setSelected] = useState(0)
+  const choiceRefs = useRef<(HTMLButtonElement | null)[]>([])
   const boxRef = useRef<HTMLDivElement>(null)
 
   const line = dialogue.lines[lineIndex] ?? ''
@@ -34,7 +35,7 @@ export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
   }, [typing, shown, line.length])
 
   useEffect(() => {
-    if (showChoices) firstChoiceRef.current?.focus()
+    if (showChoices) choiceRefs.current[0]?.focus()
     else boxRef.current?.focus()
   }, [showChoices, lineIndex])
 
@@ -46,13 +47,35 @@ export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
     }
   }
 
+  function select(index: number) {
+    const count = dialogue.choices.length
+    const next = (index + count) % count
+    setSelected(next)
+    choiceRefs.current[next]?.focus()
+  }
+
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') {
       e.stopPropagation()
       onClose()
       return
     }
-    if (!showChoices && (e.key === 'Enter' || e.key === ' ' || e.key === 'e' || e.key === 'E')) {
+    if (showChoices) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        select(selected + 1)
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        select(selected - 1)
+      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'e' || e.key === 'E') {
+        // Handled here rather than by the focused button's native click, so the
+        // highlighted choice is what's picked even if focus has wandered.
+        e.preventDefault()
+        onChoose(dialogue.choices[selected])
+      }
+      return
+    }
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'e' || e.key === 'E') {
       e.preventDefault()
       advance()
     }
@@ -84,15 +107,19 @@ export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
             {dialogue.choices.map((choice, i) => (
               <button
                 key={choice.label}
-                ref={i === 0 ? firstChoiceRef : undefined}
+                ref={(el) => {
+                  choiceRefs.current[i] = el
+                }}
                 type="button"
-                className="pixel-button"
+                className={`pixel-button ${i === selected ? 'bg-[#3d3150]' : ''}`}
+                onFocus={() => setSelected(i)}
+                onMouseEnter={() => setSelected(i)}
                 onClick={(e) => {
                   e.stopPropagation()
                   onChoose(choice)
                 }}
               >
-                <span aria-hidden className="text-[#e8c95a]">
+                <span aria-hidden className={`text-[#e8c95a] ${i === selected ? '' : 'invisible'}`}>
                   ▸
                 </span>
                 {choice.label}
