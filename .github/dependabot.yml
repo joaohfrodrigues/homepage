@@ -8,6 +8,10 @@ updates:
       groups:
           minor-and-patch:
               update-types: ['minor', 'patch']
+      ignore:
+          # eslint-plugin-react (via eslint-config-next) doesn't support ESLint 10 yet.
+          - dependency-name: 'eslint'
+            update-types: ['version-update:semver-major']
 
     # Python data pipeline dependencies (pyproject.toml)
     - package-ecosystem: 'pip'
