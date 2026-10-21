@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, type Outfit } from '@/game/pixels'
@@ -13,6 +13,8 @@ import { DialogueBox } from './dialogue-box'
 import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
+import { GuestbookPanel } from './guestbook-panel'
+import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
 
 const OUTFIT_KEY = 'house:outfit'
@@ -124,18 +126,41 @@ export function HouseShell({ data, children }: Props) {
     return () => offs.forEach((off) => off())
   }, [bridge, handleInteract])
 
+  // The guestbook's tallies, kept in this browser only.
+  useEffect(() => {
+    countVisit()
+    const offs = [
+      bridge.game.on('room', (id) => updateStats((stats) => (stats.rooms[id] = (stats.rooms[id] ?? 0) + 1))),
+      bridge.game.on('step', () => updateStats((stats) => stats.steps++)),
+      bridge.game.on('interact', (action) => {
+        if (action.type !== 'dialogue') return
+        if (action.id === 'joao') updateStats((stats) => stats.chats++)
+        else if (action.id === 'bathroom') updateStats((stats) => stats.knocks++)
+      }),
+    ]
+    window.addEventListener('pagehide', flushStats)
+    return () => {
+      offs.forEach((off) => off())
+      window.removeEventListener('pagehide', flushStats)
+      flushStats()
+    }
+  }, [bridge])
+
   useEffect(() => {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
 
-  // M toggles the directory from anywhere in the house (but not over a page or game).
+  // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
+    const shortcuts: Record<string, PanelId> = { m: 'directory', g: 'guestbook' }
     function onKey(e: KeyboardEvent) {
-      if (overlayOpen || dialogue !== null || (panel !== null && panel !== 'directory')) return
+      if (overlayOpen || dialogue !== null || (panel !== null && panel !== 'directory' && panel !== 'guestbook')) return
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable]')) return
-      if (e.key === 'm' || e.key === 'M') {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const target = shortcuts[e.key.toLowerCase()]
+      if (target) {
         e.preventDefault()
-        setPanel((open) => (open === 'directory' ? null : 'directory'))
+        setPanel((open) => (open === target ? null : target))
       }
     }
     window.addEventListener('keydown', onKey)
@@ -153,6 +178,7 @@ export function HouseShell({ data, children }: Props) {
   const changeNight = useCallback(
     (on: boolean) => {
       setNight(on)
+      if (on) updateStats((stats) => stats.naps++)
       bridge.ui.emit('night', { on, animate: true })
     },
     [bridge],
@@ -162,6 +188,7 @@ export function HouseShell({ data, children }: Props) {
     (next: Outfit) => {
       setOutfit(next)
       bridge.ui.emit('outfit', next)
+      updateStats((stats) => stats.outfits++)
       try {
         window.localStorage.setItem(OUTFIT_KEY, JSON.stringify(next))
       } catch {
@@ -217,16 +244,29 @@ export function HouseShell({ data, children }: Props) {
               </span>
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
-            <button
-              type="button"
-              className="pixel-button pointer-events-auto"
-              onClick={() => setPanel('directory')}
-              aria-keyshortcuts="M"
-            >
-              <MapIcon size={14} />
-              Directory
-              <kbd className="hidden text-xs text-[#a69cba] sm:inline">M</kbd>
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="pixel-button pointer-events-auto"
+                onClick={() => setPanel('guestbook')}
+                aria-keyshortcuts="G"
+                aria-label="Guestbook"
+              >
+                <BookOpen size={14} />
+                <span className="hidden sm:inline">Guestbook</span>
+                <kbd className="hidden text-xs text-[#a69cba] sm:inline">G</kbd>
+              </button>
+              <button
+                type="button"
+                className="pixel-button pointer-events-auto"
+                onClick={() => setPanel('directory')}
+                aria-keyshortcuts="M"
+              >
+                <MapIcon size={14} />
+                Directory
+                <kbd className="hidden text-xs text-[#a69cba] sm:inline">M</kbd>
+              </button>
+            </div>
           </div>
 
           {inputEnabled && hint && (
@@ -253,7 +293,7 @@ export function HouseShell({ data, children }: Props) {
               <div className="font-pixel max-w-md bg-[#2a2233]/90 px-4 py-2 text-center text-sm shadow-[0_3px_0_#120e18]">
                 {coarsePointer
                   ? 'Tap the floor to walk, tap things to look at them.'
-                  : 'Walk with WASD or the arrow keys (or click the floor). E to interact, M for the directory.'}
+                  : 'Walk with WASD or the arrow keys (or click the floor). E to interact, M for the directory, G for the guestbook.'}
               </div>
             </div>
           )}
@@ -291,6 +331,7 @@ export function HouseShell({ data, children }: Props) {
       )}
       {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
+      {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
 
       {children}
     </div>

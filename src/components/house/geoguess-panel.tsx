@@ -6,6 +6,7 @@ import { distanceKm, projectToMap, unprojectFromMap } from '@/game/map-projectio
 import type { GeoPhoto } from '@/lib/photos'
 import { PanelWindow } from './panel-window'
 import { PinIcon } from './travel-map'
+import { readStats, updateStats } from './visitor-stats'
 
 interface Props {
   photos: GeoPhoto[]
@@ -13,7 +14,6 @@ interface Props {
 }
 
 const ROUNDS = 5
-const BEST_KEY = 'house:geoguess-best'
 
 function pickRound(photos: GeoPhoto[]): GeoPhoto[] {
   const pool = [...photos]
@@ -32,14 +32,6 @@ function score(km: number): number {
   return Math.round(1000 * Math.exp(-km / 400))
 }
 
-function readBest(): number {
-  try {
-    return Number(window.localStorage.getItem(BEST_KEY)) || 0
-  } catch {
-    return 0
-  }
-}
-
 /**
  * The fridge magnets: a photo from one of the trips, and the visitor drops a
  * pin on the map where they think it was taken. Five rounds, scored by distance.
@@ -51,7 +43,7 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
   const [revealed, setRevealed] = useState(false)
   const [scores, setScores] = useState<number[]>([])
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
-  const [best, setBest] = useState(readBest)
+  const [best, setBest] = useState(() => readStats().geoBest)
   const mapRef = useRef<HTMLDivElement>(null)
 
   const finished = scores.length === ROUNDS && revealed && index === ROUNDS - 1
@@ -66,17 +58,18 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
     const nextScores = [...scores, points]
     setScores(nextScores)
     setRevealed(true)
-    if (nextScores.length === ROUNDS) {
-      const sum = nextScores.reduce((a, b) => a + b, 0)
-      if (sum > best) {
-        setBest(sum)
-        try {
-          window.localStorage.setItem(BEST_KEY, String(sum))
-        } catch {
-          // Private mode: the best score just isn't remembered.
-        }
+    const sum = nextScores.length === ROUNDS ? nextScores.reduce((a, b) => a + b, 0) : null
+    if (sum !== null && sum > best) setBest(sum)
+    updateStats((stats) => {
+      stats.geoGuesses++
+      stats.geoTotalKm += km
+      stats.geoClosestKm = Math.min(stats.geoClosestKm ?? Infinity, km)
+      stats.geoWorstKm = Math.max(stats.geoWorstKm ?? 0, km)
+      if (sum !== null) {
+        stats.geoRounds++
+        stats.geoBest = Math.max(stats.geoBest, sum)
       }
-    }
+    })
   }, [guess, revealed, km, scores, best])
 
   function next() {

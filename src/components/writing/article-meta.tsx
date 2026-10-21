@@ -10,8 +10,10 @@ interface ArticleMetaProps {
 export function ArticleMeta({ publishedAt, readingTime, className }: ArticleMetaProps) {
   return (
     <div className={cn('flex items-center gap-4 text-sm text-muted-foreground', className)}>
-      <time>{formatDate(publishedAt)}</time>
-      <span>{readingTime} min read</span>
+      <time className="font-pixel">{formatDate(publishedAt)}</time>
+      <span>
+        <span className="font-pixel">{readingTime}</span> min read
+      </span>
     </div>
   )
 }

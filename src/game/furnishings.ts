@@ -193,6 +193,12 @@ export function furnishHouse(): Furnishings {
     tiles: [{ x: 14, y: 22 }],
     action: { type: 'panel', panel: 'directory' },
   })
+  interactables.push({
+    id: 'guestbook',
+    label: 'Guestbook — your visit so far',
+    tiles: prop('guestbook', 17, 20),
+    action: { type: 'panel', panel: 'guestbook' },
+  })
   prop('doormat', 15, 23, false)
   kenney(K.plantSmall, 17, 23, true)
   interactables.push({

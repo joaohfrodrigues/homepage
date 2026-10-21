@@ -87,7 +87,8 @@ export function TrailSign({ events }: { events: EventItem[] }) {
             >
               <span className="block text-base leading-tight">{event.name}</span>
               <span className="block text-xs text-[#f4ecd8]/80">
-                {[event.location, year(event)].filter(Boolean).join(' · ')}
+                {event.location && `${event.location} · `}
+                <span className="font-pixel">{year(event)}</span>
               </span>
             </li>
           )

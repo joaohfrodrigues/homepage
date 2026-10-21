@@ -65,4 +65,27 @@ test.describe('House', () => {
     await guess.getByRole('button', { name: 'Guess' }).click()
     await expect(guess.getByRole('link', { name: /trip/ })).toBeVisible()
   })
+
+  test('the guestbook tallies the coffee machine and survives a reload', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await page.getByRole('button', { name: 'Pull a bica Coffee machine' }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await page.keyboard.press('Escape')
+
+    await page.keyboard.press('g')
+    const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
+    await expect(guestbook.getByText('First sip (earned)')).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: 'Guestbook' }).click()
+    await expect(guestbook).toContainText('this is your first visit')
+    await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
+  })
 })

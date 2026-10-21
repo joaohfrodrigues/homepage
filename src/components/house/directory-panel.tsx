@@ -121,16 +121,10 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
                   </>
                 )}
                 {room.id === 'hall' && (
-                  <li>
-                    <button
-                      type="button"
-                      onClick={onContact}
-                      className="flex w-full items-baseline justify-between gap-2 px-3 py-1 text-left text-sm hover:bg-[#ebe0c8]"
-                    >
-                      <span>Contact</span>
-                      <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">The post</span>
-                    </button>
-                  </li>
+                  <>
+                    <ActionRow label="Contact" item="The post" onClick={onContact} />
+                    <ActionRow label="Your visit so far" item="Guestbook" onClick={() => onPanel('guestbook')} />
+                  </>
                 )}
               </ul>
             </section>

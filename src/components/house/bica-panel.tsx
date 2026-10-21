@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { PanelWindow } from './panel-window'
+import { readStats, updateStats, type BicaResult } from './visitor-stats'
 
 interface Props {
   onClose: () => void
 }
 
 type Phase = 'ready' | 'pulling' | 'done'
-type Result = 'perfect' | 'good' | 'under' | 'over'
+type Result = BicaResult
 
 const MAX_BAR = 15
 const SWEET_SPOT = 9
-const BEST_KEY = 'house:bica-best'
 
 const RESULTS: Record<Result, { title: string; text: string; coffee: string; crema: string }> = {
   perfect: { title: 'Perfect bica!', text: 'Thick hazelnut crema. João would approve.', coffee: '#4a2c1a', crema: '#c08a4a' },
@@ -29,14 +29,6 @@ function judge(bar: number): Result {
   return bar < SWEET_SPOT ? 'under' : 'over'
 }
 
-function readBest(): number {
-  try {
-    return Number(window.localStorage.getItem(BEST_KEY)) || 0
-  } catch {
-    return 0
-  }
-}
-
 /**
  * The kitchen's espresso machine: start the pull, then stop the pressure
  * needle as close to 9 bar as possible. Perfect pulls in a row speed it up.
@@ -47,7 +39,7 @@ export function BicaPanel({ onClose }: Props) {
   const [result, setResult] = useState<Result | null>(null)
   const [streak, setStreak] = useState(0)
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
-  const [best, setBest] = useState(readBest)
+  const [best, setBest] = useState(() => readStats().bicaBestStreak)
   const frame = useRef<number | null>(null)
   const angle = useRef(-Math.PI / 2)
   const actionRef = useRef<HTMLButtonElement>(null)
@@ -79,14 +71,11 @@ export function BicaPanel({ onClose }: Props) {
       setResult(outcome)
       setStreak(nextStreak)
       setPhase('done')
-      if (nextStreak > best) {
-        setBest(nextStreak)
-        try {
-          window.localStorage.setItem(BEST_KEY, String(nextStreak))
-        } catch {
-          // Private mode: the best streak just isn't remembered.
-        }
-      }
+      if (nextStreak > best) setBest(nextStreak)
+      updateStats((stats) => {
+        stats.bicas[outcome]++
+        stats.bicaBestStreak = Math.max(stats.bicaBestStreak, nextStreak)
+      })
     } else {
       angle.current = -Math.PI / 2
       setResult(null)

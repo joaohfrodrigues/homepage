@@ -268,6 +268,7 @@ export type PropName =
   | 'boots'
   | 'medalhanger'
   | 'shoerack'
+  | 'guestbook'
   | 'bookshelf'
   | 'wallmap'
   | 'desk'
@@ -307,6 +308,7 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   boots: { w: 16, h: 16 },
   medalhanger: { w: 16, h: 32 },
   shoerack: { w: 16, h: 16 },
+  guestbook: { w: 16, h: 16 }, // a little stand with the visitors' book open on it
   bookshelf: { w: 16, h: 32 }, // four of these make 2m of shelving
   wallmap: { w: 48, h: 32 }, // 1.5m × 1m pin map
   desk: { w: 48, h: 32 }, // 1.4m desk
@@ -495,6 +497,28 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
         r(x + 1, 6, 4, 1, PALETTE.paper)
       }
       r(1, 15, 14, 1, PALETTE.shadow)
+      break
+    }
+    case 'guestbook': {
+      // Stand.
+      r(3, 8, 10, 6, PALETTE.ink)
+      r(4, 9, 8, 4, PALETTE.wood)
+      r(4, 9, 8, 1, PALETTE.woodHighlight)
+      r(4, 14, 2, 1, PALETTE.woodDark)
+      r(10, 14, 2, 1, PALETTE.woodDark)
+      // The book, open, with a red ribbon and a pen.
+      r(1, 2, 14, 8, PALETTE.ink)
+      r(2, 3, 6, 6, PALETTE.paper)
+      r(8, 3, 5, 6, '#fbf6ea')
+      r(7, 3, 1, 6, '#b5aa94')
+      for (const y of [4, 6]) {
+        r(3, y, 4, 1, '#b5aa94')
+        r(9, y, 3, 1, '#b5aa94')
+      }
+      r(5, 9, 1, 3, PALETTE.red)
+      r(13, 1, 1, 6, PALETTE.redDark)
+      r(13, 7, 1, 1, PALETTE.brass)
+      r(2, 15, 12, 1, PALETTE.shadow)
       break
     }
     // --- Study ----------------------------------------------------------------

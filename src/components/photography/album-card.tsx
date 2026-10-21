@@ -37,7 +37,9 @@ export function AlbumCard({ collection, badge, showCount = true, priority = fals
       <div>
         <p className="font-medium leading-snug group-hover:underline">{collection.title}</p>
         {showCount && (
-          <p className="text-sm text-muted-foreground">{collection.totalPhotos} photos</p>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-pixel">{collection.totalPhotos}</span> photos
+          </p>
         )}
       </div>
     </Link>
