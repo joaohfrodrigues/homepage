@@ -7,6 +7,7 @@ import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, type Room, type RoomId } from
 import { TOPICS } from '@/game/topics'
 import type { PanelId } from '@/game/bridge'
 import { cn } from '@/lib/utils'
+import { useEscapeKey } from './panel-window'
 
 interface Props {
   currentRoom: RoomId | null
@@ -25,7 +26,7 @@ function ActionRow({ label, item, onClick }: { label: string; item: string; onCl
       <button
         type="button"
         onClick={onClick}
-        className="flex w-full items-baseline justify-between gap-2 px-3 py-1 text-left text-sm hover:bg-[#ebe0c8]"
+        className="flex w-full items-baseline justify-between gap-2 px-3 py-1 text-left text-sm pointer-coarse:min-h-11 pointer-coarse:items-center hover:bg-[#ebe0c8]"
       >
         <span>{label}</span>
         <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">{item}</span>
@@ -57,6 +58,7 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
   useEffect(() => {
     closeRef.current?.focus()
   }, [])
+  useEscapeKey(onClose)
 
   return (
     <div
@@ -69,12 +71,6 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
         aria-labelledby="directory-title"
         className="pixel-window relative max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-5 sm:p-7"
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.stopPropagation()
-            onClose()
-          }
-        }}
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
@@ -100,7 +96,7 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
                     <Link
                       href={topic.href}
                       scroll={false}
-                      className="flex items-baseline justify-between gap-2 px-3 py-1 text-sm hover:bg-[#ebe0c8]"
+                      className="flex items-baseline justify-between gap-2 px-3 py-1 text-sm hover:bg-[#ebe0c8] pointer-coarse:min-h-11 pointer-coarse:items-center"
                     >
                       <span>{topic.title}</span>
                       <span className="font-pixel shrink-0 text-xs text-[#8a7f70]">{topic.item}</span>
@@ -109,14 +105,14 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onContact, onPa
                 ))}
                 {room.id === 'living' && (
                   <li>
-                    <Link href="/about" scroll={false} className="flex px-3 py-1 text-sm hover:bg-[#ebe0c8]">
+                    <Link href="/about" scroll={false} className="flex px-3 py-1 text-sm hover:bg-[#ebe0c8] pointer-coarse:min-h-11 pointer-coarse:items-center">
                       About João
                     </Link>
                   </li>
                 )}
                 {room.id === 'kitchen' && (
                   <>
-                    <ActionRow label="Where was this taken?" item="Fridge" onClick={() => onPanel('geoguess')} />
+                    <ActionRow label="Where was this taken?" item="Fridge magnets" onClick={() => onPanel('geoguess')} />
                     <ActionRow label="Pull a bica" item="Coffee machine" onClick={() => onPanel('bica')} />
                   </>
                 )}

@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { Dialogue, DialogueChoice } from './dialogues'
+import { useEscapeKey } from './panel-window'
 
 interface Props {
   dialogue: Dialogue
   onChoose: (choice: DialogueChoice) => void
   onClose: () => void
+  /** Touch screens are told to tap rather than click or press E. */
+  touch?: boolean
 }
 
 const CHARS_PER_TICK = 2
@@ -16,7 +19,7 @@ const TICK_MS = 16
  * Bottom-of-screen RPG dialogue: types each line out, then offers choices.
  * Give it a `key` per dialogue so switching dialogues restarts from line one.
  */
-export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
+export function DialogueBox({ dialogue, onChoose, onClose, touch = false }: Props) {
   const [lineIndex, setLineIndex] = useState(0)
   const [shown, setShown] = useState(0)
   const [selected, setSelected] = useState(0)
@@ -54,12 +57,9 @@ export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
     choiceRefs.current[next]?.focus()
   }
 
+  useEscapeKey(onClose)
+
   function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.stopPropagation()
-      onClose()
-      return
-    }
     if (showChoices) {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         e.preventDefault()
@@ -129,7 +129,7 @@ export function DialogueBox({ dialogue, onChoose, onClose }: Props) {
           </div>
         ) : (
           <div className="font-pixel mt-2 flex justify-end text-xs text-[#6d6359]">
-            <span className="animate-pulse">{typing ? '…' : 'Click or press E ▾'}</span>
+            <span className="animate-pulse">{typing ? '…' : touch ? 'Tap to continue ▾' : 'Click or press E ▾'}</span>
           </div>
         )}
       </div>

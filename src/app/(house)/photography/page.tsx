@@ -28,7 +28,7 @@ export default async function PhotographyPage() {
   const trips = getTrips()
 
   return (
-    <HouseOverlay eyebrow="Study · map table" title="Travel map">
+    <HouseOverlay eyebrow="Study · Wall map" title="Travel map">
       <p className="mb-5 text-[#6d6359]">
         {description} Every pin is a trip with its own exhibition — pick one, or browse every photo
         below.

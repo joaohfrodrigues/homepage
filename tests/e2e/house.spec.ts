@@ -49,6 +49,46 @@ test.describe('House', () => {
     await expect(page.getByRole('dialog', { name: 'About João' })).not.toBeVisible()
   })
 
+  test('a page opened from the directory closes straight back to the house', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    await directory.getByRole('link', { name: /About João/ }).click()
+    const about = page.getByRole('dialog', { name: 'About João' })
+    await expect(about).toBeVisible()
+    await expect(directory).not.toBeVisible()
+    await page.getByRole('button', { name: 'Close and return to the house' }).click()
+    await expect(page).toHaveURL('/')
+    await expect(about).not.toBeVisible()
+    await expect(directory).not.toBeVisible()
+    // Back steps out of the house rather than reopening the page just closed.
+    await page.goBack()
+    await expect(page).not.toHaveURL(/\/about/)
+  })
+
+  test('Escape steps up from a trip to the travel map, then to the house', async ({ page }) => {
+    await page.goto('/photography')
+    const overlay = page.getByRole('dialog', { name: 'Travel map' })
+    await overlay.locator('a[href^="/photography/"][aria-label*="photos"]').first().click()
+    await expect(page).toHaveURL(/\/photography\/.+/)
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL('/photography')
+    await page.keyboard.press('Escape')
+    await expect(page).toHaveURL('/')
+  })
+
+  test('Escape closes the directory after focus leaves it', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    await expect(directory).toBeVisible()
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+    await page.keyboard.press('Escape')
+    await expect(directory).not.toBeVisible()
+  })
+
   test('hobby items open themed windows with the existing cards', async ({ page }) => {
     // In dev, the first visit after a change compiles the hobby route, which
     // can outlast the default 30s on its own.
@@ -74,7 +114,7 @@ test.describe('House', () => {
     await page.keyboard.press('Escape')
 
     await page.keyboard.press('m')
-    await page.getByRole('button', { name: 'Where was this taken? Fridge' }).click()
+    await page.getByRole('button', { name: 'Where was this taken? Fridge magnets' }).click()
     const guess = page.getByRole('dialog', { name: 'Where was this taken?' })
     await guess.getByRole('application').click({ position: { x: 100, y: 60 } })
     await guess.getByRole('button', { name: 'Guess' }).click()

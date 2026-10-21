@@ -87,7 +87,7 @@ export function BicaPanel({ onClose }: Props) {
   const needle = (bar / MAX_BAR) * 100
 
   return (
-    <PanelWindow eyebrow="Kitchen · coffee machine" title="Pull a bica" width="narrow" onClose={onClose}>
+    <PanelWindow eyebrow="Kitchen · Coffee machine" title="Pull a bica" width="narrow" onClose={onClose}>
       <p className="mb-4 text-sm text-[#6d6359]">
         A good bica pulls at about 9 bar. Start the pull, then stop the needle in the gold zone.
       </p>

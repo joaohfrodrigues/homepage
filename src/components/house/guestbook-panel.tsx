@@ -143,7 +143,7 @@ export function GuestbookPanel({ onClose }: Props) {
   }
 
   return (
-    <PanelWindow eyebrow="Entrance hall · guestbook" title="Guestbook" onClose={onClose}>
+    <PanelWindow eyebrow="Entrance hall · Guestbook" title="Guestbook" onClose={onClose}>
       <p className="mb-5 text-sm text-[#6d6359]">
         Dear visitor — <Intro stats={stats} />
       </p>

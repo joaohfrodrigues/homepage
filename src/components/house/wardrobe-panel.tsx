@@ -65,7 +65,7 @@ export function WardrobePanel({ outfit, onChange, onClose }: Props) {
   }
 
   return (
-    <PanelWindow eyebrow="Bedroom · wardrobe" title="Change outfit" width="narrow" onClose={onClose}>
+    <PanelWindow eyebrow="Bedroom · Wardrobe" title="Change outfit" width="narrow" onClose={onClose}>
       <div className="flex flex-col items-center gap-5">
         <div className="border-4 border-[#2a2233] bg-[#c9d6c3] p-3">
           <canvas
