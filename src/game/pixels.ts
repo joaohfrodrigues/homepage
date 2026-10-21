@@ -1018,12 +1018,21 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'litterbox': {
-      // A covered litter box with a cat flap facing into the kitchen.
+      // An open tray of sand, so whatever Zeno leaves in it is plain to see.
       r(1, 3, 14, 12, PALETTE.ink)
-      r(2, 4, 12, 10, '#b9c4cc')
-      r(2, 4, 12, 2, '#d3dbe0')
-      r(5, 8, 6, 6, '#3a3a44')
-      r(5, 8, 6, 1, '#55555f')
+      r(2, 4, 12, 10, '#7fa7bd')
+      r(2, 4, 12, 1, '#9fc3d6')
+      r(3, 5, 10, 8, '#e3d6b4')
+      for (const [x, y] of [
+        [4, 6],
+        [8, 7],
+        [11, 6],
+        [5, 10],
+        [10, 11],
+        [7, 9],
+      ] as const) {
+        r(x, y, 1, 1, '#cbbd96')
+      }
       r(1, 15, 14, 1, PALETTE.shadow)
       break
     }
@@ -1492,6 +1501,19 @@ export function drawHeart(ctx: Ctx) {
       if (row[x] === 'r') rect(ctx, x, y, 1, 1, '#e05a68')
     }
   })
+}
+
+/** Two clumps in the litter sand, drawn over the tray until the box is cleaned. */
+export function drawPoop(ctx: Ctx) {
+  for (const [x, y] of [
+    [5, 7],
+    [9, 9],
+  ] as const) {
+    rect(ctx, x, y, 3, 2, '#5a3a24')
+    rect(ctx, x + 1, y - 1, 1, 1, '#5a3a24')
+    rect(ctx, x, y, 1, 1, '#7a5234')
+    rect(ctx, x, y + 2, 3, 1, 'rgba(20, 14, 30, 0.2)')
+  }
 }
 
 /** Three wavy fumes, 9x8, that rise off Zeno's litter box until it's cleaned. */

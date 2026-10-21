@@ -30,6 +30,7 @@ import {
   drawCat,
   drawCharacter,
   drawHeart,
+  drawPoop,
   drawStink,
   drawFocusArrow,
   drawSparkle,
@@ -146,10 +147,11 @@ export class HouseScene extends Phaser.Scene {
   private zenoNextPlayAt = 0
   private zenoNextLitterAt = 0
   private zenoLitterTrip = false
-  /** Out of sight inside his covered litter box. */
+  /** Busy in his litter box: not to be petted. */
   private zenoInBox = false
   private litterDirty = false
   private stink!: Phaser.GameObjects.Image
+  private poop!: Phaser.GameObjects.Image
   private chairs = new Set<string>()
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
@@ -235,7 +237,12 @@ export class HouseScene extends Phaser.Scene {
     this.stink = this.add
       .image(box.x * TILE + 4, box.y * TILE - 2, 'litter-stink')
       .setOrigin(0, 1)
-      .setDepth(32)
+      .setDepth(4)
+      .setVisible(false)
+    this.poop = this.add
+      .image(box.x * TILE, box.y * TILE, 'litter-poop')
+      .setOrigin(0, 0)
+      .setDepth(3)
       .setVisible(false)
     if (!this.reducedMotion) {
       this.tweens.add({ targets: this.stink, y: this.stink.y - 2, alpha: 0.5, duration: 900, yoyo: true, repeat: -1 })
@@ -465,6 +472,9 @@ export class HouseScene extends Phaser.Scene {
     const toy = this.textures.createCanvas('zeno-toy', TILE, TILE)!
     drawProp(toy.getContext(), 0, 0, 'cattoy')
     toy.refresh()
+    const poop = this.textures.createCanvas('litter-poop', TILE, TILE)!
+    drawPoop(poop.getContext())
+    poop.refresh()
     const stink = this.textures.createCanvas('litter-stink', 9, 8)!
     drawStink(stink.getContext())
     stink.refresh()
@@ -1018,20 +1028,20 @@ export class HouseScene extends Phaser.Scene {
     return true
   }
 
-  /** Into the covered box and out of sight for a few seconds; it needs cleaning after. */
+  /** A few seconds sat in the open tray, then out he hops and leaves it for cleaning. */
   private enterLitterBox() {
     this.zenoLitterTrip = false
     this.zenoInBox = true
-    this.zeno.sprite.setVisible(false)
+    this.restZeno(0, 0, true)
     this.zenoRestUntil = Infinity
     this.updateHint()
     this.time.delayedCall(between([3500, 6000]), () => {
       this.zenoInBox = false
       this.litterDirty = true
+      this.poop.setVisible(true)
       this.stink.setVisible(true)
       this.zeno.facing = 'down'
       this.setIdle(this.zeno)
-      this.zeno.sprite.setVisible(true)
       this.zenoNextLitterAt = this.time.now + between(ZENO_LITTER_GAP_MS)
       // Hop straight out onto the floor, so the box is free to be cleaned.
       const out = (Object.keys(DELTAS) as Direction[]).find((d) => {
@@ -1227,6 +1237,7 @@ export class HouseScene extends Phaser.Scene {
     } else if (target.object.id === 'litterbox') {
       action = { type: 'dialogue', id: this.litterDirty ? 'litterbox-dirty' : 'litterbox-clean' }
       this.litterDirty = false
+      this.poop.setVisible(false)
       this.stink.setVisible(false)
     } else {
       action = target.object.action
