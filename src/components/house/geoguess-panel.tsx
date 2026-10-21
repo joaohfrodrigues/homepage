@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { distanceKm, fitView, isInView, projectToMap, unprojectFromMap, type LatLon } from '@/game/map-projection'
 import type { GeoPhoto } from '@/lib/photos'
+import { openPage } from './house-navigation'
 import { PanelWindow } from './panel-window'
 import { PinIcon } from './travel-map'
 import { readStats, updateStats } from './visitor-stats'
@@ -38,6 +40,7 @@ function score(km: number): number {
  * pin on the map where they think it was taken. Five rounds, scored by distance.
  */
 export function GeoGuessPanel({ photos, onClose }: Props) {
+  const router = useRouter()
   const [round, setRound] = useState(() => pickRound(photos))
   const [index, setIndex] = useState(0)
   const [guess, setGuess] = useState<LatLon | null>(null)
@@ -198,7 +201,18 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
             <span className="font-pixel">
               {photo.place || photo.tripTitle} — {Math.round(km)} km off, +{scores[index]} points.
             </span>{' '}
-            <Link href={`/photography/${photo.tripSlug}`} scroll={false} onClick={onClose} className="text-[#8e2a20] underline underline-offset-4">
+            <Link
+              href={`/photography/${photo.tripSlug}`}
+              scroll={false}
+              onClick={(e) => {
+                // New-tab and other modified clicks behave like any link.
+                if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+                // The page takes over the panel's history entry and closes it.
+                e.preventDefault()
+                openPage(router, `/photography/${photo.tripSlug}`)
+              }}
+              className="text-[#8e2a20] underline underline-offset-4"
+            >
               See the {photo.tripTitle} trip →
             </Link>
           </p>
