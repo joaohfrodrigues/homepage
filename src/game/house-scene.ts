@@ -1261,10 +1261,10 @@ export class HouseScene extends Phaser.Scene {
 
   private handleTap(pointer: Phaser.Input.Pointer) {
     if (!this.inputEnabled) return
-    // With the on-screen pad, touches on the house are just looking around.
-    if (pointer.wasTouch && !this.tapToMove) return
     const tile = { x: Math.floor(pointer.worldX / TILE), y: Math.floor(pointer.worldY / TILE) }
     const target = this.pointerTargetAt(tile)
+    // With the on-screen pad the stick does the walking, but tapping a thing still goes to it.
+    if (pointer.wasTouch && !this.tapToMove && !target) return
 
     if (target) {
       const tiles = this.targetTiles(target)

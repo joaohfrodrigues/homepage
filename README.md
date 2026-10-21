@@ -44,10 +44,13 @@ bun run build      # production build
 
 ## 🏠 The House
 
-The home page is a compact Lisbon flat drawn tile by tile. Walk with the arrow keys/WASD (or the
-on-screen pad or tap-to-walk on touch screens) and interact with <kbd>E</kbd>, <kbd>Space</kbd> or
-<kbd>Enter</kbd>. <kbd>M</kbd> opens the room directory and <kbd>G</kbd> the guestbook. Furniture
-and people open the site's sections:
+The home page is a compact Lisbon flat drawn tile by tile. Walk with the arrow keys/WASD and
+interact with <kbd>E</kbd>, <kbd>Space</kbd> or <kbd>Enter</kbd>, or click the floor and the things
+on it. <kbd>M</kbd> opens the room directory and <kbd>G</kbd> the guestbook. On touch screens you
+tap: the floor to walk, a thing or person to walk over and interact. A switch in the top bar swaps
+in an on-screen joystick with an A button that names what it will do; tapping things still works
+with it on, and the choice is remembered in `localStorage`. Furniture and people open the site's
+sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV) and João himself.
