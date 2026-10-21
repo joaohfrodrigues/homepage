@@ -35,7 +35,7 @@
     --radius-sm: calc(var(--radius) - 4px);
 
     --font-serif: var(--font-serif), ui-serif, Georgia, serif;
-    --font-pixel: var(--font-pixel), ui-monospace, monospace;
+    --font-pixel: var(--font-pixel-digits), var(--font-pixel), ui-monospace, monospace;
     --font-lego: var(--font-lego), ui-sans-serif, sans-serif;
     --font-lego-thick: var(--font-lego-thick), ui-sans-serif, sans-serif;
 }

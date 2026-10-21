@@ -6,6 +6,20 @@ import { SITE_URL, SITE_NAME } from '@/lib/site-config'
 
 const lora = Lora({ subsets: ['latin'], variable: '--font-serif' })
 const pixel = Pixelify_Sans({ subsets: ['latin'], variable: '--font-pixel' })
+// Pixelify's digits are hard to read (5 passes for S), so the pixel stack
+// takes 0-9 from VT323 instead. The file is subset to the ten digits, and the
+// unicode-range lets every other character fall through to Pixelify. No
+// fallback face: one without the range would claim all the other characters.
+const pixelDigits = localFont({
+  src: '../../public/fonts/VT323-digits.woff2',
+  variable: '--font-pixel-digits',
+  adjustFontFallback: false,
+  declarations: [
+    { prop: 'unicode-range', value: 'U+0030-0039' },
+    // VT323 draws small for its em; this lines its digits up with Pixelify's.
+    { prop: 'size-adjust', value: '130%' },
+  ],
+})
 const lego = localFont({ src: '../../public/fonts/LEGO.ttf', variable: '--font-lego' })
 const legoThick = localFont({
   src: '../../public/fonts/Legothick.ttf',
@@ -43,7 +57,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${pixel.variable} ${lego.variable} ${legoThick.variable}`}>
+    <html lang="en" className={`${lora.variable} ${pixel.variable} ${pixelDigits.variable} ${lego.variable} ${legoThick.variable}`}>
       <head>
         <link
           rel="stylesheet"

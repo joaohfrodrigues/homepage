@@ -86,10 +86,15 @@ export function HouseShell({ data, children }: Props) {
     let cancelled = false
     let game: { destroy: (removeCanvas: boolean) => void } | null = null
     ;(async () => {
+      const root = getComputedStyle(document.documentElement)
       const fontFamily =
-        getComputedStyle(document.documentElement).getPropertyValue('--font-pixel').trim() || 'monospace'
-      // Phaser rasterizes text once, so the pixel font has to be loaded first.
-      await document.fonts?.load(`8px ${fontFamily}`).catch(() => undefined)
+        [root.getPropertyValue('--font-pixel-digits'), root.getPropertyValue('--font-pixel'), 'monospace']
+          .map((family) => family.trim())
+          .filter(Boolean)
+          .join(', ')
+      // Phaser rasterizes text once, so the pixel font has to be loaded first,
+      // digits included (their face only loads when asked for a digit).
+      await document.fonts?.load(`8px ${fontFamily}`, 'A0').catch(() => undefined)
       const { createHouseGame } = await import('@/game/create-game')
       if (cancelled || !containerRef.current) return
       game = createHouseGame(containerRef.current, {
