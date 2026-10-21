@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookOpen, Gamepad2, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
-import { DEFAULT_OUTFIT, type Outfit } from '@/game/pixels'
+import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import { cn } from '@/lib/utils'
 import type { HouseData } from '@/lib/house'
@@ -40,7 +40,8 @@ function readPadPreference(): boolean {
 function readOutfit(): Outfit {
   try {
     const saved = window.localStorage.getItem(OUTFIT_KEY)
-    return saved ? { ...DEFAULT_OUTFIT, ...JSON.parse(saved) } : DEFAULT_OUTFIT
+    // Saves from before the Modern Interiors characters held colours; those fall back to the default.
+    return saved ? cleanOutfit(JSON.parse(saved)) : DEFAULT_OUTFIT
   } catch {
     return DEFAULT_OUTFIT
   }

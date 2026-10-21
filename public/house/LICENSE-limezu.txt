@@ -1,0 +1,9 @@
+Character art (public/house/characters.png)
+
+	Modern Interiors by LimeZu — https://limezu.itch.io/moderninteriors
+
+	Used under the Modern Interiors full version licence: the art may be
+	used and edited in commercial and non-commercial projects, with credit,
+	but may not be resold or redistributed. This file holds only the pieces
+	the house uses, packed by scripts/import_characters.mjs; get the pack
+	from the link above to use it yourself.
