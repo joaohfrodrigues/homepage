@@ -318,6 +318,16 @@ function plainRug(mx, my, cols, bands) {
     return { parts };
 }
 
+/** A 30x16 mat from the same rug: its top eight rows on its bottom eight, so the dither still lines up. */
+function plainMat(mx, my) {
+    return {
+        parts: [
+            ['4_Bedroom', mx, my, 30, 8, 0, 0],
+            ['4_Bedroom', mx, my + 22, 30, 8, 0, 8],
+        ],
+    };
+}
+
 /**
  * Sprites cut from the theme sheets: [sheet, x, y, w, h] in sheet pixels, or
  * { parts: [[sheet, x, y, w, h, dx, dy], ...] } assembled from several pieces,
@@ -337,9 +347,9 @@ const FURNITURE = {
     // Rugs
     rugTerracotta: plainRug(161, 1073, 4, 2),
     rugBeige: ['1_Generic', 3, 706, 43, 28],
-    rugPurple: ['1_Generic', 196, 339, 56, 58],
-    runnerPurple: { parts: [['1_Generic', 176, 387, 16, 58, 0, 0]], rotate: true },
-    doormatGrey: ['1_Generic', 131, 211, 41, 17],
+    rugGreyStudy: plainRug(209, 1073, 2, 2),
+    rugGreyCorridor: plainRug(209, 1073, 2, 0),
+    doormatGrey: plainMat(209, 1073),
 };
 
 const furnitureSheets = new Map();

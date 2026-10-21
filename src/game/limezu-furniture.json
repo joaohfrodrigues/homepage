@@ -71,22 +71,22 @@
         "w": 43,
         "h": 28
     },
-    "rugPurple": {
+    "rugGreyStudy": {
         "x": 44,
         "y": 91,
-        "w": 56,
+        "w": 62,
         "h": 58
     },
-    "runnerPurple": {
+    "rugGreyCorridor": {
         "x": 0,
         "y": 150,
-        "w": 58,
-        "h": 16
+        "w": 62,
+        "h": 30
     },
     "doormatGrey": {
-        "x": 59,
+        "x": 63,
         "y": 150,
-        "w": 41,
-        "h": 17
+        "w": 30,
+        "h": 16
     }
 }
