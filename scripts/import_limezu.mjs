@@ -17,7 +17,8 @@
  * Furniture: named sprites cut from the pack's 16x16 theme sheets, packed into
  * public/house/limezu-furniture.png with a manifest in src/game/limezu-furniture.json.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 
@@ -27,7 +28,8 @@ if (!PACK) {
     process.exit(1);
 }
 const GENERATOR = join(PACK, '2_Characters/Character_Generator');
-const THEMES = join(PACK, '1_Interiors/16x16/Theme_Sorter');
+// The black-shadow sheets: same layout, but translucent shadows that sit on any floor.
+const THEMES = join(PACK, '1_Interiors/16x16/Theme_Sorter_Black_Shadow');
 
 const FRAME_W = 16;
 const FRAME_H = 32;
@@ -302,25 +304,25 @@ console.log(
  */
 const FURNITURE = {
     // Plants
-    palm: ['1_Generic_16x16', 212, 408, 23, 31],
-    pottedTree: ['1_Generic_16x16', 215, 457, 18, 31],
-    leafyPlant: ['1_Generic_16x16', 133, 905, 22, 30],
-    tallBush: ['1_Generic_16x16', 113, 908, 14, 29],
-    smallBush: ['1_Generic_16x16', 97, 914, 14, 23],
-    fern: ['1_Generic_16x16', 224, 1011, 15, 19],
-    bigFern: ['1_Generic_16x16', 240, 1021, 16, 25],
-    sprig: ['1_Generic_16x16', 227, 984, 9, 13],
-    topiary: ['1_Generic_16x16', 115, 1040, 10, 14],
-    snakePlant: ['2_LivingRoom_16x16', 2, 86, 12, 14],
+    palm: ['1_Generic', 212, 408, 23, 31],
+    pottedTree: ['1_Generic', 215, 457, 18, 31],
+    leafyPlant: ['1_Generic', 133, 905, 22, 30],
+    tallBush: ['1_Generic', 113, 908, 14, 29],
+    smallBush: ['1_Generic', 97, 914, 14, 23],
+    fern: ['1_Generic', 224, 1011, 15, 19],
+    bigFern: ['1_Generic', 240, 1021, 16, 25],
+    sprig: ['1_Generic', 227, 984, 9, 13],
+    topiary: ['1_Generic', 115, 1040, 10, 14],
+    snakePlant: ['2_LivingRoom', 2, 86, 12, 14],
     // Living room
-    sofaFacingEast: ['2_LivingRoom_16x16', 145, 582, 22, 42],
-    sofaFacingWest: ['2_LivingRoom_16x16', 121, 582, 22, 42],
+    sofaFacingEast: ['2_LivingRoom', 145, 582, 22, 42],
+    sofaFacingWest: ['2_LivingRoom', 121, 582, 22, 42],
     flatTv: ['23_Television_and_Film_Studio', 161, 17, 46, 21],
-    coffeeTable: ['1_Generic_16x16', 221, 561, 22, 21],
-    diningTable: ['1_Generic_16x16', 13, 545, 38, 37],
-    chairFacingEast: ['12_Kitchen_16x16', 82, 177, 13, 21],
-    chairFacingWest: ['12_Kitchen_16x16', 97, 209, 13, 21],
-    floorLamp: ['2_LivingRoom_16x16', 193, 200, 13, 33],
+    coffeeTable: ['1_Generic', 221, 561, 22, 21],
+    diningTable: ['12_Kitchen', 105, 240, 30, 41],
+    chairFacingEast: ['12_Kitchen', 98, 177, 13, 21],
+    chairFacingWest: ['12_Kitchen', 81, 209, 13, 21],
+    floorLamp: ['2_LivingRoom', 193, 200, 13, 33],
 };
 
 /** Scales a colour towards black, leaving the pack's dark outline alone. */
@@ -334,8 +336,10 @@ const shelfWidth = 128;
 const placed = {};
 let [cursorX, cursorY, shelfHeight] = [0, 0, 0];
 for (const [name, [sheet, x, y, w, h, darken]] of Object.entries(FURNITURE)) {
-    if (!furnitureSheets.has(sheet))
-        furnitureSheets.set(sheet, decode(join(THEMES, `${sheet}.png`)));
+    if (!furnitureSheets.has(sheet)) {
+        const file = readdirSync(THEMES).find(f => f.startsWith(`${sheet}_`));
+        furnitureSheets.set(sheet, decode(join(THEMES, file)));
+    }
     if (cursorX + w > shelfWidth)
         [cursorX, cursorY, shelfHeight] = [0, cursorY + shelfHeight + 1, 0];
     placed[name] = { x: cursorX, y: cursorY, w, h, from: { sheet, x, y }, darken };
@@ -369,4 +373,20 @@ writeFileSync(
 );
 console.log(
     `packed ${Object.keys(placed).length} furniture sprites into public/house/limezu-furniture.png`
+);
+
+// Match the repo's formatting so re-running the import leaves no diff noise.
+execFileSync(
+    'npx',
+    [
+        'prettier',
+        '--write',
+        '--tab-width=4',
+        '--print-width=100',
+        'src/game/character-pieces.json',
+        'src/game/limezu-furniture.json',
+    ],
+    {
+        stdio: 'ignore',
+    }
 );

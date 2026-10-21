@@ -113,11 +113,11 @@ export function furnishHouse(): Furnishings {
   limezu('floorLamp', 9, 3, { h: 2 })
   // Dining by the kitchen's pocket door: two steps from the hob. Chairs can be
   // walked over (pulled out of the way); the table can't.
-  limezu('diningTable', 2, 10, { w: 3, h: 2, dy: 3 })
-  limezu('chairFacingEast', 1, 10, { solid: false })
+  limezu('diningTable', 2, 10, { w: 2, h: 3 })
   limezu('chairFacingEast', 1, 11, { solid: false })
-  limezu('chairFacingWest', 5, 10, { solid: false })
-  limezu('chairFacingWest', 5, 11, { solid: false })
+  limezu('chairFacingEast', 1, 12, { solid: false })
+  limezu('chairFacingWest', 4, 11, { solid: false })
+  limezu('chairFacingWest', 4, 12, { solid: false })
   // The right-hand side stays clear: it's the way in from the hall.
   prop('recordplayer', 10, 5)
   limezu('leafyPlant', 1, 3)
