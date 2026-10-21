@@ -26,12 +26,21 @@ import {
   PROP_SIZES,
   STEPS,
   DESK_LEDS,
+  CAT_FRAMES,
+  drawCat,
   drawCharacter,
+  drawHeart,
+  drawPoop,
+  drawStink,
   drawFocusArrow,
   drawSparkle,
   traceSilhouette,
+  drawCapWindow,
   drawDoorway,
   drawFloor,
+  drawRailingFront,
+  drawRailingSide,
+  drawWindow,
   drawClosedDoor,
   drawFrontDoor,
   drawSideDoorway,
@@ -75,16 +84,30 @@ const KEY_STEPS: Record<string, Direction> = {
 const KENNEY_COLUMNS = 27
 const PLAYER_STEP_MS = 150
 const NPC_STEP_MS = 260
+const ZENO_STEP_MS = 300
+const ZENO_TICK_MS = 380
+/** Zeno gives up on a favourite spot that's further than this many steps away. */
+const ZENO_MAX_TRIP = 40
+/** How far he'll chase the toy after batting it before losing interest. */
+const ZENO_MAX_CHASE = 6
+const TOY_SLIDE_MS = 120
+/** Gaps between his games with the toy, and between litter box visits. */
+const ZENO_PLAY_GAP_MS: [number, number] = [60_000, 120_000]
+const ZENO_LITTER_GAP_MS: [number, number] = [120_000, 240_000]
+/** People leave chairs to visitors and cats; João stays off them. */
+const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
+
+const between = ([min, max]: [number, number]) => min + Math.random() * (max - min)
 
 interface Walker {
   sprite: Phaser.GameObjects.Sprite
-  who: CharacterName
+  who: CharacterName | 'zeno'
   tile: Point
   facing: Direction
   moving: boolean
 }
 
-type Target = { kind: 'object'; object: Interactable } | { kind: 'npc' }
+type Target = { kind: 'object'; object: Interactable } | { kind: 'npc' } | { kind: 'zeno' }
 
 const key = (p: Point) => `${p.x},${p.y}`
 
@@ -108,6 +131,28 @@ export class HouseScene extends Phaser.Scene {
     }
   >()
   private npcOutline!: Phaser.GameObjects.Sprite
+  private zeno!: Walker
+  private zenoOutline!: Phaser.GameObjects.Sprite
+  /** Tiles Zeno can stand on that people can't: the sofa, the bed, his litter box. */
+  private zenoPerches = new Set<string>()
+  private zenoPath: Point[] = []
+  private zenoRestUntil = 0
+  /** True while he's on his way to one of his spots, so he settles there on arrival. */
+  private zenoOnTrip = false
+  /** In a game with his toy, and how many more pounces he has in him. */
+  private zenoPlaying = false
+  private zenoChases = 0
+  private toy!: Phaser.GameObjects.Image
+  private toyTile!: Point
+  private zenoNextPlayAt = 0
+  private zenoNextLitterAt = 0
+  private zenoLitterTrip = false
+  /** Busy in his litter box: not to be petted. */
+  private zenoInBox = false
+  private litterDirty = false
+  private stink!: Phaser.GameObjects.Image
+  private poop!: Phaser.GameObjects.Image
+  private chairs = new Set<string>()
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
@@ -153,8 +198,8 @@ export class HouseScene extends Phaser.Scene {
   create() {
     this.bakeHouse()
     this.bakeCharacters()
+    this.bakeZeno()
     this.buildCollision()
-    this.addLabels()
     this.addAmbience()
 
     this.bakeCues()
@@ -177,7 +222,40 @@ export class HouseScene extends Phaser.Scene {
     this.setupInput()
     this.setupBridge()
 
+    const zeno = this.furnishings.zeno
+    zeno.perches.forEach((tile) => this.zenoPerches.add(key(tile)))
+    this.zeno = this.addWalker('zeno', zeno.start, 'down', 'house-zeno')
+    this.zenoOutline = this.add
+      .sprite(this.zeno.sprite.x, this.zeno.sprite.y, 'house-zeno-outline', 'zeno-down-idle')
+      .setOrigin(0.5, 1)
+      .setVisible(false)
+
+    // His first visit to the litter box comes within a minute or so, so visitors get to see it.
+    this.zenoNextPlayAt = this.time.now + between([30_000, 60_000])
+    this.zenoNextLitterAt = this.time.now + between([40_000, 80_000])
+    const box = zeno.litterBox
+    this.stink = this.add
+      .image(box.x * TILE + 4, box.y * TILE - 2, 'litter-stink')
+      .setOrigin(0, 1)
+      .setDepth(4)
+      .setVisible(false)
+    this.poop = this.add
+      .image(box.x * TILE, box.y * TILE, 'litter-poop')
+      .setOrigin(0, 0)
+      .setDepth(3)
+      .setVisible(false)
+    if (!this.reducedMotion) {
+      this.tweens.add({ targets: this.stink, y: this.stink.y - 2, alpha: 0.5, duration: 900, yoyo: true, repeat: -1 })
+    }
+
+    this.toyTile = { ...zeno.toy }
+    this.toy = this.add
+      .image(this.toyTile.x * TILE, this.toyTile.y * TILE, 'zeno-toy')
+      .setOrigin(0, 0)
+      .setDepth(2)
+
     this.time.addEvent({ delay: 1800, loop: true, callback: () => this.wanderNpc() })
+    this.time.addEvent({ delay: ZENO_TICK_MS, loop: true, callback: () => this.tickZeno() })
 
     this.updateRoom()
     this.updateHint()
@@ -242,23 +320,32 @@ export class HouseScene extends Phaser.Scene {
         const oy = y * TILE
         const cell = FLOOR_PLAN[y][x]
         const below = roomBelow(x, y)
-        if (cell === '.') {
-          drawFloor(ctx, ox, oy, roomAt(x, y)?.floor ?? 'wood', x, y)
+        if (cell === ' ') {
+          // Outside the flat: leave it to the camera's dark background.
+          continue
+        } else if (cell === '=') {
+          drawRailingFront(ctx, ox, oy)
+        } else if (cell === '|') {
+          drawRailingSide(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'balcony', x, y)
+        } else if (cell === '.') {
+          drawFloor(ctx, ox, oy, roomAt(x, y)?.floor ?? 'oak', x, y)
         } else if (cell === 'F') {
           drawFrontDoor(ctx, ox, oy, cellAt(x - 1, y) === 'F' ? 'right' : 'left')
         } else if (cell === 'd') {
-          drawSideDoorway(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'wood', roomAt(x + 1, y)?.floor ?? 'wood', x, y)
+          drawSideDoorway(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'oak', roomAt(x + 1, y)?.floor ?? 'oak', x, y)
         } else {
           const part = wallPartAt(x, y)
-          if (part === 'cap' || !below) {
+          const edges = { left: cellAt(x - 1, y) !== cell, right: cellAt(x + 1, y) !== cell }
+          if (cell === 'W' && (part === 'cap' || !below)) {
+            drawCapWindow(ctx, ox, oy, edges)
+          } else if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
+          } else if (cell === 'W') {
+            drawWindow(ctx, ox, oy, below.wall, part, edges)
           } else if (cell === 'X') {
             drawClosedDoor(ctx, ox, oy, below.wall, part, cellAt(x - 1, y) === 'X' ? 'right' : 'left')
           } else if (cell === 'D') {
-            drawDoorway(ctx, ox, oy, below.floor, part, x, y, {
-              left: cellAt(x - 1, y) !== 'D',
-              right: cellAt(x + 1, y) !== 'D',
-            })
+            drawDoorway(ctx, ox, oy, below.floor, part, x, y, edges)
           } else {
             drawWallFace(ctx, ox, oy, below.wall, part)
           }
@@ -354,6 +441,48 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
+  /** Zeno's frames, his matching outlines for the focus cue, and his walk cycles. */
+  private bakeZeno() {
+    const sheet = this.textures.createCanvas('house-zeno', CAT_FRAMES.length * TILE, TILE)!
+    const OUT = TILE + 2
+    const outlines = this.textures.createCanvas('house-zeno-outline', CAT_FRAMES.length * OUT, OUT)!
+    const frame = document.createElement('canvas')
+    frame.width = TILE
+    frame.height = TILE
+    const frameCtx = frame.getContext('2d')!
+    CAT_FRAMES.forEach((name, i) => {
+      drawCat(sheet.getContext(), i * TILE, 0, name)
+      sheet.add(`zeno-${name}`, 0, i * TILE, 0, TILE, TILE)
+      frameCtx.clearRect(0, 0, TILE, TILE)
+      drawCat(frameCtx, 0, 0, name)
+      outlines.getContext().drawImage(traceSilhouette(frame).outline, i * OUT, 0)
+      outlines.add(`zeno-${name}`, 0, i * OUT, 0, OUT, OUT)
+    })
+    sheet.refresh()
+    outlines.refresh()
+    for (const facing of FACINGS) {
+      this.anims.create({
+        key: `zeno-walk-${facing}`,
+        frames: ['a', 'idle', 'b', 'idle'].map((step) => ({ key: 'house-zeno', frame: `zeno-${facing}-${step}` })),
+        frameRate: 12,
+        repeat: -1,
+      })
+    }
+    // His toy lives outside the baked house so it can move.
+    const toy = this.textures.createCanvas('zeno-toy', TILE, TILE)!
+    drawProp(toy.getContext(), 0, 0, 'cattoy')
+    toy.refresh()
+    const poop = this.textures.createCanvas('litter-poop', TILE, TILE)!
+    drawPoop(poop.getContext())
+    poop.refresh()
+    const stink = this.textures.createCanvas('litter-stink', 9, 8)!
+    drawStink(stink.getContext())
+    stink.refresh()
+    const heart = this.textures.createCanvas('zeno-heart', 7, 6)!
+    drawHeart(heart.getContext())
+    heart.refresh()
+  }
+
   private buildCollision() {
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
@@ -361,21 +490,13 @@ export class HouseScene extends Phaser.Scene {
       }
     }
     for (const item of this.furnishings.decor) {
+      if (item.kind === 'prop' && CHAIR_PROPS.has(item.prop)) propTiles(item).forEach((t) => this.chairs.add(key(t)))
       if (!item.solid) continue
       const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
     for (const object of this.furnishings.interactables) {
       object.tiles.forEach((tile) => this.objectsByTile.set(key(tile), object))
-    }
-  }
-
-  private addLabels() {
-    for (const label of this.furnishings.labels) {
-      this.add
-        .text(label.x, label.y, label.text, this.textStyle('#f4ecd8', '#2a2233'))
-        .setOrigin(0.5, 0.5)
-        .setDepth(34)
     }
   }
 
@@ -569,6 +690,7 @@ export class HouseScene extends Phaser.Scene {
       cue.sparkle.setVisible(this.inputEnabled && !isFocused && this.isNear(id))
     }
     this.npcOutline.setVisible(target?.kind === 'npc')
+    this.zenoOutline.setVisible(target?.kind === 'zeno')
     this.focusArrow.setVisible(target !== null)
   }
 
@@ -604,6 +726,16 @@ export class HouseScene extends Phaser.Scene {
         .setAlpha(still ? 1 : 0.75 + 0.25 * wave)
       arrowX = sprite.x
       arrowY = sprite.y - CHAR_H - 10
+    } else if (target?.kind === 'zeno') {
+      const sprite = this.zeno.sprite
+      this.zenoOutline
+        .setPosition(sprite.x, sprite.y + 1)
+        .setFrame(sprite.frame.name)
+        .setFlipX(sprite.flipX)
+        .setDepth(31)
+        .setAlpha(still ? 1 : 0.75 + 0.25 * wave)
+      arrowX = sprite.x
+      arrowY = sprite.y - TILE - 2
     }
     if (target) {
       const bob = still ? 0 : Math.round(Math.sin(time / 160) * 1.5)
@@ -621,9 +753,9 @@ export class HouseScene extends Phaser.Scene {
   // -------------------------------------------------------------------------
   // Characters and movement
 
-  private addWalker(who: CharacterName, tile: Point, facing: Direction): Walker {
+  private addWalker(who: Walker['who'], tile: Point, facing: Direction, texture = 'house-chars'): Walker {
     const sprite = this.add
-      .sprite(tile.x * TILE + TILE / 2, (tile.y + 1) * TILE, 'house-chars', `${who}-down-idle`)
+      .sprite(tile.x * TILE + TILE / 2, (tile.y + 1) * TILE, texture, `${who}-down-idle`)
       .setOrigin(0.5, 1)
       .setDepth(10 + tile.y / 100)
     const walker: Walker = { sprite, who, tile: { ...tile }, facing, moving: false }
@@ -655,11 +787,23 @@ export class HouseScene extends Phaser.Scene {
     return null
   }
 
-  private isWalkable(x: number, y: number, ignoreNpc = false): boolean {
+  /** Free floor for people. `self` is the walker asking, who doesn't block themselves. */
+  private isWalkable(x: number, y: number, self?: Walker): boolean {
     if (this.solid.has(key({ x, y }))) return false
-    if (!ignoreNpc && this.npc && this.npc.tile.x === x && this.npc.tile.y === y) return false
-    if (this.player && this.player.tile.x === x && this.player.tile.y === y) return false
-    return true
+    return !this.occupied(x, y, self)
+  }
+
+  /** Free for Zeno: floor, plus the furniture he's allowed on. */
+  private zenoCanWalk(x: number, y: number): boolean {
+    const k = key({ x, y })
+    if (this.solid.has(k) && !this.zenoPerches.has(k)) return false
+    return !this.occupied(x, y, this.zeno)
+  }
+
+  private occupied(x: number, y: number, self?: Walker): boolean {
+    return [this.player, this.npc, this.zeno].some(
+      (walker) => walker && walker !== self && walker.tile.x === x && walker.tile.y === y,
+    )
   }
 
   private tryStep(direction: Direction) {
@@ -734,8 +878,11 @@ export class HouseScene extends Phaser.Scene {
   }
 
   /** Breadth-first search to the nearest tile in `goals`. Returns the steps, excluding the start. */
-  private findPath(goals: Point[]): Point[] | null {
-    const start = this.player.tile
+  private findPath(
+    goals: Point[],
+    start: Point = this.player.tile,
+    walkable: (x: number, y: number) => boolean = (x, y) => this.isWalkable(x, y),
+  ): Point[] | null {
     const goalKeys = new Set(goals.map(key))
     if (goalKeys.has(key(start))) return []
     const previous = new Map<string, Point | null>([[key(start), null]])
@@ -745,7 +892,7 @@ export class HouseScene extends Phaser.Scene {
       for (const delta of Object.values(DELTAS)) {
         const next = { x: current.x + delta.x, y: current.y + delta.y }
         const k = key(next)
-        if (previous.has(k) || !this.isWalkable(next.x, next.y)) continue
+        if (previous.has(k) || !walkable(next.x, next.y)) continue
         previous.set(k, current)
         if (goalKeys.has(k)) {
           const steps: Point[] = []
@@ -783,7 +930,7 @@ export class HouseScene extends Phaser.Scene {
     const inArea =
       target.x >= area.x && target.x < area.x + area.w && target.y >= area.y && target.y < area.y + area.h
     this.npc.facing = direction
-    if (!inArea || !this.isWalkable(target.x, target.y, true)) {
+    if (!inArea || this.chairs.has(key(target)) || !this.isWalkable(target.x, target.y, this.npc)) {
       this.setIdle(this.npc)
       return
     }
@@ -799,10 +946,245 @@ export class HouseScene extends Phaser.Scene {
   }
 
   // -------------------------------------------------------------------------
+  // Zeno
+
+  /**
+   * One beat of cat: keep walking to a favourite spot if he's on his way to one,
+   * otherwise sit down for a while, set off for a spot, or trot about, mostly in
+   * a straight line, stopping now and then to think about it.
+   */
+  private tickZeno() {
+    const zeno = this.zeno
+    if (zeno.moving || !this.inputEnabled || this.pendingTarget?.kind === 'zeno') return
+    if (this.time.now < this.zenoRestUntil) return
+
+    if (this.zenoPath.length > 0) {
+      const next = this.zenoPath.shift()!
+      const direction = this.directionTo(zeno.tile, next)
+      if (direction && this.zenoCanWalk(next.x, next.y)) {
+        this.stepZeno(direction)
+      } else {
+        this.zenoPath = []
+        this.zenoPlaying = false
+        if (this.zenoLitterTrip) {
+          this.zenoLitterTrip = false
+          this.zenoNextLitterAt = this.time.now + 5000
+        }
+      }
+      return
+    }
+
+    const now = this.time.now
+    if (now >= this.zenoNextLitterAt && this.goToLitterBox()) return
+
+    // A cat's afternoon: mostly ambling about in short, wandering bursts, with
+    // plenty of stopping to look around, the odd sit-down, a trip to a favourite
+    // spot, and only now and then a game with the toy.
+    const roll = Math.random()
+    if (roll < 0.07) {
+      this.restZeno(3000, 9000, true)
+    } else if (roll < 0.14) {
+      if (!this.goToSpot()) this.restZeno(500, 1500, false)
+    } else if (roll < 0.16 && now >= this.zenoNextPlayAt) {
+      if (!this.playWithToy()) this.restZeno(500, 1500, false)
+    } else if (roll < 0.3) {
+      // Look around without going anywhere.
+      const directions = Object.keys(DELTAS) as Direction[]
+      this.face(zeno, directions[Math.floor(Math.random() * directions.length)])
+      this.restZeno(400, 1400, false)
+    } else if (roll < 0.45) {
+      this.restZeno(600, 2600, false)
+    } else {
+      const directions = (Object.keys(DELTAS) as Direction[]).filter((d) =>
+        this.zenoCanWalk(zeno.tile.x + DELTAS[d].x, zeno.tile.y + DELTAS[d].y),
+      )
+      if (directions.length === 0) return
+      const ahead = directions.includes(zeno.facing) && Math.random() < 0.35
+      this.stepZeno(ahead ? zeno.facing : directions[Math.floor(Math.random() * directions.length)])
+    }
+  }
+
+  private goToSpot(): boolean {
+    const spots = this.furnishings.zeno.spots
+    const spot = spots[Math.floor(Math.random() * spots.length)]
+    const path = this.findPath([spot], this.zeno.tile, (x, y) => this.zenoCanWalk(x, y))
+    if (!path || path.length === 0 || path.length > ZENO_MAX_TRIP) return false
+    this.zenoPath = path
+    this.zenoOnTrip = true
+    return true
+  }
+
+  private goToLitterBox(): boolean {
+    const path = this.findPath([this.furnishings.zeno.litterBox], this.zeno.tile, (x, y) => this.zenoCanWalk(x, y))
+    if (!path || path.length === 0) {
+      // Blocked for now (someone's in the way): try again shortly.
+      this.zenoNextLitterAt = this.time.now + 5000
+      return false
+    }
+    this.zenoPath = path
+    this.zenoOnTrip = false
+    this.zenoPlaying = false
+    this.zenoLitterTrip = true
+    return true
+  }
+
+  /** A few seconds sat in the open tray, then out he hops and leaves it for cleaning. */
+  private enterLitterBox() {
+    this.zenoLitterTrip = false
+    this.zenoInBox = true
+    this.restZeno(0, 0, true)
+    this.zenoRestUntil = Infinity
+    this.updateHint()
+    this.time.delayedCall(between([3500, 6000]), () => {
+      this.zenoInBox = false
+      this.litterDirty = true
+      this.poop.setVisible(true)
+      this.stink.setVisible(true)
+      this.zeno.facing = 'down'
+      this.setIdle(this.zeno)
+      this.zenoNextLitterAt = this.time.now + between(ZENO_LITTER_GAP_MS)
+      // Hop straight out onto the floor, so the box is free to be cleaned.
+      const out = (Object.keys(DELTAS) as Direction[]).find((d) => {
+        const t = { x: this.zeno.tile.x + DELTAS[d].x, y: this.zeno.tile.y + DELTAS[d].y }
+        return this.zenoCanWalk(t.x, t.y) && !this.zenoPerches.has(key(t))
+      })
+      this.zenoRestUntil = 0
+      if (out) this.stepZeno(out)
+      this.updateHint()
+    })
+  }
+
+  private stepZeno(direction: Direction) {
+    const zeno = this.zeno
+    const target = { x: zeno.tile.x + DELTAS[direction].x, y: zeno.tile.y + DELTAS[direction].y }
+    zeno.facing = direction
+    // Walking into his toy always sends it skittering on ahead.
+    if (target.x === this.toyTile.x && target.y === this.toyTile.y) this.batToy(direction)
+    this.moveWalker(zeno, target, ZENO_STEP_MS, () => {
+      this.setIdle(zeno)
+      if (this.zenoLitterTrip && this.zenoPath.length === 0) {
+        this.enterLitterBox()
+      } else if (this.zenoOnTrip && this.zenoPath.length === 0) {
+        this.zenoOnTrip = false
+        this.restZeno(5000, 12000, true)
+      } else if (this.zenoPlaying && this.zenoPath.length === 0) {
+        this.chaseToy()
+      }
+      this.updateHint()
+    })
+  }
+
+  /** Go and find the toy, if it's not too far, for a game of bat-and-chase. */
+  private playWithToy(): boolean {
+    const path = this.findPath([this.toyTile], this.zeno.tile, (x, y) => this.zenoCanWalk(x, y))
+    if (!path || path.length === 0 || path.length > ZENO_MAX_TRIP) return false
+    this.zenoPath = path
+    this.zenoOnTrip = false
+    this.zenoPlaying = true
+    this.zenoChases = 1 + Math.floor(Math.random() * 3)
+    this.zenoNextPlayAt = this.time.now + between(ZENO_PLAY_GAP_MS)
+    return true
+  }
+
+  /** After a swat, pounce after the toy, or sit down once he's had enough. */
+  private chaseToy() {
+    const path =
+      this.zenoChases > 0 ? this.findPath([this.toyTile], this.zeno.tile, (x, y) => this.zenoCanWalk(x, y)) : null
+    if (path && path.length > 0 && path.length <= ZENO_MAX_CHASE) {
+      this.zenoChases--
+      this.zenoPath = path
+      return
+    }
+    this.zenoPlaying = false
+    this.restZeno(3000, 7000, true)
+  }
+
+  /**
+   * Knock the toy one to three tiles along `direction`, stopping at anything in
+   * the way. Against a wall it glances off sideways, so it never gets stuck in
+   * a corner for good.
+   */
+  private batToy(direction: Direction) {
+    const sideways: Direction[] = direction === 'up' || direction === 'down' ? ['left', 'right'] : ['up', 'down']
+    if (Math.random() < 0.5) sideways.reverse()
+    const reach = 1 + Math.floor(Math.random() * 3)
+    let dest = this.toyTile
+    for (const d of [direction, ...sideways]) {
+      const delta = DELTAS[d]
+      for (let i = 0; i < reach; i++) {
+        const next = { x: dest.x + delta.x, y: dest.y + delta.y }
+        if (!this.toyCanLand(next)) break
+        dest = next
+      }
+      if (dest !== this.toyTile) break
+    }
+    if (dest === this.toyTile) return
+    const tiles = Math.abs(dest.x - this.toyTile.x) + Math.abs(dest.y - this.toyTile.y)
+    this.toyTile = dest
+    const x = dest.x * TILE
+    const y = dest.y * TILE
+    if (this.reducedMotion) {
+      this.toy.setPosition(x, y)
+      return
+    }
+    // The swat lands halfway through his step.
+    this.tweens.add({ targets: this.toy, x, y, delay: ZENO_STEP_MS / 2, duration: TOY_SLIDE_MS * tiles, ease: 'Quad.easeOut' })
+  }
+
+  /** Plain open floor: not a doorway, not under furniture, not under anyone's feet. */
+  private toyCanLand(tile: Point): boolean {
+    return cellAt(tile.x, tile.y) === '.' && !this.solid.has(key(tile)) && !this.occupied(tile.x, tile.y)
+  }
+
+  /** Stay put for a while, sitting down properly if `sit`. */
+  private restZeno(minMs: number, maxMs: number, sit: boolean) {
+    this.zenoRestUntil = this.time.now + minMs + Math.random() * (maxMs - minMs)
+    if (!sit) return
+    const sprite = this.zeno.sprite
+    sprite.stop()
+    sprite.setFrame('zeno-sit')
+    const facing = this.zeno.facing
+    sprite.setFlipX(facing === 'left' || (facing !== 'right' && Math.random() < 0.5))
+  }
+
+  /** Petting: he turns to the visitor, sits, and a heart floats up. */
+  private petZeno() {
+    const opposite: Record<Direction, Direction> = { up: 'down', down: 'up', left: 'right', right: 'left' }
+    this.zenoPath = []
+    this.zenoOnTrip = false
+    this.zenoPlaying = false
+    if (this.zenoLitterTrip) {
+      this.zenoLitterTrip = false
+      this.zenoNextLitterAt = this.time.now + 15_000
+    }
+    if (Math.abs(this.zeno.tile.x - this.player.tile.x) + Math.abs(this.zeno.tile.y - this.player.tile.y) === 1) {
+      this.zeno.facing = opposite[this.player.facing]
+    }
+    this.restZeno(6000, 10000, true)
+    const heart = this.add
+      .image(this.zeno.sprite.x, this.zeno.sprite.y - TILE, 'zeno-heart')
+      .setOrigin(0.5, 1)
+      .setDepth(33)
+    if (this.reducedMotion) {
+      this.time.delayedCall(900, () => heart.destroy())
+      return
+    }
+    this.tweens.add({
+      targets: heart,
+      y: heart.y - 10,
+      alpha: 0,
+      duration: 1100,
+      ease: 'Sine.easeOut',
+      onComplete: () => heart.destroy(),
+    })
+  }
+
+  // -------------------------------------------------------------------------
   // Interaction
 
   private targetAt(tile: Point): Target | null {
     if (this.npc.tile.x === tile.x && this.npc.tile.y === tile.y) return { kind: 'npc' }
+    if (!this.zenoInBox && this.zeno.tile.x === tile.x && this.zeno.tile.y === tile.y) return { kind: 'zeno' }
     const object = this.objectsByTile.get(key(tile))
     return object ? { kind: 'object', object } : null
   }
@@ -819,11 +1201,15 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private targetTiles(target: Target): Point[] {
-    return target.kind === 'npc' ? [this.npc.tile] : target.object.tiles
+    if (target.kind === 'npc') return [this.npc.tile]
+    if (target.kind === 'zeno') return [this.zeno.tile]
+    return target.object.tiles
   }
 
   private targetLabel(target: Target): string {
-    return target.kind === 'npc' ? 'Talk to João' : target.object.label
+    if (target.kind === 'npc') return 'Talk to João'
+    if (target.kind === 'zeno') return 'Pet Zeno'
+    return target.object.label
   }
 
   private faceTarget(target: Target) {
@@ -845,6 +1231,14 @@ export class HouseScene extends Phaser.Scene {
       }
       this.npcTalking = true
       action = { type: 'dialogue', id: 'joao' }
+    } else if (target.kind === 'zeno') {
+      this.petZeno()
+      action = { type: 'dialogue', id: 'zeno' }
+    } else if (target.object.id === 'litterbox') {
+      action = { type: 'dialogue', id: this.litterDirty ? 'litterbox-dirty' : 'litterbox-clean' }
+      this.litterDirty = false
+      this.poop.setVisible(false)
+      this.stink.setVisible(false)
     } else {
       action = target.object.action
     }
@@ -925,11 +1319,21 @@ export class HouseScene extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       // Shoo João out of the way if he's standing on the spawn tile.
       if (this.npc.tile.x === spawn.x && this.npc.tile.y === spawn.y) {
-        const free = this.neighbours([spawn]).find((t) => this.isWalkable(t.x, t.y, true))
+        const free = this.neighbours([spawn]).find((t) => this.isWalkable(t.x, t.y, this.npc))
         if (free) {
           this.npc.tile = free
           this.npc.sprite.setPosition(free.x * TILE + TILE / 2, (free.y + 1) * TILE)
           this.syncNpcLabel()
+        }
+      }
+      // Zeno too: he just jumps aside.
+      if (this.zeno.tile.x === spawn.x && this.zeno.tile.y === spawn.y && !this.zeno.moving && !this.zenoInBox) {
+        const free = this.neighbours([spawn]).find((t) => this.zenoCanWalk(t.x, t.y))
+        if (free) {
+          this.zeno.tile = free
+          this.zeno.sprite.setPosition(free.x * TILE + TILE / 2, (free.y + 1) * TILE).setDepth(10 + free.y / 100)
+          this.zenoPath = []
+          this.zenoPlaying = false
         }
       }
       this.player.tile = { ...spawn }

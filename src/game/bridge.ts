@@ -18,6 +18,10 @@ export type DialogueId =
   | 'bed'
   | 'alarm'
   | 'bathroom'
+  | 'balcony'
+  | 'zeno'
+  | 'litterbox-clean'
+  | 'litterbox-dirty'
   | `topic:${TopicId}`
 
 /** The interactable the player is facing or hovering, shown in the HUD. */

@@ -11,48 +11,59 @@ export const METRES_PER_TILE = 0.5
  *   d  doorway through a side wall (walkable)
  *   X  a shut door (the bathroom: occupied)
  *   F  front door
+ *   W  window: tall and glazed in a wall face, a slit of glass in a wall top
+ *   =  the balcony's front railing; |  its side railing
+ *      (space) outside the flat
  *
  * A wall run directly above a floor renders as a two-tile-high wall face, so
- * every room's north wall is two rows of `#` (or `D` for its door).
+ * every room's north wall is two rows of `#` (or `D`/`W`).
  *
- * A Lisbon-style T2 of about 75m²: bedroom, bathroom and study off a 1m-wide
- * corridor, and the entrance hall opening onto the living room and kitchen.
+ * A Lisbon T2 of about 70m² with the street along the top: the living room
+ * and bedroom get the façade windows, the kitchen and study look onto the
+ * courtyard at the back. The hall opens straight into the living room, and
+ * the compact kitchen opens to both: to the living room through a pocket
+ * door and to the hall by the front door, so meals never cross the entrance.
+ * A 2m corridor serves the bedroom, bathroom and study, and the bedroom steps
+ * out onto a balcony in the corner the study leaves free.
  */
 export const FLOOR_PLAN = [
-  '##########################',
-  '##########################',
-  '##########################',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '#........#....#..........#',
-  '####DD#####XX######DD#####',
-  '####DD#####XX######DD#####',
-  '#........................#',
-  '#........................#',
-  '###############DD#########',
-  '###############DD#########',
-  '#............#....#......#',
-  '#............d....d......#',
-  '#............d....d......#',
-  '#............#....#......#',
-  '#............#....#......#',
-  '#............#....#......#',
-  '#............#....#......#',
-  '#............#....#......#',
-  '###############FF#########',
+  '#####################   ',
+  '##WW####WW##WW####WW#   ',
+  '##WW####WW##WW####WW#===',
+  '#..........#........#..|',
+  '#..........#........#..|',
+  '#..........#........#..|',
+  '#..........#........#..|',
+  '#..........#........d..|',
+  '#..........#........d..|',
+  '#..........#........#..|',
+  '#..........#........#..|',
+  '#..........###DD########',
+  '#..........###DD########',
+  '#####DD#...d....d......#',
+  '#####DD#...d....d......#',
+  '#......#...###XX#......#',
+  '#......#...###XX#......#',
+  '#......d...#....#......#',
+  '#......d...#....#......#',
+  '#......#...#....#......#',
+  '###WW####FF#....###WW###',
+  '           #....#       ',
+  '           ##WW##       ',
 ]
 
 export const MAP_WIDTH = FLOOR_PLAN[0].length
 export const MAP_HEIGHT = FLOOR_PLAN.length
 
-export type RoomId = 'hall' | 'corridor' | 'living' | 'kitchen' | 'study' | 'bedroom' | 'bathroom'
+export type RoomId = 'hall' | 'corridor' | 'living' | 'kitchen' | 'study' | 'bedroom' | 'bathroom' | 'balcony'
 
-export type FloorKind = 'wood' | 'checker' | 'parquet' | 'tile' | 'bath'
-export type WallKind = 'cream' | 'rose' | 'library' | 'sage' | 'bath' | 'tile'
+/**
+ * One light oak runs through every room but the kitchen and bathroom. Its
+ * planks run front-to-back, towards the street windows, except in the
+ * corridor, where they follow its length.
+ */
+export type FloorKind = 'oak' | 'oak-across' | 'hydraulic' | 'bath' | 'balcony'
+export type WallKind = 'warmwhite' | 'azulejo' | 'library' | 'sage' | 'bath' | 'metro' | 'railing'
 export type Direction = 'up' | 'down' | 'left' | 'right'
 
 export interface Point {
@@ -81,11 +92,11 @@ export const ROOMS: Room[] = [
   {
     id: 'hall',
     name: 'Entrance hall',
-    blurb: 'Front door, the post, and the running and hiking kit.',
-    rect: { x: 14, y: 16, w: 4, h: 8 },
-    floor: 'checker',
-    wall: 'rose',
-    spawn: { x: 15, y: 23 },
+    blurb: 'Front door, the post, and the running and hiking kit, open to the living room.',
+    rect: { x: 8, y: 13, w: 3, h: 7 },
+    floor: 'oak',
+    wall: 'azulejo',
+    spawn: { x: 9, y: 19 },
     spawnFacing: 'up',
     listed: true,
   },
@@ -93,68 +104,79 @@ export const ROOMS: Room[] = [
     id: 'corridor',
     name: 'Corridor',
     blurb: 'Bedroom, bathroom and study open off it.',
-    rect: { x: 1, y: 12, w: 24, h: 2 },
-    floor: 'wood',
-    wall: 'cream',
-    spawn: { x: 16, y: 13 },
+    rect: { x: 12, y: 13, w: 4, h: 2 },
+    floor: 'oak-across',
+    wall: 'warmwhite',
+    spawn: { x: 13, y: 14 },
     spawnFacing: 'up',
     listed: false,
   },
   {
     id: 'living',
     name: 'Living room',
-    blurb: 'The TV, the dining table — and usually João.',
-    rect: { x: 1, y: 16, w: 12, h: 8 },
-    floor: 'wood',
-    wall: 'cream',
-    spawn: { x: 12, y: 17 },
-    spawnFacing: 'left',
+    blurb: 'The TV between the street windows, the dining table — and usually João.',
+    rect: { x: 1, y: 3, w: 10, h: 10 },
+    floor: 'oak',
+    wall: 'warmwhite',
+    spawn: { x: 9, y: 11 },
+    spawnFacing: 'up',
     listed: true,
   },
   {
     id: 'kitchen',
     name: 'Kitchen',
     blurb: 'Pull a bica, or guess where the fridge-magnet photos were taken.',
-    rect: { x: 19, y: 16, w: 6, h: 8 },
-    floor: 'tile',
-    wall: 'tile',
-    spawn: { x: 19, y: 17 },
-    spawnFacing: 'right',
+    rect: { x: 1, y: 15, w: 6, h: 5 },
+    floor: 'hydraulic',
+    wall: 'metro',
+    spawn: { x: 5, y: 17 },
+    spawnFacing: 'left',
     listed: true,
   },
   {
     id: 'study',
     name: 'Study',
     blurb: 'Wall map, bookshelves, the home server, camera and drums.',
-    rect: { x: 15, y: 3, w: 10, h: 7 },
-    floor: 'parquet',
+    rect: { x: 17, y: 13, w: 6, h: 7 },
+    floor: 'oak',
     wall: 'library',
-    spawn: { x: 19, y: 9 },
+    spawn: { x: 18, y: 14 },
     spawnFacing: 'up',
     listed: true,
   },
   {
     id: 'bedroom',
     name: 'Bedroom',
-    blurb: 'Change outfit at the wardrobe, or nap until nightfall.',
-    rect: { x: 1, y: 3, w: 8, h: 7 },
-    floor: 'wood',
+    blurb: 'Change outfit at the wardrobe, nap until nightfall, or step out onto the balcony.',
+    rect: { x: 12, y: 3, w: 8, h: 8 },
+    floor: 'oak',
     wall: 'sage',
-    spawn: { x: 4, y: 9 },
+    spawn: { x: 14, y: 9 },
     spawnFacing: 'up',
     listed: true,
   },
   {
     id: 'bathroom',
     name: 'Bathroom',
-    blurb: 'Second door on the left.',
-    rect: { x: 10, y: 3, w: 4, h: 7 },
+    blurb: 'Across from the bedroom.',
+    rect: { x: 12, y: 17, w: 4, h: 5 },
     floor: 'bath',
     wall: 'bath',
-    spawn: { x: 11, y: 9 },
+    spawn: { x: 13, y: 19 },
     spawnFacing: 'up',
     listed: false,
     locked: true,
+  },
+  {
+    id: 'balcony',
+    name: 'Balcony',
+    blurb: 'A narrow balcony off the bedroom, over the street.',
+    rect: { x: 21, y: 3, w: 2, h: 8 },
+    floor: 'balcony',
+    wall: 'railing',
+    spawn: { x: 22, y: 8 },
+    spawnFacing: 'up',
+    listed: false,
   },
 ]
 

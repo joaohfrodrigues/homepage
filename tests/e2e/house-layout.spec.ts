@@ -1,0 +1,76 @@
+import { test, expect } from '@playwright/test'
+import { furnishHouse, propTiles } from '../../src/game/furnishings'
+import { MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, isFloorCell, type Point } from '../../src/game/layout'
+
+// Pure checks on the floor plan and furniture: no browser needed.
+
+const key = (p: Point) => `${p.x},${p.y}`
+const neighbours = (p: Point): Point[] => [
+  { x: p.x + 1, y: p.y },
+  { x: p.x - 1, y: p.y },
+  { x: p.x, y: p.y + 1 },
+  { x: p.x, y: p.y - 1 },
+]
+
+function solidFurniture(): Set<string> {
+  const solid = new Set<string>()
+  for (const item of furnishHouse().decor) {
+    if (!item.solid) continue
+    const tiles = item.kind === 'prop' ? propTiles(item) : [{ x: item.x, y: item.y }]
+    tiles.forEach((tile) => solid.add(key(tile)))
+  }
+  return solid
+}
+
+const onFloor = (p: Point) => p.x >= 0 && p.y >= 0 && p.x < MAP_WIDTH && p.y < MAP_HEIGHT && isFloorCell(p.x, p.y)
+
+/** Every tile a visitor can stand on, walking from the front door. */
+function reachableFromFrontDoor(): Set<string> {
+  const solid = solidFurniture()
+  return reachable(getRoom('hall').spawn, (p) => onFloor(p) && !solid.has(key(p)))
+}
+
+/** Every tile Zeno can get to: the floor, plus the furniture he's allowed on. */
+function reachableByZeno(): Set<string> {
+  const solid = solidFurniture()
+  const { start, perches } = furnishHouse().zeno
+  const perch = new Set(perches.map(key))
+  return reachable(start, (p) => onFloor(p) && (!solid.has(key(p)) || perch.has(key(p))))
+}
+
+function reachable(start: Point, walkable: (p: Point) => boolean): Set<string> {
+  const seen = new Set([key(start)])
+  const queue = [start]
+  while (queue.length > 0) {
+    for (const next of neighbours(queue.shift()!)) {
+      if (walkable(next) && !seen.has(key(next))) {
+        seen.add(key(next))
+        queue.push(next)
+      }
+    }
+  }
+  return seen
+}
+
+test.describe('House layout', () => {
+  test('every interactable can be reached and faced from the floor', () => {
+    const reachable = reachableFromFrontDoor()
+    const stranded = furnishHouse()
+      .interactables.filter((object) => !object.tiles.some((tile) => neighbours(tile).some((n) => reachable.has(key(n)))))
+      .map((object) => object.id)
+    expect(stranded).toEqual([])
+  })
+
+  test('every open room spawns the visitor on a reachable tile', () => {
+    const reachable = reachableFromFrontDoor()
+    const blocked = ROOMS.filter((room) => !room.locked && !reachable.has(key(room.spawn))).map((room) => room.id)
+    expect(blocked).toEqual([])
+  })
+
+  test('Zeno can reach all his favourite spots, his toy and his litter box', () => {
+    const reachable = reachableByZeno()
+    const { spots, toy, litterBox } = furnishHouse().zeno
+    const missed = [...spots, toy, litterBox].filter((spot) => !reachable.has(key(spot)))
+    expect(missed).toEqual([])
+  })
+})

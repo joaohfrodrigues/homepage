@@ -19,6 +19,18 @@ test.describe('House', () => {
     await expect(page.getByText('Study', { exact: true })).toBeVisible()
   })
 
+  test('the floor plan reaches the balcony off the bedroom and keeps the bathroom shut', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    const directory = page.getByRole('dialog', { name: 'Where to?' })
+    await expect(directory.getByLabel('Bathroom (occupied)')).toBeVisible()
+    await expect(directory.getByRole('button', { name: 'Go to the bathroom' })).toHaveCount(0)
+    await directory.getByRole('button', { name: 'Go to the balcony' }).click()
+    await expect(directory).not.toBeVisible()
+    await expect(page.getByText('Balcony', { exact: true })).toBeVisible()
+  })
+
   test('travel map overlay has a pin per trip linking to its exhibition', async ({ page }) => {
     await page.goto('/photography')
     const overlay = page.getByRole('dialog', { name: 'Travel map' })
@@ -38,6 +50,9 @@ test.describe('House', () => {
   })
 
   test('hobby items open themed windows with the existing cards', async ({ page }) => {
+    // In dev, the first visit after a change compiles the hobby route, which
+    // can outlast the default 30s on its own.
+    test.slow()
     await page.goto('/hobbies/running')
     const overlay = page.getByRole('dialog', { name: 'Running' })
     await expect(overlay).toBeVisible()
