@@ -7,21 +7,21 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   bridge: HouseBridge
-  /** What A would do right now, if anything; lights the button up and shows beside it. */
-  actionLabel: string | null
 }
 
 /** How far the knob travels from the centre of the base, in CSS pixels. */
 const STICK_RADIUS = 40
 /** Wobbles shorter than this don't count as a direction. */
 const DEAD_ZONE = 12
+/** A touch that moves further than this is a drag (the joystick); anything less is a tap. */
+const DRAG_THRESHOLD = 10
 
-interface Stick {
+interface Touch {
   pointerId: number
-  /** Where the thumb landed: the centre of the base. */
-  origin: { x: number; y: number }
-  /** The knob's offset from the origin, clamped to the base. */
-  knob: { x: number; y: number }
+  /** Where the thumb landed, relative to the layer. */
+  start: { x: number; y: number }
+  /** Set once the touch turned into a drag: the joystick's centre and knob offset. */
+  stick: { origin: { x: number; y: number }; knob: { x: number; y: number } } | null
 }
 
 /** The grid only walks in four directions, so the stick snaps to the dominant axis. */
@@ -38,20 +38,20 @@ function clampToBase(dx: number, dy: number) {
 }
 
 /**
- * Opt-in floating joystick and A button for touch screens. The stick appears
- * wherever a thumb lands on the left half of the screen and snaps to four
- * directions; the A button names what it will do. Everything is translucent so
- * the house shows through, and taps on things in the right half still reach it.
+ * Touch input for the house. Dragging anywhere brings up a floating joystick
+ * under the thumb that snaps to four directions; a touch that lifts without
+ * dragging is a tap, handed to the scene to walk to the floor or the thing
+ * under it. The joystick is translucent so the house shows through.
  */
-export function TouchControls({ bridge, actionLabel }: Props) {
+export function TouchControls({ bridge }: Props) {
   const heldRef = useRef<Direction | null>(null)
   // Mirrored in a ref: pointermove can arrive before React re-renders from pointerdown.
-  const stickRef = useRef<Stick | null>(null)
-  const [stick, setStickState] = useState<Stick | null>(null)
+  const touchRef = useRef<Touch | null>(null)
+  const [touch, setTouchState] = useState<Touch | null>(null)
 
-  function setStick(next: Stick | null) {
-    stickRef.current = next
-    setStickState(next)
+  function setTouch(next: Touch | null) {
+    touchRef.current = next
+    setTouchState(next)
   }
 
   function hold(direction: Direction | null) {
@@ -60,102 +60,76 @@ export function TouchControls({ bridge, actionLabel }: Props) {
     bridge.ui.emit('padDirection', direction)
   }
 
-  // Let go if the controls unmount mid-press (a dialogue opens, say).
+  // Let go if the controls unmount mid-drag (a dialogue opens, say).
   useEffect(() => () => bridge.ui.emit('padDirection', null), [bridge])
 
   function onDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (stickRef.current) return
+    if (touchRef.current) return
     e.currentTarget.setPointerCapture(e.pointerId)
     const box = e.currentTarget.getBoundingClientRect()
-    // Keep the whole base on screen even when the thumb lands near an edge.
-    const origin = {
-      x: Math.min(Math.max(e.clientX - box.left, STICK_RADIUS + 8), box.width - STICK_RADIUS - 8),
-      y: Math.min(Math.max(e.clientY - box.top, STICK_RADIUS + 8), box.height - STICK_RADIUS - 8),
-    }
-    setStick({ pointerId: e.pointerId, origin, knob: { x: 0, y: 0 } })
+    setTouch({ pointerId: e.pointerId, start: { x: e.clientX - box.left, y: e.clientY - box.top }, stick: null })
   }
 
   function onMove(e: React.PointerEvent<HTMLDivElement>) {
-    const stick = stickRef.current
-    if (!stick || e.pointerId !== stick.pointerId) return
+    const current = touchRef.current
+    if (!current || e.pointerId !== current.pointerId) return
     const box = e.currentTarget.getBoundingClientRect()
-    const dx = e.clientX - box.left - stick.origin.x
-    const dy = e.clientY - box.top - stick.origin.y
-    setStick({ ...stick, knob: clampToBase(dx, dy) })
+    const x = e.clientX - box.left
+    const y = e.clientY - box.top
+    let stick = current.stick
+    if (!stick) {
+      if (Math.hypot(x - current.start.x, y - current.start.y) < DRAG_THRESHOLD) return
+      // Keep the whole base on screen even when the thumb lands near an edge.
+      const origin = {
+        x: Math.min(Math.max(current.start.x, STICK_RADIUS + 8), box.width - STICK_RADIUS - 8),
+        y: Math.min(Math.max(current.start.y, STICK_RADIUS + 8), box.height - STICK_RADIUS - 8),
+      }
+      stick = { origin, knob: { x: 0, y: 0 } }
+    }
+    const dx = x - stick.origin.x
+    const dy = y - stick.origin.y
+    setTouch({ ...current, stick: { origin: stick.origin, knob: clampToBase(dx, dy) } })
     hold(directionOf(dx, dy))
   }
 
   function onUp(e: React.PointerEvent<HTMLDivElement>) {
-    if (stickRef.current?.pointerId !== e.pointerId) return
-    setStick(null)
+    const current = touchRef.current
+    if (current?.pointerId !== e.pointerId) return
+    setTouch(null)
     hold(null)
+    if (!current.stick && e.type === 'pointerup') bridge.ui.emit('tapAt', { x: e.clientX, y: e.clientY })
   }
 
-  // At rest, a faint stick sits bottom-left so visitors know where to put a thumb.
-  const base = stick?.origin ?? null
+  const stick = touch?.stick ?? null
   const direction = stick ? directionOf(stick.knob.x, stick.knob.y) : null
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-20 bottom-0 select-none [-webkit-touch-callout:none]" data-testid="touch-controls">
-      <div
-        role="group"
-        aria-label="Joystick: drag to walk"
-        className="pointer-events-auto absolute inset-y-0 left-0 w-1/2 touch-none"
-        onPointerDown={onDown}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        onContextMenu={(e) => e.preventDefault()}
-      >
+    <div
+      role="group"
+      aria-label="Drag to walk, tap to go to things"
+      className="absolute inset-x-0 top-20 bottom-0 touch-none select-none [-webkit-touch-callout:none]"
+      data-testid="touch-controls"
+      onPointerDown={onDown}
+      onPointerMove={onMove}
+      onPointerUp={onUp}
+      onPointerCancel={onUp}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      {stick && (
         <div
-          className={cn(
-            'absolute size-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-[#f4ecd8]/35 bg-[#2a2233]/35 transition-opacity',
-            base ? 'opacity-100' : 'bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-6 translate-x-0 translate-y-0 opacity-60',
-          )}
-          style={base ? { left: base.x, top: base.y } : undefined}
+          className="pointer-events-none absolute size-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-[#f4ecd8]/35 bg-[#2a2233]/35"
+          style={{ left: stick.origin.x, top: stick.origin.y }}
+          data-testid="joystick"
         >
           <div
             className={cn(
               'absolute top-1/2 left-1/2 size-9 rounded-full shadow-[0_3px_0_rgba(18,14,24,0.45)]',
               direction ? 'bg-[#e8c95a]/80' : 'bg-[#f4ecd8]/55',
             )}
-            style={{
-              transform: `translate(calc(-50% + ${stick?.knob.x ?? 0}px), calc(-50% + ${stick?.knob.y ?? 0}px))`,
-            }}
+            style={{ transform: `translate(calc(-50% + ${stick.knob.x}px), calc(-50% + ${stick.knob.y}px))` }}
           />
         </div>
-      </div>
-
-      {/* The label rides on the button, so the words are as tappable as the A. */}
-      <button
-        type="button"
-        aria-label={actionLabel ? `A: ${actionLabel}` : 'A'}
-        className="group font-pixel pointer-events-auto absolute right-4 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] flex max-w-[calc(50%-1rem)] touch-none items-center gap-2"
-        onPointerDown={(e) => {
-          e.preventDefault()
-          bridge.ui.emit('interactFacing')
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        {actionLabel && (
-          <span
-            aria-hidden
-            className="min-w-0 bg-[#2a2233]/90 px-2.5 py-1.5 text-left text-sm leading-tight text-[#f4ecd8] shadow-[0_3px_0_#120e18]"
-            data-testid="action-label"
-          >
-            {actionLabel}
-          </span>
-        )}
-        <span
-          aria-hidden
-          className={cn(
-            'flex size-16 shrink-0 items-center justify-center rounded-full text-xl shadow-[0_3px_0_rgba(18,14,24,0.45)] transition-colors group-active:translate-y-0.5 group-active:shadow-none',
-            actionLabel ? 'bg-[#8e2a20]/70 text-[#f4ecd8]' : 'bg-[#2a2233]/45 text-[#f4ecd8]/60',
-          )}
-        >
-          A
-        </span>
-      </button>
+      )}
     </div>
   )
 }

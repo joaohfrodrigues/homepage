@@ -268,8 +268,8 @@ async function tapTile(page: Page, tile: Point) {
   await page.touchscreen.tap(x, y)
 }
 
-// The guestbook stand, two tiles from the hall spawn and right of it: a tap
-// has to walk there before it opens, and it sits outside the joystick's half.
+// The guestbook stand, near the hall spawn: a tap has to walk there before it
+// can be used.
 const guestbookStand = furnishHouse().interactables.find((object) => object.id === 'guestbook')!.tiles[0]
 
 test.describe('House on a touch screen', () => {
@@ -285,60 +285,50 @@ test.describe('House on a touch screen', () => {
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
   }
 
-  test('tapping is the default: no joystick, the floor walks and things open', async ({ page }) => {
+  test('a tap walks; a tapped thing is walked up to, and a second tap opens it', async ({ page }) => {
     await boot(page)
-    await expect(page.getByRole('button', { name: 'On-screen joystick' })).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.getByTestId('touch-controls')).toHaveCount(0)
-    await expect(page.getByText('Tap the floor to walk')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'On-screen joystick' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^A\b/ })).toHaveCount(0)
+    await expect(page.getByText('Drag anywhere to walk')).toBeVisible()
 
     const start = await playerTile(page)
     await tapTile(page, { x: start.x, y: start.y - 1 })
     await expect.poll(() => playerTile(page)).toEqual({ x: start.x, y: start.y - 1 })
 
-    await tapTile(page, guestbookStand)
-    await expect(page.getByRole('dialog', { name: 'Guestbook' })).toBeVisible()
-  })
-
-  test('the joystick is opt-in, remembered, and tapping things still works with it', async ({ page }) => {
-    await boot(page)
-    await page.getByRole('button', { name: 'On-screen joystick' }).tap()
-    await expect(page.getByTestId('touch-controls')).toBeVisible()
-    await expect(page.getByText('Drag on the left side to walk')).toBeVisible()
-
-    await page.reload()
-    await expect(page.getByRole('button', { name: 'On-screen joystick' })).toHaveAttribute('aria-pressed', 'true', {
-      timeout: 15_000,
-    })
-    await expect(page.getByTestId('touch-controls')).toBeVisible()
-
-    // A tap on the floor no longer walks: the stick does that.
-    const start = await playerTile(page)
-    await tapTile(page, { x: start.x, y: start.y - 1 })
-    await page.waitForTimeout(500)
-    expect(await playerTile(page)).toEqual(start)
-
-    // A tap on a thing still walks to it and opens it.
-    await tapTile(page, guestbookStand)
+    // The first tap on the stand only walks up to it and faces it.
     const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    const hint = page.getByRole('button', { name: /^Tap.*Guestbook/ })
+    await tapTile(page, guestbookStand)
+    await expect(hint).toBeVisible()
+    await page.waitForTimeout(300)
+    await expect(guestbook).not.toBeVisible()
+
+    // The second opens it.
+    await tapTile(page, guestbookStand)
     await expect(guestbook).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(guestbook).not.toBeVisible()
 
-    // Now facing the stand, the A button says what it will do, and does it.
-    const a = page.getByRole('button', { name: /^A: Guestbook/ })
-    await expect(page.getByTestId('action-label')).toHaveText(/Guestbook/)
-    await a.tap()
+    // Still standing there facing it, one tap is enough.
+    await tapTile(page, guestbookStand)
     await expect(guestbook).toBeVisible()
   })
 
-  test('switching the joystick back off returns to tapping', async ({ page }) => {
-    await page.addInitScript(() => window.localStorage.setItem('house:controls', 'pad'))
+  test('dragging anywhere brings up the joystick and walks', async ({ page }) => {
     await boot(page)
-    const toggle = page.getByRole('button', { name: 'On-screen joystick' })
-    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
-    await toggle.tap()
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.getByTestId('touch-controls')).toHaveCount(0)
-    expect(await page.evaluate(() => window.localStorage.getItem('house:controls'))).toBe('tap')
+    await expect(page.getByTestId('joystick')).toHaveCount(0)
+    const start = await playerTile(page)
+    const from = await screenPointOf(page, start)
+    const client = await page.context().newCDPSession(page)
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
+      client.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+
+    // Start on the right half too: the whole screen takes a drag now.
+    await touch('touchStart', from.x + 60, from.y)
+    for (let dy = 8; dy <= 64; dy += 8) await touch('touchMove', from.x + 60, from.y - dy)
+    await expect(page.getByTestId('joystick')).toBeVisible()
+    await expect.poll(() => playerTile(page).then((tile) => tile.y)).toBeLessThan(start.y)
+    await touch('touchEnd', 0, 0)
+    await expect(page.getByTestId('joystick')).toHaveCount(0)
   })
 })

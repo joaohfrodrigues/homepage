@@ -51,10 +51,13 @@ interface UiEvents {
   inputEnabled: boolean
   /** Trigger whatever the player is currently facing (HUD button / touch). */
   interactFacing: undefined
-  /** The on-screen D-pad direction being held, or null once it's let go. */
+  /** The on-screen joystick direction being held, or null once it's let go. */
   padDirection: Direction | null
-  /** Whether tapping the floor walks there (off while the on-screen pad is in use). */
-  tapToMove: boolean
+  /**
+   * A touch tap at these client coordinates: walks to the floor there, or up to
+   * the thing there, which a second tap (once the guest is facing it) uses.
+   */
+  tapAt: { x: number; y: number }
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
