@@ -3,7 +3,7 @@ import type { Outfit } from './pixels'
 import type { TopicId } from './topics'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
-export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess'
+export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
 
 /** What happens when the visitor interacts with something in the house. */
 export type InteractAction =
@@ -33,6 +33,8 @@ interface GameEvents {
   hint: Hint | null
   room: RoomId
   moved: undefined
+  /** The player took a step (counted for the guestbook). */
+  step: undefined
 }
 
 interface UiEvents {

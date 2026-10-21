@@ -21,7 +21,7 @@ export function ArticleListItem({
     <li>
       <article>
         <div className="flex items-center gap-2">
-          <time className="text-sm text-muted-foreground">{formatDate(publishedAt)}</time>
+          <time className="font-pixel text-sm text-muted-foreground">{formatDate(publishedAt)}</time>
           {project && <ProjectPill slug={project.slug} title={project.title} />}
         </div>
         <h3 className="text-xl font-semibold mt-1 mb-2">

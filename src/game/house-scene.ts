@@ -674,6 +674,7 @@ export class HouseScene extends Phaser.Scene {
       this.hasMoved = true
       this.cfg.bridge.game.emit('moved')
     }
+    this.cfg.bridge.game.emit('step')
     this.moveWalker(walker, target, PLAYER_STEP_MS, () => {
       this.updateRoom()
       this.updateHint()

@@ -51,7 +51,9 @@ export default async function CollectionPage({ params }: Props) {
     <HouseOverlay title={collection.title} back={{ href: '/photography', label: 'Travel map' }}>
       {collection.description && <p className="mb-2 text-[#6d6359]">{collection.description}</p>}
       <p className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#6d6359]">
-        <span>{collection.totalPhotos} photos</span>
+        <span>
+          <span className="font-pixel">{collection.totalPhotos}</span> photos
+        </span>
         {stops.length > 0 && (
           <span className="inline-flex flex-wrap items-center gap-1">
             <MapPin size={14} className="text-[#c0392b]" aria-hidden />
