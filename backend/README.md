@@ -1,16 +1,26 @@
 # Backend Architecture
 
-This backend uses a local SQLite database to store all photo metadata with proper
-relational structure, eliminating the need for repeated API calls to Unsplash.
+The backend is a set of Python ETL pipelines that sync external data into the repo, so the site
+never calls those APIs at request time:
+
+- **Unsplash → SQLite** (`etl.py`) - photos and collections into `data/photos.db`, which the
+    Next.js frontend reads directly with `better-sqlite3`.
+- **Plex → Keystatic** (`plex_etl.py`) - watch history into one YAML file per title under
+    `content/watch-items/`.
 
 ## Structure
 
 ```text
 backend/
 ├── __init__.py
-├── database.py      # Database schema and operations
-├── db_service.py    # Query layer for reading data
-└── etl.py           # ETL script to sync from Unsplash
+├── database.py      # SQLite schema and write operations
+├── db_service.py    # Python query layer (used by tests and ad-hoc checks)
+├── etl.py           # Unsplash sync pipeline
+├── plex_etl.py      # Plex watch-history sync pipeline
+├── slug.py          # URL slug helper shared by both pipelines
+└── providers/
+    ├── unsplash.py  # Unsplash API client: pagination, enrichment, transforms
+    └── tmdb.py      # TMDB poster lookup, fallback for Plex items with no thumbnail
 
 data/
 └── photos.db        # SQLite database (committed to git)
@@ -50,115 +60,72 @@ data/
 - Composite index on (photo_id, collection_id) in junction table
 - Individual indexes on foreign keys
 
-## Usage
-
-### Initial Setup
-
-1. Run ETL to populate database:
+## Unsplash ETL (`etl.py`)
 
 ```bash
-# Sync all photos (production)
-python backend/etl.py
-
-# Test mode (only 5 photos per collection)
-python backend/etl.py --test
-
-# Limit photos per collection
-python backend/etl.py --max-photos 10
+python backend/etl.py                       # Incremental sync (only updated photos)
+python backend/etl.py --full-load           # Re-sync every photo
+python backend/etl.py --test                # Test mode (5 photos per user/collection)
+python backend/etl.py --max-photos 10       # Limit photos per user/collection
+python backend/etl.py --fetch-mode details  # Fetch per-photo details (EXIF, location)
 ```
 
-## ETL Pipeline
+Needs `UNSPLASH_ACCESS_KEY` (and optionally `UNSPLASH_USERNAME`) in `.env`.
 
-### Sync Strategy (Optimized)
+### Sync strategy
 
-The ETL minimizes API calls while fetching complete data:
+1. **User photos** - fetches the user's photos with statistics. In incremental mode (the default),
+    photos unchanged since the last sync are skipped.
+2. **Collections** - fetches the user's collections, syncs their photos, and links photos to
+    collections in `photo_collections`.
 
-1. **Fetch user photos with statistics** (5 API calls)
-    - Gets all photos with view/download counts
-    - No EXIF or location data at this stage
+`--fetch-mode` (or the `FETCH_MODE` env var) picks how photos are fetched: `batch` (the CLI default)
+uses list endpoints only and is fast; `details` also fetches each photo's details endpoint for EXIF
+and location, but only for photos that don't have real EXIF yet. Slugs are deduplicated so every
+photo gets a unique URL.
 
-2. **Fetch EXIF for featured photos** (2 API calls)
-    - Strategic fetching for only 2 photos
-    - Gets complete EXIF + location data
-
-3. **Fetch collections metadata** (1 API call)
-    - Gets all user collections
-
-4. **Link photos to collections** (8 API calls)
-    - Fetches collection photos for linking
-    - Creates many-to-many relationships
-
-**Total: 16 API calls** per sync (well within 50/hour limit)
-
-### Transform Functions
-
-- `transform_photo(photo, fetch_exif, access_key)` - Converts API data to database schema
-- `sync_photos(access_key, username, max_photos)` - Main ETL orchestration
-
-### Development
-
-The application automatically reads from the database:
-
-- No API calls needed after initial sync
-- Fast local queries
-- Full EXIF data pre-fetched
-- Full-text search available
-
-### Testing
+## Plex ETL (`plex_etl.py`)
 
 ```bash
-# Run tests
-PYTHONPATH=. pytest tests/test_database.py tests/test_db_service.py -v
-
-# Check database stats
-python -c "from backend.db_service import get_database_stats; print(get_database_stats())"
+python backend/plex_etl.py                     # Plex's entire retained history
+python backend/plex_etl.py --since 2026-01-01  # Bound a historical backfill
 ```
 
-### GitHub Actions
+Needs `PLEX_URL` and `PLEX_TOKEN`; `TMDB_API_KEY` is optional and fills in missing posters. Films
+map to `film` and episodes are aggregated into one `series` entry once at least 3 episodes have been
+watched. Visibility is driven by the Plex rating (8/10 or higher is shown), a manual `hidden` edit in
+Keystatic survives until the rating changes, and hidden entries older than a year are deleted by
+`cleanup_stale_hidden_items`. See the root [README](../README.md) for the full rules.
 
-The ETL runs daily via GitHub Actions:
-
-- Syncs latest photos from Unsplash
-- Updates statistics (views/downloads)
-- Commits updated database to git
-- Workflow file: `.github/workflows/sync-photos.yaml`
-
-## Benefits
-
-✅ **No Rate Limits** - All data pre-fetched daily  
-✅ **Fast Queries** - Local SQLite with proper indexes  
-✅ **Offline Development** - Work without API access  
-✅ **Complete EXIF** - Strategic fetching for featured photos  
-✅ **Full-Text Search** - FTS5 virtual table  
-✅ **Relational Data** - Proper many-to-many for collections
-
-## API Endpoints (implemented)
-
-- `GET /api/photo-details/{id}` - Photo details (EXIF included)
-- `GET /api/trigger-download` - Compliance (uses Unsplash API)
+Posters are stored as token-free Plex paths; the site's `/api/watch-poster` route adds `PLEX_TOKEN`
+server-side, so the token is never committed.
 
 ## Query Layer (`db_service.py`)
 
-- `get_latest_photos(order, page, limit)` - Paginated photos with sorting
-- `get_all_collections()` - All collections with cover photos
-- `get_collection_photos(collection_id, page, limit)` - Photos in collection
-- `get_photo_by_id(photo_id)` - Single photo details
-- `get_database_stats()` - Database statistics
+The frontend has its own TypeScript query layer (`src/lib/photos.ts`); this Python one is used by
+the tests and for inspecting the database:
 
-## Running Tests
+- `get_latest_photos(...)` - Paginated photos with sorting
+- `get_all_collections()` - All collections with cover photos
+- `get_collection_photos(...)` - Photos in a collection
+- `get_collection_by_slug(slug)` / `get_collection_by_id(id)` - One collection
+- `search_photos(...)` - Full-text search
+- `get_photo_by_id(photo_id)` - Single photo details
+- `get_database_stats()` / `get_collection_stats()` - Database statistics
+
+## Testing
 
 ```bash
-# Run all tests
-PYTHONPATH=. pytest -v
-
-# Database tests only
-PYTHONPATH=. pytest tests/test_database.py -v
-
-# Service layer tests
-PYTHONPATH=. pytest tests/test_db_service.py -v
-
-# ETL transformation tests
-PYTHONPATH=. pytest tests/test_etl_transform.py -v
+pytest -v                                       # All unit tests (tests/unit_tests/)
+pytest tests/unit_tests/test_plex_etl.py -v     # One file
+python -c "from backend.db_service import get_database_stats; print(get_database_stats())"
 ```
 
-Current status: **28/28 tests passing** ✅
+Fixtures for the Unsplash tests are described in
+[tests/unit_tests/fixtures/README.md](../tests/unit_tests/fixtures/README.md).
+
+## GitHub Actions
+
+- `.github/workflows/etl.yaml` - daily Unsplash sync; commits the updated `data/photos.db`. Can be
+    run manually with a fetch mode and a full-load option.
+- `.github/workflows/plex-etl.yaml` - daily Plex sync; commits changed `content/watch-items/` files.
