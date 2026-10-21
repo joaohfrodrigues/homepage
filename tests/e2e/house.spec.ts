@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('House', () => {
+  // These tests are about the house itself, so skip the first-visit welcome card.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
+  })
+
   test('home page boots the game with its HUD', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
@@ -142,5 +147,55 @@ test.describe('House', () => {
     await page.getByRole('button', { name: 'Guestbook' }).click()
     await expect(guestbook).toContainText('this is your first visit')
     await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
+  })
+})
+
+test.describe('Welcome card', () => {
+  test('a first visit gets the card, and it stays dismissed after a reload', async ({ page }) => {
+    await page.goto('/')
+    const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
+    await expect(card.getByRole('link', { name: 'Films & series' })).toHaveAttribute('href', '/hobbies/watching')
+    // The house waits behind the card: M doesn't open the directory yet.
+    await page.keyboard.press('m')
+    await expect(page.getByRole('dialog', { name: 'Where to?' })).not.toBeVisible()
+    await card.getByRole('button', { name: 'Explore the house' }).click()
+    await expect(card).not.toBeVisible()
+    await page.keyboard.press('m')
+    await expect(page.getByRole('dialog', { name: 'Where to?' })).toBeVisible()
+
+    await page.reload()
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+    await expect(card).not.toBeVisible()
+  })
+
+  test('Escape dismisses the card', async ({ page }) => {
+    await page.goto('/')
+    const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    // Focus lands on the close button once the card's key handlers are in place.
+    await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
+    await page.keyboard.press('Escape')
+    await expect(card).not.toBeVisible()
+  })
+
+  test('a shortcut opens its page and closing it returns to the house without the card', async ({ page }) => {
+    await page.goto('/')
+    const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    await card.getByRole('link', { name: 'About' }).click()
+    const about = page.getByRole('dialog', { name: 'About João' })
+    await expect(about).toBeVisible()
+    await expect(card).not.toBeVisible()
+    await page.getByRole('button', { name: 'Close and return to the house' }).click()
+    await expect(page).toHaveURL('/')
+    await expect(card).not.toBeVisible()
+  })
+
+  test('a deep link skips the card', async ({ page }) => {
+    await page.goto('/about')
+    await expect(page.getByRole('dialog', { name: 'About João' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close and return to the house' }).click()
+    await expect(page).toHaveURL('/')
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('dialog', { name: 'Hi, I’m João' })).not.toBeVisible()
   })
 })

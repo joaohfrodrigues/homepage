@@ -26,6 +26,8 @@ const page = await browser.newPage({
     viewport: { width: 1200, height: 630 },
     reducedMotion: 'reduce',
 });
+// Skip the first-visit welcome card so M reaches the directory.
+await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'));
 await page.goto(BASE);
 await page.locator('canvas').waitFor({ timeout: 30_000 });
 await page.getByText('João’s house').waitFor();

@@ -19,10 +19,13 @@ import { HouseNavigationContext } from './house-navigation'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
+import { WelcomeCard } from './welcome-card'
 
 const OUTFIT_KEY = 'house:outfit'
 /** 'tap' when a touch visitor switched the on-screen pad off for tap-to-walk. */
 const CONTROLS_KEY = 'house:controls'
+/** Set once a visitor has dismissed the first-visit welcome card. */
+const WELCOMED_KEY = 'house:welcomed'
 
 /** The house starts at night between 8pm and 7am, visitor's local time. */
 function isNightNow(): boolean {
@@ -35,6 +38,14 @@ function readPadPreference(): boolean {
     return window.localStorage.getItem(CONTROLS_KEY) !== 'tap'
   } catch {
     return true
+  }
+}
+
+function readWelcomed(): boolean {
+  try {
+    return window.localStorage.getItem(WELCOMED_KEY) !== null
+  } catch {
+    return false
   }
 }
 
@@ -94,16 +105,23 @@ export function HouseShell({ data, children }: Props) {
   // Touch screens walk with the on-screen pad unless the visitor switched to tapping the floor.
   const [padPreferred, setPadPreferred] = useState(() => typeof window !== 'undefined' && readPadPreference())
   const usePad = coarsePointer && padPreferred
+  // A first visit to the house itself gets a hello; a deep link already knows where it's going.
+  const [welcome, setWelcome] = useState(
+    () => typeof window !== 'undefined' && pathname === '/' && !readWelcomed(),
+  )
 
   const overlayOpen = pathname !== '/'
-  const inputEnabled = !overlayOpen && dialogue === null && panel === null
+  const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
 
   // A page opening (from the directory, say) takes the place of any panel, so
   // closing the page goes straight back to the house.
   const [shownPathname, setShownPathname] = useState(pathname)
   if (pathname !== shownPathname) {
     setShownPathname(pathname)
-    if (overlayOpen) setPanel(null)
+    if (overlayOpen) {
+      setPanel(null)
+      setWelcome(false)
+    }
   }
 
   // The page before this one, to tell whether closing it can just step back.
@@ -222,7 +240,7 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     const shortcuts: Record<string, PanelId> = { m: 'directory', g: 'guestbook' }
     function onKey(e: KeyboardEvent) {
-      if (overlayOpen || dialogue !== null || (panel !== null && panel !== 'directory' && panel !== 'guestbook')) return
+      if (overlayOpen || welcome || dialogue !== null || (panel !== null && panel !== 'directory' && panel !== 'guestbook')) return
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const target = shortcuts[e.key.toLowerCase()]
@@ -233,7 +251,7 @@ export function HouseShell({ data, children }: Props) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [overlayOpen, dialogue, panel])
+  }, [overlayOpen, welcome, dialogue, panel])
 
   const teleport = useCallback(
     (target: RoomId) => {
@@ -251,6 +269,15 @@ export function HouseShell({ data, children }: Props) {
     },
     [bridge],
   )
+
+  const dismissWelcome = useCallback(() => {
+    setWelcome(false)
+    try {
+      window.localStorage.setItem(WELCOMED_KEY, '1')
+    } catch {
+      // Private mode: the card comes back on the next visit.
+    }
+  }, [])
 
   const changeOutfit = useCallback(
     (next: Outfit) => {
@@ -407,6 +434,8 @@ export function HouseShell({ data, children }: Props) {
           touch={coarsePointer}
         />
       )}
+
+      {ready && welcome && <WelcomeCard onClose={dismissWelcome} />}
 
       {panel === 'directory' && (
         <DirectoryPanel

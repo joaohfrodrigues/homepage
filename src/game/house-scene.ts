@@ -1366,18 +1366,31 @@ export class HouseScene extends Phaser.Scene {
 
   private setupCamera() {
     const camera = this.cameras.main
-    // No bounds, like Pokémon: the player stays centred and the void past the
-    // walls is simply dark.
+    // No sideways bounds, like Pokémon: the player stays centred and the void
+    // past the walls is simply dark.
     camera.setRoundPixels(true)
     camera.startFollow(this.player.sprite, true, 0.18, 0.18)
-    // Pokémon-style framing: about 17 tiles along the longer side of the
-    // screen, at a whole-number zoom so every pixel stays square.
-    const applyZoom = () => {
+    const applyFraming = () => {
       const { width, height } = this.scale.gameSize
-      camera.setZoom(Math.max(2, Math.round(Math.max(width, height) / (17 * TILE))))
+      // Pokémon-style framing: about 17 tiles along the longer side of the
+      // screen, but at least 11 across so a phone shows a whole room, at a
+      // whole-number zoom so every pixel stays square.
+      const zoom = Math.max(
+        2,
+        Math.min(Math.round(Math.max(width, height) / (17 * TILE)), Math.floor(width / (11 * TILE))),
+      )
+      camera.setZoom(zoom)
+      // Up and down, though, the view stops at the top and bottom of the flat
+      // (or centres it, when the whole height fits), so the front door, on the
+      // bottom row, doesn't leave half the screen empty.
+      const mapHeight = MAP_HEIGHT * TILE
+      const viewHeight = height / zoom
+      const top = viewHeight > mapHeight ? (mapHeight - viewHeight) / 2 : 0
+      const far = 1_000 * TILE
+      camera.setBounds(-far, top, 2 * far + MAP_WIDTH * TILE, Math.max(mapHeight, viewHeight))
     }
-    applyZoom()
-    this.scale.on(Phaser.Scale.Events.RESIZE, applyZoom)
+    applyFraming()
+    this.scale.on(Phaser.Scale.Events.RESIZE, applyFraming)
   }
 
   private setupInput() {
