@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
@@ -15,6 +15,7 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { BUZZING_AT, CAFFEINE_OVERDOSE, OVERDOSE_AT, caffeine } from './intoxication'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -272,9 +273,31 @@ export function HouseShell({ data, children }: Props) {
     (on: boolean) => {
       setNight(on)
       if (on) updateStats((stats) => stats.naps++)
+      // A nap sleeps off the coffee.
+      caffeine.clear()
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
       bridge.ui.emit('night', { on, animate: true })
     },
     [bridge],
+  )
+
+  // Ten bicas in five minutes: the guest starts vibrating, and João notices.
+  const pulledBica = useCallback(
+    (lately: number) => {
+      if (lately < OVERDOSE_AT) return
+      bridge.ui.emit('effect', { source: 'caffeine', effect: CAFFEINE_OVERDOSE })
+      if (lately > OVERDOSE_AT) return
+      updateStats((stats) => stats.overdoses++)
+      setPanel(null)
+      setDialogue('caffeine-overdose')
+    },
+    [bridge],
+  )
+
+  // Built when it opens, so a count running out mid-chat doesn't change the lines.
+  const shownDialogue = useMemo(
+    () => dialogue && buildDialogue(dialogue, data, { night, buzzing: caffeine.count() >= BUZZING_AT }),
+    [dialogue, data, night],
   )
 
   const dismissWelcome = useCallback(() => {
@@ -402,10 +425,10 @@ export function HouseShell({ data, children }: Props) {
         </>
       )}
 
-      {dialogue && (
+      {dialogue && shownDialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night })}
+          dialogue={shownDialogue}
           onChoose={choose}
           onClose={() => setDialogue(null)}
           touch={coarsePointer}
@@ -429,7 +452,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'wardrobe' && (
         <WardrobePanel outfit={outfit} onChange={changeOutfit} onClose={() => setPanel(null)} />
       )}
-      {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
+      {panel === 'bica' && <BicaPanel onPull={pulledBica} onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
 

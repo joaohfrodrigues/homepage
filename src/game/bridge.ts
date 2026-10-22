@@ -22,6 +22,32 @@ export type DialogueId =
   | 'litterbox-clean'
   | 'litterbox-dirty'
 
+/** What a temporary effect on the guest comes from; each source has at most one going. */
+export type EffectSource = 'caffeine'
+
+/**
+ * A temporary change to how the guest walks and how the house looks, e.g. after
+ * too many bicas. Effects from different sources stack. Under
+ * `prefers-reduced-motion` the scene drops shake, jitter, sway and drift and
+ * keeps only the tint.
+ */
+export interface PlayerEffect {
+  /** Walking speed multiplier. */
+  speed?: number
+  /** Camera shake intensity, in short bursts like a heartbeat. */
+  shake?: number
+  /** How far, in pixels, the guest's sprite trembles. */
+  jitter?: number
+  /** How far, in pixels, the camera sways from side to side. */
+  sway?: number
+  /** Chance that a step taken with the keys or joystick veers sideways. */
+  drift?: number
+  /** Colour washed over the guest. */
+  tint?: number
+  /** How long it lasts before wearing off on its own. */
+  ms: number
+}
+
 /** Something the directory can take the guest to: an interactable's id, or João himself. */
 export type VisitTarget = string
 
@@ -61,6 +87,8 @@ interface UiEvents {
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
+  /** Start (or, with null, end) an effect on the guest. */
+  effect: { source: EffectSource; effect: PlayerEffect | null }
 }
 
 type Listener<T> = (payload: T) => void

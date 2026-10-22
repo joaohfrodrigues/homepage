@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { HouseBridge, Hint, InteractAction, VisitTarget } from './bridge'
+import type { EffectSource, HouseBridge, Hint, InteractAction, PlayerEffect, VisitTarget } from './bridge'
 import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   FLOOR_PLAN,
@@ -103,6 +103,9 @@ const TOY_SLIDE_MS = 120
 /** Gaps between his games with the toy, and between litter box visits. */
 const ZENO_PLAY_GAP_MS: [number, number] = [60_000, 120_000]
 const ZENO_LITTER_GAP_MS: [number, number] = [120_000, 240_000]
+/** Gap between an effect's camera-shake bursts, and between jitters of the guest. */
+const SHAKE_GAP_MS = 1100
+const JITTER_MS = 70
 /** People leave chairs to visitors and cats; João stays off them. */
 const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
 
@@ -189,6 +192,12 @@ export class HouseScene extends Phaser.Scene {
   private hasMoved = false
   private npcTalking = false
   private unsubscribers: (() => void)[] = []
+  /** Effects on the guest (too much coffee…), each with when it wears off. */
+  private effects = new Map<EffectSource, { effect: PlayerEffect; until: number }>()
+  /** All of them combined, refreshed every frame. */
+  private effect: Omit<PlayerEffect, 'ms'> = {}
+  private nextShakeAt = 0
+  private nextJitterAt = 0
 
   constructor() {
     super('house')
@@ -276,6 +285,7 @@ export class HouseScene extends Phaser.Scene {
 
   update(time: number) {
     this.animateCues(time)
+    this.applyEffects(time)
     if (!this.inputEnabled || this.player.moving) return
 
     const direction = this.heldDirection() ?? this.queuedStep
@@ -283,7 +293,7 @@ export class HouseScene extends Phaser.Scene {
     if (direction) {
       this.path = []
       this.pendingTarget = null
-      this.tryStep(direction)
+      this.tryStep(this.veer(direction))
       return
     }
 
@@ -591,6 +601,49 @@ export class HouseScene extends Phaser.Scene {
     })
   }
 
+  private setEffect(source: EffectSource, effect: PlayerEffect | null) {
+    if (effect) this.effects.set(source, { effect, until: this.time.now + effect.ms })
+    else this.effects.delete(source)
+  }
+
+  /**
+   * Per frame: wears effects off, combines the rest (speeds multiply, the
+   * others take the strongest) and applies them to the guest and the camera.
+   * Under reduced motion only the speed and the tint survive.
+   */
+  private applyEffects(time: number) {
+    const combined: Omit<PlayerEffect, 'ms'> = {}
+    for (const [source, { effect, until }] of this.effects) {
+      if (time >= until) {
+        this.effects.delete(source)
+        continue
+      }
+      if (effect.speed) combined.speed = (combined.speed ?? 1) * effect.speed
+      if (effect.tint !== undefined) combined.tint = effect.tint
+      if (this.reducedMotion) continue
+      for (const name of ['shake', 'jitter', 'sway', 'drift'] as const) {
+        if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
+      }
+    }
+    this.effect = combined
+
+    const { sprite } = this.player
+    const camera = this.cameras.main
+    if (combined.tint === undefined) sprite.clearTint()
+    else sprite.setTint(combined.tint)
+    if (!combined.jitter) sprite.setOrigin(0.5, 1)
+    else if (time >= this.nextJitterAt) {
+      this.nextJitterAt = time + JITTER_MS
+      sprite.setOrigin(0.5 + Phaser.Math.Between(-combined.jitter, combined.jitter) / sprite.width, 1)
+    }
+    const sway = combined.sway ?? 0
+    camera.setFollowOffset(Math.sin(time / 900) * sway, Math.sin(time / 1400) * sway * 0.5)
+    if (combined.shake && time >= this.nextShakeAt) {
+      this.nextShakeAt = time + SHAKE_GAP_MS
+      camera.shake(160, combined.shake)
+    }
+  }
+
   /** Redraw the visitor's frames in a new outfit from the wardrobe. */
   private repaintGuest(outfit: Outfit) {
     const texture = this.textures.get('house-chars') as Phaser.Textures.CanvasTexture
@@ -829,12 +882,21 @@ export class HouseScene extends Phaser.Scene {
       this.cfg.bridge.game.emit('moved')
     }
     this.cfg.bridge.game.emit('step')
-    this.moveWalker(walker, target, PLAYER_STEP_MS, () => {
+    this.moveWalker(walker, target, PLAYER_STEP_MS / (this.effect.speed ?? 1), () => {
       this.updateRoom()
       this.updateHint()
       // Stop the walk cycle unless the next frame keeps us moving.
       if (!this.heldDirection() && !this.queuedStep && this.path.length === 0) this.setIdle(walker)
     })
+  }
+
+  /** Dizzy steering: now and then a step veers off to one side. Taps and clicks walk straight. */
+  private veer(direction: Direction): Direction {
+    if (Math.random() >= (this.effect.drift ?? 0)) return direction
+    const sides: Direction[] = direction === 'up' || direction === 'down' ? ['left', 'right'] : ['up', 'down']
+    const side = sides[Math.floor(Math.random() * sides.length)]
+    const tile = { x: this.player.tile.x + DELTAS[side].x, y: this.player.tile.y + DELTAS[side].y }
+    return this.isWalkable(tile.x, tile.y) ? side : direction
   }
 
   private moveWalker(walker: Walker, target: Point, duration: number, onDone: () => void) {
@@ -1487,6 +1549,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
+      ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
         // A quick flick that lets go before the next frame still takes one step.

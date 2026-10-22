@@ -25,6 +25,8 @@ export interface VisitorStats {
   scoops: number
   naps: number
   outfits: number
+  /** Times the visitor had so many bicas so fast that they started vibrating. */
+  overdoses: number
 }
 
 function emptyStats(): VisitorStats {
@@ -47,6 +49,7 @@ function emptyStats(): VisitorStats {
     scoops: 0,
     naps: 0,
     outfits: 0,
+    overdoses: 0,
   }
 }
 
@@ -152,4 +155,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
+  { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
 ]

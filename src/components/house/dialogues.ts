@@ -2,7 +2,7 @@ import type { DialogueId, PanelId } from '@/game/bridge'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
-export type DialogueKey = DialogueId | 'joao-contact'
+export type DialogueKey = DialogueId | 'joao-contact' | 'caffeine-overdose'
 
 export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
@@ -18,7 +18,11 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
-export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean }): Dialogue {
+export function buildDialogue(
+  id: DialogueKey,
+  data: HouseData,
+  house: { night: boolean; buzzing?: boolean },
+): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
@@ -31,6 +35,7 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         speaker: 'João',
         lines: [
           "Hey, welcome in! I'm João.",
+          ...(house.buzzing ? ['…you’re buzzing a bit. How many bicas was that?'] : []),
           ...(data.aboutIntro ? [data.aboutIntro] : []),
           'Make yourself at home. The map in the study has every trip I’ve photographed, and most things around the flat have a story.',
         ],
@@ -47,6 +52,12 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
           "LinkedIn is the quickest way to reach me. Code's on GitHub, and the photos also live on Unsplash. There's a note with all of it on the console by the front door.",
         ],
         choices: [...contactChoices, { label: 'Thanks!', kind: 'close' }],
+      }
+    case 'caffeine-overdose':
+      return {
+        speaker: 'João',
+        lines: ['Whoa. You’re vibrating.', 'Sit down, have a glass of water. The machine’s closed for a bit.'],
+        choices: [{ label: 'I feel GREAT', kind: 'close' }],
       }
     case 'letterbox':
       return {

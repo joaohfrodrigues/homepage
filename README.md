@@ -76,6 +76,13 @@ any first page.
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
+There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
+faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
+or until a nap. Those counts live in memory for the session only
+(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats, and the
+temporary effects (`effect` on the bridge) drop shake, jitter, sway and drift for a tint under
+`prefers-reduced-motion`.
+
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
