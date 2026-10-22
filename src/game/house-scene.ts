@@ -29,6 +29,7 @@ import {
   CAT_FRAMES,
   drawCat,
   drawHeart,
+  drawPartyHat,
   drawPoop,
   drawStink,
   drawFocusArrow,
@@ -158,6 +159,8 @@ export class HouseScene extends Phaser.Scene {
   private zenoLitterTrip = false
   /** Busy in his litter box: not to be petted. */
   private zenoInBox = false
+  /** Put on by the Konami code, for the rest of the visit. */
+  private partyHat: Phaser.GameObjects.Image | null = null
   private litterDirty = false
   private stink!: Phaser.GameObjects.Image
   private poop!: Phaser.GameObjects.Image
@@ -276,6 +279,7 @@ export class HouseScene extends Phaser.Scene {
 
   update(time: number) {
     this.animateCues(time)
+    this.placePartyHat()
     if (!this.inputEnabled || this.player.moving) return
 
     const direction = this.heldDirection() ?? this.queuedStep
@@ -487,6 +491,9 @@ export class HouseScene extends Phaser.Scene {
     const heart = this.textures.createCanvas('zeno-heart', 7, 6)!
     drawHeart(heart.getContext())
     heart.refresh()
+    const hat = this.textures.createCanvas('zeno-party-hat', 7, 7)!
+    drawPartyHat(hat.getContext())
+    hat.refresh()
   }
 
   private buildCollision() {
@@ -1190,6 +1197,27 @@ export class HouseScene extends Phaser.Scene {
     })
   }
 
+  private throwParty() {
+    this.partyHat ??= this.add.image(0, 0, 'zeno-party-hat').setOrigin(0.5, 1)
+    this.placePartyHat()
+    if (this.reducedMotion) return
+    this.tweens.add({ targets: this.partyHat, scaleY: { from: 0.2, to: 1 }, duration: 300, ease: 'Back.easeOut' })
+  }
+
+  /** Keeps the hat on Zeno's head, which sits further forward side-on (and on the other side when flipped). */
+  private placePartyHat() {
+    const hat = this.partyHat
+    if (!hat) return
+    const sprite = this.zeno.sprite
+    const frame = String(sprite.frame.name)
+    const forward = frame.includes('side') ? 4 : frame.includes('sit') ? 2 : 0
+    const top = frame.includes('sit') ? 3 : 4
+    hat
+      .setPosition(sprite.x + (sprite.flipX ? -forward : forward), sprite.y - TILE + top + 1)
+      .setDepth(sprite.depth + 0.001)
+      .setVisible(sprite.visible)
+  }
+
   // -------------------------------------------------------------------------
   // Interaction
 
@@ -1487,6 +1515,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
+      ui.on('party', () => this.throwParty()),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
         // A quick flick that lets go before the next frame still takes one step.

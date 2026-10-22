@@ -25,6 +25,7 @@ export interface VisitorStats {
   scoops: number
   naps: number
   outfits: number
+  parties: number
 }
 
 function emptyStats(): VisitorStats {
@@ -47,6 +48,7 @@ function emptyStats(): VisitorStats {
     scoops: 0,
     naps: 0,
     outfits: 0,
+    parties: 0,
   }
 }
 
@@ -152,4 +154,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
+  { id: 'party-animal', title: 'Party animal', hint: 'Enter a very old cheat code.', earned: (s) => s.parties >= 1 },
 ]

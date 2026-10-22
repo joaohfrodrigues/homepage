@@ -2,7 +2,7 @@ import type { Direction, RoomId } from './layout'
 import type { Outfit } from './characters'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
-export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
+export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook' | 'pi-terminal'
 
 /** What happens when the visitor interacts with something in the house. */
 export type InteractAction =
@@ -21,6 +21,7 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
+  | 'raspberry-pi'
 
 /** Something the directory can take the guest to: an interactable's id, or João himself. */
 export type VisitTarget = string
@@ -61,6 +62,8 @@ interface UiEvents {
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
+  /** The Konami code was entered: Zeno puts on a party hat. */
+  party: undefined
 }
 
 type Listener<T> = (payload: T) => void

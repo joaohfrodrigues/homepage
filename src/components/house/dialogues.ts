@@ -1,4 +1,5 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
+import { getTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -113,6 +114,17 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         lines: ['Zeno’s litter box is spotless. For now.'],
         choices: [{ label: 'Leave it be', kind: 'close' }],
       }
+    case 'raspberry-pi': {
+      const pi = getTopic('home-server')
+      return {
+        lines: [pi.look, 'A cursor blinks on the little monitor beside it: pi@homeserver:~$'],
+        choices: [
+          { label: 'Read the home server series →', kind: 'link', href: pi.href },
+          { label: 'Type something at the prompt', kind: 'panel', panel: 'pi-terminal' },
+          { label: 'Let it blink', kind: 'close' },
+        ],
+      }
+    }
     case 'balcony':
       return house.night
         ? {
