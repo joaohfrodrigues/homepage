@@ -2,6 +2,7 @@ import type { InteractAction } from './bridge'
 import type { Point } from './layout'
 import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
+import type { Season } from './seasons'
 import { getTopic, type TopicId } from './topics'
 
 export type Decor =
@@ -62,8 +63,9 @@ export function topicAction(id: TopicId): InteractAction {
 /**
  * Everything placed in the house. Props drawn on a wall face (the rows directly
  * above a room) sit on tiles that are already solid; floor props block movement.
+ * A `season` adds its decorations on top.
  */
-export function furnishHouse(): Furnishings {
+export function furnishHouse(season: Season | null = null): Furnishings {
   const decor: Decor[] = []
   const interactables: Interactable[] = []
   const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
@@ -241,6 +243,26 @@ export function furnishHouse(): Furnishings {
   topicItem('drums', prop('drums', 16, 15))
   topicItem('camera', prop('camerastand', 19, 16))
   limezu('pottedTree', 21, 17)
+
+  // --- Seasonal -----------------------------------------------------------------
+  // Only spare floor, tabletops and wall faces, so every path and item
+  // stays reachable whatever the date.
+  const garlands = () => [2, 4, 6, 8].forEach((x) => prop('garland', x, 1, false))
+  if (season === 'xmas') {
+    prop('xmastree', 5, 8)
+    prop('bolorei', 3, 8, false)
+  } else if (season === 'santos') {
+    garlands()
+    prop('sardines', 19, 4, false)
+    // Manjericos in their pots along the balcony railing.
+    limezu('sprig', 19, 2, false)
+    limezu('sprig', 20, 2, false)
+  } else if (season === 'halloween') {
+    prop('pumpkin', 9, 17)
+  } else if (season === 'newyear' || season === 'birthday') {
+    garlands()
+    prop('balloons', 5, 8)
+  }
 
   return {
     decor,

@@ -76,11 +76,19 @@ any first page.
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
+The visitor's local date also puts up seasonal decorations (`src/game/seasons.ts`): a tree and a
+bolo-rei in December until Dia de Reis, sardines, manjericos and paper garlands through June for the
+Santos Populares, a pumpkin by the front door and Zeno in a witch's hat for Halloween week, and
+balloons on New Year's Eve and Day (and on João's birthday, once `BIRTHDAY` is set). João greets
+visitors with a seasonal line. Add `?season=xmas` (or `santos`, `halloween`, `newyear`, `birthday`)
+to the URL to preview one whatever the date, or `?season=none` to turn them off.
+
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
-    React.
+    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/seasons.ts` - which decorations
+    are up; `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between
+    Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
     and dialogue.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
@@ -97,7 +105,8 @@ bun run og                                                  # re-snapshot the sh
 
 The pack's licence forbids redistributing it, so only the packed atlases are committed — never the
 pack itself. `bun run og` needs a running dev server and writes `src/assets/og-image.png`; re-run it
-and commit the PNG whenever the house art changes.
+and commit the PNG whenever the house art changes. It always snapshots the everyday house
+(`?season=none`), so seasonal decorations never need a new one.
 
 ## 📸 ETL Pipelines - Quick Start
 
@@ -259,7 +268,7 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters
+│   ├── game/             # Phaser scene, floor plan, furniture, characters, seasons
 │   ├── lib/              # Data access, utilities
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
