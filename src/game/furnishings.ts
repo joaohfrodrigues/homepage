@@ -100,7 +100,12 @@ export function furnishHouse(): Furnishings {
   prop('chimney', 4, 1, false)
   topicItem('watching', prop('tv', 4, 1))
   prop('coffeetable', 5, 4)
-  prop('sofa', 4, 5)
+  interactables.push({
+    id: 'sofa',
+    label: 'Sofa — sink into the cushions',
+    tiles: prop('sofa', 4, 5),
+    action: { type: 'dialogue', id: 'sofa' },
+  })
   prop('floorlamp', 3, 5)
   // Dining behind the sofa, by the kitchen's pocket door: two steps from the hob.
   // Chairs can be walked over (pulled out of the way); tables and sofas can't.
@@ -133,7 +138,12 @@ export function furnishHouse(): Furnishings {
   })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
-  prop('kcounter', 1, 16)
+  interactables.push({
+    id: 'drawer',
+    label: 'Kitchen drawer — have a rummage',
+    tiles: prop('kcounter', 1, 16),
+    action: { type: 'dialogue', id: 'drawer' },
+  })
   prop('kcounter', 1, 17)
   interactables.push({
     id: 'litterbox',

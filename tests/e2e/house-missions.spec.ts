@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import type { DialogueId } from '../../src/game/bridge'
+import { COLLECTIBLES } from '../../src/game/collectibles'
 import { MISSIONS } from '../../src/game/missions'
 import { ACHIEVEMENTS } from '../../src/components/house/visitor-stats'
 
@@ -139,5 +140,54 @@ test.describe('Missions', () => {
     await page.keyboard.press('m')
     await expect(directory.getByLabel('Bathroom (occupied)')).toBeVisible()
     await expect(directory.getByRole('button', { name: 'Go to the bathroom' })).toHaveCount(0)
+  })
+})
+
+test.describe('Lost drumsticks', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
+  })
+
+  test('each is found once, counted in the guestbook, kept and cleared by its reset', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+    const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
+    const odds = guestbook.getByRole('region', { name: 'Odds and ends' })
+
+    // Looking closely at the sofa turns one up, with the tally.
+    await interact(page, 'sofa')
+    await pick(page, 'Get comfy')
+    await page.keyboard.press('g')
+    await expect(odds).toContainText(`1of ${COLLECTIBLES.length}lost drumsticks found`)
+    await page.keyboard.press('Escape')
+
+    // A second look finds nothing more.
+    await interact(page, 'sofa')
+    await expect(dialogue(page)).not.toContainText('drumstick', { timeout: 1000 })
+    await pick(page, 'Get comfy')
+    await page.reload()
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('g')
+    await expect(odds).toContainText(`1of ${COLLECTIBLES.length}`)
+    await expect(guestbook.getByText('Drumroll (locked)')).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // The rest, for the sticker.
+    for (const item of COLLECTIBLES.filter((c) => c.spot !== 'sofa')) {
+      await interact(page, item.spot)
+      await expect(async () => {
+        await dialogue(page).click()
+        await expect(dialogue(page)).toContainText(item.line, { timeout: 250 })
+      }).toPass({ timeout: 10_000 })
+      await page.keyboard.press('Escape')
+      await expect(dialogue(page)).not.toBeVisible()
+    }
+    await page.keyboard.press('g')
+    await expect(odds).toContainText(`${COLLECTIBLES.length}of ${COLLECTIBLES.length}`)
+    await expect(guestbook.getByText('Drumroll (earned)')).toBeVisible()
+
+    await guestbook.getByRole('button', { name: 'Tear out this page' }).click()
+    await guestbook.getByRole('button', { name: 'Sure? Click again' }).click()
+    await expect(odds).toContainText(`0of ${COLLECTIBLES.length}`)
   })
 })

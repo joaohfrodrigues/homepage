@@ -21,6 +21,8 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
+  | 'sofa'
+  | 'drawer'
 
 /** Something the directory can take the guest to: an interactable's id, or João himself. */
 export type VisitTarget = string

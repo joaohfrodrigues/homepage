@@ -3,6 +3,7 @@ import { decorTiles, furnishHouse } from '../../src/game/furnishings'
 import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point, type UnlockId } from '../../src/game/layout'
 import { limezuRect } from '../../src/game/limezu-furniture'
 import { MISSIONS } from '../../src/game/missions'
+import { COLLECTIBLES } from '../../src/game/collectibles'
 
 // Pure checks on the floor plan and furniture: no browser needed.
 
@@ -81,6 +82,14 @@ test.describe('House layout', () => {
       .filter((object) => !object.tiles.some((tile) => neighbours(tile).some((n) => reachable.has(key(n)))))
       .map((object) => object.id)
     expect(stranded).toEqual([])
+  })
+
+  test('every hidden drumstick is tucked into furniture the visitor can use', () => {
+    const spots = new Set(
+      furnishHouse().interactables.flatMap((object) => (object.action.type === 'dialogue' ? [object.action.id] : [])),
+    )
+    expect(COLLECTIBLES.filter((item) => !spots.has(item.spot)).map((item) => item.id)).toEqual([])
+    expect(new Set(COLLECTIBLES.map((item) => item.spot)).size).toBe(COLLECTIBLES.length)
   })
 
   test('Zeno can reach all his favourite spots, his toy and his litter box', () => {

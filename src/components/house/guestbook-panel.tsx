@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { getRoom, type RoomId } from '@/game/layout'
+import { COLLECTIBLES } from '@/game/collectibles'
 import { MISSIONS, currentStep, isMissionStarted, missionProgress, type Mission } from '@/game/missions'
 import { cn } from '@/lib/utils'
 import { PanelWindow } from './panel-window'
@@ -244,6 +245,7 @@ export function GuestbookPanel({ onReset, onClose }: Props) {
             <Stat value={stats.scoops} label="litter boxes scooped" />
             <Stat value={stats.naps} label="naps until evening" />
             <Stat value={stats.outfits} label="outfit changes" />
+            <Stat value={stats.found.length} unit={`of ${COLLECTIBLES.length}`} label="lost drumsticks found" />
           </div>
         </Section>
       </div>
