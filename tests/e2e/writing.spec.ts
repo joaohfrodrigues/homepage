@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const ARTICLES_DIR = join(process.cwd(), 'content/articles')
 const today = new Date().toISOString().slice(0, 10)

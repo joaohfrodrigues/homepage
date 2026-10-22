@@ -1,5 +1,6 @@
 import type { Direction, RoomId } from './layout'
 import type { Outfit } from './characters'
+import type { Weather } from '@/lib/weather'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
 export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
@@ -60,6 +61,8 @@ interface UiEvents {
   tapAt: { x: number; y: number }
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
+  /** Lisbon's sky through the windows and on the balcony. */
+  weather: Weather
   outfit: Outfit
 }
 

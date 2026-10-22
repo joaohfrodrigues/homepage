@@ -2,12 +2,13 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { BookOpen, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
+import { isWeather, type Weather } from '@/lib/weather'
 import { BicaPanel } from './bica-panel'
 import { DialogueBox } from './dialogue-box'
 import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
@@ -29,6 +30,18 @@ function isNightNow(): boolean {
   const hour = new Date().getHours()
   return hour >= 20 || hour < 7
 }
+
+/** `?weather=rain` (or clear, cloudy, storm) previews a sky without waiting for one. */
+function readWeatherPreview(): Weather | null {
+  const preview = new URLSearchParams(window.location.search).get('weather')
+  return isWeather(preview) ? preview : null
+}
+
+const WEATHER_ICONS = {
+  cloudy: { Icon: Cloud, label: 'Cloudy in Lisbon' },
+  rain: { Icon: CloudRain, label: 'Raining in Lisbon' },
+  storm: { Icon: CloudLightning, label: 'Storm over Lisbon' },
+} as const
 
 function readWelcomed(): boolean {
   try {
@@ -89,6 +102,8 @@ export function HouseShell({ data, children }: Props) {
   const [night, setNight] = useState(() => typeof window !== 'undefined' && isNightNow())
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
   const initialLook = useRef({ night, outfit })
+  const [weatherPreview] = useState(() => (typeof window !== 'undefined' ? readWeatherPreview() : null))
+  const [weather, setWeather] = useState<Weather>(weatherPreview ?? 'clear')
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
@@ -221,6 +236,25 @@ export function HouseShell({ data, children }: Props) {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
 
+  // Lisbon's real sky, unless a preview asked for another; clear if it can't be had.
+  useEffect(() => {
+    if (weatherPreview) return
+    let cancelled = false
+    fetch('/api/weather')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { weather?: unknown } | null) => {
+        if (!cancelled && isWeather(body?.weather)) setWeather(body.weather)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [weatherPreview])
+
+  useEffect(() => {
+    if (ready) bridge.ui.emit('weather', weather)
+  }, [bridge, ready, weather])
+
   // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
     const shortcuts: Record<string, PanelId> = { m: 'directory', g: 'guestbook' }
@@ -343,6 +377,7 @@ export function HouseShell({ data, children }: Props) {
               <span className="flex items-center gap-1.5 text-sm leading-tight sm:text-base">
                 João&rsquo;s house
                 {night ? <Moon size={12} aria-label="Night" /> : <Sun size={12} aria-label="Day" />}
+                {weather !== 'clear' && <WeatherIcon weather={weather} />}
               </span>
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
@@ -405,7 +440,7 @@ export function HouseShell({ data, children }: Props) {
       {dialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night })}
+          dialogue={buildDialogue(dialogue, data, { night, weather })}
           onChoose={choose}
           onClose={() => setDialogue(null)}
           touch={coarsePointer}
@@ -436,4 +471,9 @@ export function HouseShell({ data, children }: Props) {
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>
   )
+}
+
+function WeatherIcon({ weather }: { weather: Exclude<Weather, 'clear'> }) {
+  const { Icon, label } = WEATHER_ICONS[weather]
+  return <Icon size={12} aria-label={label} />
 }

@@ -15,8 +15,9 @@ their output straight to the repo.
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
-      `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side) and `keystatic`
-      (the CMS backend).
+      `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `weather`
+      (Lisbon's current sky from [Open-Meteo](https://open-meteo.com/), cached for 30 minutes)
+      and `keystatic` (the CMS backend).
 - **ETL pipelines** (`backend/`) - Python scripts that sync data into the repo, each on its own
     daily GitHub Actions schedule:
     - `backend/etl.py` - syncs photos and collections from the Unsplash API into `data/photos.db`
@@ -73,14 +74,20 @@ steps back over its entry, and a page opened from a panel takes over the panel's
 from that page returns to the house. The welcome card gets no entry: Back from it leaves, as from
 any first page.
 
-The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
-plain HTML version for screen readers, crawlers and visitors without JavaScript.
+The house starts at night between 8pm and 7am, visitor's local time. Lisbon's real weather shows
+through the windows and on the balcony: the glass goes grey under cloud, rain runs down the panes
+and streaks across the balcony, a storm brings the odd lightning flash, and the balcony's view
+mentions it. The HUD shows a cloud icon when the sky isn't clear. The sky comes from `/api/weather`
+(Open-Meteo, no API key, cached for 30 minutes) and falls back to clear if that fails. Under
+`prefers-reduced-motion` the drops hold still and there's no lightning. To preview a sky, add
+`?weather=clear`, `cloudy`, `rain` or `storm` to the URL. Every room's page also has a plain HTML
+version for screen readers, crawlers and visitors without JavaScript.
 
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
-    React.
+    `src/game/house-scene.ts` - the Phaser scene; `src/game/weather-layer.ts` - rain, cloud and
+    lightning over it; `src/game/bridge.ts` - events between Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
     and dialogue.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
@@ -207,6 +214,7 @@ Vercel then picks up the change on the next deploy.
 - **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug and
     bed art for the house (most furniture is hand-drawn in code)
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
+- **[Open-Meteo](https://open-meteo.com/)** - Lisbon's current weather for the house (no API key)
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
 - **[Unsplash API](https://unsplash.com/developers)** - Photo source with CDN
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
@@ -255,7 +263,7 @@ homepage/
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
-│   │   ├── api/             # photos, watch-poster, keystatic
+│   │   ├── api/             # photos, watch-poster, weather, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
@@ -279,6 +287,9 @@ homepage/
 pytest -v            # ETL/backend tests
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
+
+E2E specs import `test` from `tests/e2e/fixtures.ts`, which answers `/api/weather` with a clear sky
+so no test reaches Open-Meteo; a test can `page.route` its own sky on top.
 
 CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, `pytest` and `pip-audit`.
 
