@@ -15,6 +15,8 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { playFanfare, useKonamiCode } from './konami'
+import { PiTerminalPanel } from './pi-terminal-panel'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -83,6 +85,8 @@ export function HouseShell({ data, children }: Props) {
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
   const [showControls, setShowControls] = useState(true)
+  // Counts Konami codes entered, so each one shows its own toast.
+  const [parties, setParties] = useState(0)
   // Night and outfit only matter once the game has booted client-side, so
   // reading the clock and localStorage in the initializers can't cause a
   // hydration mismatch.
@@ -238,6 +242,20 @@ export function HouseShell({ data, children }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [overlayOpen, welcome, dialogue, panel])
 
+  // ↑↑↓↓←→←→BA: a fanfare, a party hat for Zeno and a sticker.
+  useKonamiCode(ready && inputEnabled && !visiting, () => {
+    bridge.ui.emit('party')
+    playFanfare()
+    updateStats((stats) => stats.parties++)
+    setParties((n) => n + 1)
+  })
+
+  useEffect(() => {
+    if (parties === 0) return
+    const timer = setTimeout(() => setParties(0), 4000)
+    return () => clearTimeout(timer)
+  }, [parties])
+
   const teleport = useCallback(
     (target: RoomId) => {
       setPanel(null)
@@ -373,6 +391,14 @@ export function HouseShell({ data, children }: Props) {
 
           {inputEnabled && coarsePointer && <TouchControls bridge={bridge} />}
 
+          {parties > 0 && (
+            <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-center p-4">
+              <div role="status" className="font-pixel bg-[#2a2233]/90 px-4 py-2 text-sm text-[#e8c95a] shadow-[0_3px_0_#120e18]">
+                ↑↑↓↓←→←→BA! Zeno is wearing a party hat.
+              </div>
+            </div>
+          )}
+
           {inputEnabled && hint && (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-4 pb-6">
               {hint.hover ? (
@@ -432,6 +458,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+      {panel === 'pi-terminal' && <PiTerminalPanel onClose={() => setPanel(null)} />}
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>

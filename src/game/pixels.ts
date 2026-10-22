@@ -1251,6 +1251,17 @@ export function drawHeart(ctx: Ctx) {
   })
 }
 
+/** A 7x7 striped party hat with a pompom, which Zeno wears after the Konami code. */
+export function drawPartyHat(ctx: Ctx) {
+  const rows = ['...w...', '..kwk..', '..kyk..', '.kmmmk.', '.kyyyk.', 'kmmmmmk', 'kkkkkkk']
+  const colors: Record<string, string> = { k: PALETTE.ink, w: '#f4f1ea', y: '#e8c95a', m: '#d0568a' }
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (colors[row[x]]) rect(ctx, x, y, 1, 1, colors[row[x]])
+    }
+  })
+}
+
 /** Two clumps in the litter sand, drawn over the tray until the box is cleaned. */
 export function drawPoop(ctx: Ctx) {
   for (const [x, y] of [

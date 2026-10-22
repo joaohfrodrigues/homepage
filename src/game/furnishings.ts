@@ -54,8 +54,9 @@ export function decorTiles(decor: Decor): Point[] {
   return [{ x: decor.x, y: decor.y }]
 }
 
-/** Opening a topic goes straight into its window. */
+/** Opening a topic goes straight into its window; the Pi first offers a shell on it too. */
 export function topicAction(id: TopicId): InteractAction {
+  if (id === 'home-server') return { type: 'dialogue', id: 'raspberry-pi' }
   return { type: 'navigate', href: getTopic(id).href }
 }
 

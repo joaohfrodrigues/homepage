@@ -57,7 +57,8 @@ site's sections:
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV) and João himself.
 - **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
-- **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
+- **Study** - the wall map (photography by trip), bookshelves (writing), the Raspberry Pi (the home
+    server series, or a fake shell on the Pi whose commands link to the matching parts), camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
 
@@ -72,6 +73,10 @@ phone's swipe back closes just that layer instead of leaving the site. Closing o
 steps back over its entry, and a page opened from a panel takes over the panel's entry, so Back
 from that page returns to the house. The welcome card gets no entry: Back from it leaves, as from
 any first page.
+
+Typing the Konami code (↑↑↓↓←→←→BA) in the house plays a fanfare, puts a party hat on Zeno and
+earns a guestbook sticker. The keys still walk the guest; nothing happens until the sequence is
+complete.
 
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
