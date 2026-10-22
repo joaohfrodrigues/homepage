@@ -4,7 +4,8 @@ João Rodrigues' personal site — photography, writing, and hobbies (music, run
 The home page is a pixel-art apartment you walk around: each room leads to part of the site. The
 frontend is a Next.js 16 app (App Router, TypeScript, Tailwind CSS, Keystatic CMS) with the house
 drawn by Phaser. Photo data and watch items are synced daily by Python ETL pipelines that commit
-their output straight to the repo.
+their output straight to the repo. The only data visitors can send is what they choose to post to
+the public scoreboards, which live in Upstash Redis.
 
 ## 🏗️ Architecture
 
@@ -15,8 +16,13 @@ their output straight to the repo.
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
-      `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side) and `keystatic`
-      (the CMS backend).
+      `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
+      public scoreboards, below) and `keystatic` (the CMS backend).
+    - **Scoreboards** (`src/lib/scores/`, `src/app/api/scores/`) - shared names and scores for the
+      house's games and Hall of Fame, the one thing on the site visitors write to. Kept in
+      [Upstash Redis](https://upstash.com/) (a sorted set per board) behind a small store
+      interface, so tests run on an in-memory store and a site without the env vars shows every
+      board as offline. See [Scoreboards API](#-scoreboards-api).
 - **ETL pipelines** (`backend/`) - Python scripts that sync data into the repo, each on its own
     daily GitHub Actions schedule:
     - `backend/etl.py` - syncs photos and collections from the Unsplash API into `data/photos.db`
@@ -41,6 +47,11 @@ bun run lint       # ESLint
 bun run typecheck  # TypeScript, no emit
 bun run build      # production build
 ```
+
+`bun run dev` needs no environment variables. Without the Upstash ones the public
+scoreboards read as offline; set `SCORES_STORE=memory` in `.env.local` to try them with an
+in-memory store, or copy the Upstash variables there to use the real one (see
+[.env.example](./.env.example)).
 
 ## 🏠 The House
 
@@ -98,6 +109,28 @@ bun run og                                                  # re-snapshot the sh
 The pack's licence forbids redistributing it, so only the packed atlases are committed — never the
 pack itself. `bun run og` needs a running dev server and writes `src/assets/og-image.png`; re-run it
 and commit the PNG whenever the house art changes.
+
+## 🏆 Scoreboards API
+
+`src/app/api/scores/route.ts`, with the logic in `src/lib/scores/`. Boards are listed in
+`src/lib/scores/boards.ts` (`geoguess`, `bica` and `hall-of-fame`); adding one is a single entry
+there, with its score bounds and whether it ranks by score or lists newest first.
+
+- `GET /api/scores?board=geoguess&limit=10` - the top entries (default 10, at most 50), cached at
+    the edge for 30 seconds.
+- `POST /api/scores` with `{ board, player, name, score, meta? }` - saves an entry. `player` is a
+    random id the browser keeps, so each browser has one entry per board: its best score, or on a
+    board listed by date its latest. Answers with the entry, its rank and the fresh top 10.
+- `POST /api/scores/moderate` with `Authorization: Bearer $SCORES_ADMIN_SECRET` and
+    `{ board, id, hidden }` - hides an entry (or shows it again). Hidden entries stay hidden if
+    their browser submits again. Entries can also be edited in the Upstash console.
+
+Everything is checked on the server: scores must be whole numbers within the board's bounds, names
+2-16 characters of Latin letters, digits and single `space . _ ' -` separators, and past a small
+English/Portuguese profanity filter; `meta` may only hold a few numbers and flags. Each IP (stored
+hashed) gets 5 submissions a minute. Failures answer with an `error` message to show as is; a
+missing or unreachable store answers `503 { offline: true }`. Scores are worked out in the
+browser, so they can still be forged: the checks only stop casual abuse.
 
 ## 📸 ETL Pipelines - Quick Start
 
@@ -195,7 +228,10 @@ Vercel then picks up the change on the next deploy.
 1. Push your code to GitHub
 2. Import the repository in [Vercel](https://vercel.com)
 3. Add environment variables in the project settings
-4. Deploy
+4. For the scoreboards, add **Upstash for Redis** from the Vercel Marketplace (Storage → Create
+    Database) and connect it to the project, which sets its REST URL and token; then add
+    `SCORES_ADMIN_SECRET` for moderation
+5. Deploy
 
 ## 🛠️ Tech Stack
 
@@ -208,10 +244,13 @@ Vercel then picks up the change on the next deploy.
     bed art for the house (most furniture is hand-drawn in code)
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
+- **[Upstash Redis](https://upstash.com/)** - the public scoreboards (`@upstash/redis`), with
+    `@upstash/ratelimit` for per-IP limits
 - **[Unsplash API](https://unsplash.com/developers)** - Photo source with CDN
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
     poster fallback
 - **[Playwright](https://playwright.dev/)** - End-to-end tests
+- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests for the scoreboards
 - **[pytest](https://pytest.org/)** - ETL pipeline tests
 - **[Ruff](https://docs.astral.sh/ruff/)** - Python linter and formatter
 - **[Vercel](https://vercel.com)** - Deployment platform
@@ -232,7 +271,7 @@ Vercel then picks up the change on the next deploy.
 homepage/
 ├── .github/
 │   └── workflows/       # CI/CD pipelines
-│       ├── dev.yaml         # Linting, testing
+│       ├── dev.yaml         # Linting, testing (pytest, Bun unit tests)
 │       ├── etl.yaml         # Daily photo sync
 │       └── plex-etl.yaml    # Daily watch-items sync
 ├── backend/             # Database and ETL (Python)
@@ -255,17 +294,19 @@ homepage/
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
-│   │   ├── api/             # photos, watch-poster, keystatic
+│   │   ├── api/             # photos, watch-poster, scores, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
 │   ├── game/             # Phaser scene, floor plan, furniture, characters
 │   ├── lib/              # Data access, utilities
+│   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
 │   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
+│   ├── unit_ts/          # Bun unit tests (scoreboards)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -277,16 +318,23 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
+bun run test:unit    # Scoreboard unit tests (validation, store, API), on an in-memory store
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 
-CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, `pytest` and `pip-audit`.
+The e2e tests never need Upstash: the scores API spec only sends requests the server rejects
+before reaching a store.
+
+CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, `pytest`, the scoreboard unit tests
+and `pip-audit`.
 
 ## 🔐 Security
 
 - **Environment Variables:** API keys stored in `.env` (not committed)
 - **Dependency Updates:** Dependabot for automated security updates
 - **pip-audit:** Dependency vulnerability scan in CI
+- **Scoreboards:** names and scores are validated server-side, submissions are rate-limited per
+    (hashed) IP, and moderation needs `SCORES_ADMIN_SECRET`
 
 ## 📝 License
 

@@ -238,7 +238,7 @@ export function GuestbookPanel({ onClose }: Props) {
       </section>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-[#b5aa94] pt-4">
-        <p className="text-xs text-[#6d6359]">Kept only in this browser. Nothing here is sent anywhere.</p>
+        <p className="text-xs text-[#6d6359]">Kept only in this browser. Only a name and score you choose to submit to a public board ever leave it.</p>
         <button
           type="button"
           className="pixel-button"
