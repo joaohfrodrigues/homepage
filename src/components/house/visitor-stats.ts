@@ -1,5 +1,6 @@
 import { METRES_PER_TILE, type RoomId } from '@/game/layout'
 import { isMissionComplete } from '@/game/missions'
+import { COLLECTIBLES } from '@/game/collectibles'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
@@ -28,6 +29,8 @@ export interface VisitorStats {
   outfits: number
   /** Mission steps done, as `mission/step` (see `src/game/missions.ts`). */
   missionSteps: string[]
+  /** Hidden things found around the flat, by id (see `src/game/collectibles.ts`). */
+  found: string[]
 }
 
 function emptyStats(): VisitorStats {
@@ -51,6 +54,7 @@ function emptyStats(): VisitorStats {
     naps: 0,
     outfits: 0,
     missionSteps: [],
+    found: [],
   }
 }
 
@@ -69,6 +73,7 @@ function load(): VisitorStats {
         bicas: { ...stats.bicas, ...parsed.bicas },
         rooms: { ...parsed.rooms },
         missionSteps: Array.isArray(parsed.missionSteps) ? parsed.missionSteps : [],
+        found: Array.isArray(parsed.found) ? parsed.found : [],
       })
     }
   } catch {
@@ -164,4 +169,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
   { id: 'bath-time', title: 'Bath time', hint: 'Find out who’s always in the bathroom.', earned: (s) => isMissionComplete(s, 'bathroom') },
+  { id: 'drumroll', title: 'Drumroll', hint: 'Find all of João’s lost drumsticks.', earned: (s) => s.found.length >= COLLECTIBLES.length },
 ]

@@ -116,6 +116,16 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         lines: ['Zeno’s litter box is spotless. For now.'],
         choices: [{ label: 'Leave it be', kind: 'close' }],
       }
+    case 'sofa':
+      return {
+        lines: ['You sink into the sofa. Zeno has left a fine layer of fur on every cushion.'],
+        choices: [{ label: 'Get comfy', kind: 'close' }],
+      }
+    case 'drawer':
+      return {
+        lines: ['The kitchen drawer: cutlery, takeaway menus, a dozen rubber bands and a bike key nobody can place.'],
+        choices: [{ label: 'Shut the drawer', kind: 'close' }],
+      }
     case 'balcony':
       return house.night
         ? {

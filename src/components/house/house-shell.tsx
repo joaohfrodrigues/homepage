@@ -8,10 +8,11 @@ import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
 import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
+import { COLLECTIBLES, collectibleAt } from '@/game/collectibles'
 import type { HouseData } from '@/lib/house'
 import { BicaPanel } from './bica-panel'
 import { DialogueBox } from './dialogue-box'
-import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
+import { buildDialogue, type Dialogue, type DialogueChoice, type DialogueKey } from './dialogues'
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
@@ -72,6 +73,12 @@ function startRoomFor(pathname: string): RoomId {
   return 'hall'
 }
 
+/** Adds what the visitor just found to the end of the dialogue's lines. */
+function withFind(dialogue: Dialogue, find: { line: string; count: number } | null): Dialogue {
+  if (!find) return dialogue
+  return { ...dialogue, lines: [...dialogue.lines, `${find.line} (${find.count} of ${COLLECTIBLES.length} found)`] }
+}
+
 /** What missions have opened, in a stable order so unchanged sets compare equal. */
 function readUnlocks(): UnlockId[] {
   return [...unlocksOf(readStats())].sort()
@@ -93,6 +100,14 @@ export function HouseShell({ data, children }: Props) {
   const [room, setRoom] = useState<RoomId | null>(null)
   const [dialogue, setDialogue] = useState<DialogueKey | MissionDialogueKey | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
+  // A hidden thing the dialogue `spot` just turned up, and how many that makes.
+  const [find, setFind] = useState<{ spot: DialogueKey; line: string; count: number } | null>(null)
+  // It only belongs to that dialogue: gone once another opens or it closes.
+  const [findShownWith, setFindShownWith] = useState(dialogue)
+  if (dialogue !== findShownWith) {
+    setFindShownWith(dialogue)
+    if (find && find.spot !== dialogue) setFind(null)
+  }
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
   const [showControls, setShowControls] = useState(true)
@@ -192,7 +207,13 @@ export function HouseShell({ data, children }: Props) {
   const handleInteract = useCallback(
     (action: InteractAction) => {
       if (action.type === 'navigate') router.push(action.href, { scroll: false })
-      else if (action.type === 'dialogue') setDialogue(action.id)
+      else if (action.type === 'dialogue') {
+        // Using the furniture something is hidden in finds it, once.
+        const item = collectibleAt(action.id, readStats().found)
+        if (item) updateStats((stats) => stats.found.push(item.id))
+        setFind(item ? { spot: action.id, line: item.line, count: readStats().found.length } : null)
+        setDialogue(action.id)
+      }
       else setPanel(action.panel)
     },
     [router],
@@ -456,7 +477,7 @@ export function HouseShell({ data, children }: Props) {
           dialogue={
             isMissionDialogue(dialogue)
               ? buildMissionDialogue(dialogue, readStats())
-              : withMissionChoices(buildDialogue(dialogue, data, { night }), dialogue, readStats())
+              : withMissionChoices(withFind(buildDialogue(dialogue, data, { night }), find), dialogue, readStats())
           }
           onChoose={choose}
           onClose={() => setDialogue(null)}

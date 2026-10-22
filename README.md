@@ -70,6 +70,11 @@ hint for any mission under way, and the guestbook shows each one's progress. Mis
 in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and
 tearing out the guestbook page shuts everything again.
 
+João has also lost five drumsticks around the flat. They're tucked into furniture (the sofa, the
+kitchen drawer, the post on the console, the bed and the balcony railing's palm) and only turn up
+when you use it. The guestbook counts how many you've found, finding them all earns a sticker, and
+tearing out its page puts them back. They're listed in `src/game/collectibles.ts`.
+
 A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
@@ -88,7 +93,8 @@ plain HTML version for screen readers, crawlers and visitors without JavaScript.
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/missions.ts` - missions and what they unlock;
+    `src/game/missions.ts` - missions and what they unlock; `src/game/collectibles.ts` - the hidden
+    drumsticks;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
@@ -269,7 +275,7 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions
+│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, collectibles
 │   ├── lib/              # Data access, utilities
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
