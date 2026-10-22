@@ -198,6 +198,10 @@ export class HouseScene extends Phaser.Scene {
   private effect: Omit<PlayerEffect, 'ms'> = {}
   private nextShakeAt = 0
   private nextJitterAt = 0
+  /** Made on first use; null on renderers without camera filters. */
+  private vignette?: Phaser.Filters.Vignette | null
+  /** Passed out: the keys wait until the guest comes to. */
+  private dozing = false
 
   constructor() {
     super('house')
@@ -286,7 +290,7 @@ export class HouseScene extends Phaser.Scene {
   update(time: number) {
     this.animateCues(time)
     this.applyEffects(time)
-    if (!this.inputEnabled || this.player.moving) return
+    if (!this.inputEnabled || this.dozing || this.player.moving) return
 
     const direction = this.heldDirection() ?? this.queuedStep
     this.queuedStep = null
@@ -620,6 +624,7 @@ export class HouseScene extends Phaser.Scene {
       }
       if (effect.speed) combined.speed = (combined.speed ?? 1) * effect.speed
       if (effect.tint !== undefined) combined.tint = effect.tint
+      if (effect.vignette) combined.vignette = Math.max(combined.vignette ?? 0, effect.vignette)
       if (this.reducedMotion) continue
       for (const name of ['shake', 'jitter', 'sway', 'drift'] as const) {
         if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
@@ -642,6 +647,43 @@ export class HouseScene extends Phaser.Scene {
       this.nextShakeAt = time + SHAKE_GAP_MS
       camera.shake(160, combined.shake)
     }
+    if (combined.vignette) this.vignette ??= camera.filters?.external.addVignette(0.5, 0.5, 0.6, 0) ?? null
+    if (this.vignette) {
+      this.vignette.active = !!combined.vignette
+      this.vignette.strength = combined.vignette ?? 0
+    }
+  }
+
+  /**
+   * Passing out after one too many: a slow fade to black, and the guest comes
+   * to on the living-room sofa in the morning, with João standing over them.
+   */
+  private doze() {
+    const sofa = this.propAt('sofa')
+    if (!sofa) return this.cfg.bridge.game.emit('dozed')
+    this.dozing = true
+    this.effects.clear()
+    const seat = { x: sofa.x + 1, y: sofa.y + 1 }
+    this.placeGuest(
+      seat,
+      'down',
+      () => {
+        this.applyNight(false)
+        // At the corner of the sofa rather than straight in front, so he doesn't hide the guest.
+        const beside = [1, -1, 0]
+          .map((dx) => ({ x: seat.x + dx, y: seat.y + 1 }))
+          .find((t) => this.isWalkable(t.x, t.y, this.npc))
+        if (beside) {
+          this.npc.tile = beside
+          this.npc.sprite.setPosition(beside.x * TILE + TILE / 2, (beside.y + 1) * TILE).setDepth(10 + beside.y / 100)
+          this.face(this.npc, this.directionToward(beside, [seat]))
+          this.syncNpcLabel()
+        }
+        this.dozing = false
+        this.cfg.bridge.game.emit('dozed')
+      },
+      { out: 1200, in: 1500, colour: [0, 0, 0] },
+    )
   }
 
   /** Redraw the visitor's frames in a new outfit from the wardrobe. */
@@ -1446,7 +1488,12 @@ export class HouseScene extends Phaser.Scene {
   }
 
   /** Moves the guest to `spot` behind a quick fade (a cut under reduced motion). */
-  private placeGuest(spot: Point, facing: Direction, onPlaced?: () => void) {
+  private placeGuest(
+    spot: Point,
+    facing: Direction,
+    onPlaced?: () => void,
+    fade: { out: number; in: number; colour: [number, number, number] } = { out: 140, in: 180, colour: [20, 18, 28] },
+  ) {
     this.path = []
     this.pendingTarget = null
     const move = () => {
@@ -1475,14 +1522,14 @@ export class HouseScene extends Phaser.Scene {
       this.player.facing = facing
       this.setIdle(this.player)
       this.cameras.main.centerOn(this.player.sprite.x, this.player.sprite.y)
-      if (!this.reducedMotion) this.cameras.main.fadeIn(180, 20, 18, 28)
+      if (!this.reducedMotion) this.cameras.main.fadeIn(fade.in, ...fade.colour)
       this.currentRoom = null
       this.updateRoom()
       this.updateHint()
       onPlaced?.()
     }
     if (this.reducedMotion) return move()
-    this.cameras.main.fadeOut(140, 20, 18, 28)
+    this.cameras.main.fadeOut(fade.out, ...fade.colour)
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, move)
   }
 
@@ -1550,6 +1597,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),
+      ui.on('doze', () => this.doze()),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
         // A quick flick that lets go before the next frame still takes one step.

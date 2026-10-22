@@ -15,7 +15,18 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
-import { BUZZING_AT, CAFFEINE_OVERDOSE, OVERDOSE_AT, caffeine } from './intoxication'
+import {
+  BEER_DIZZY,
+  BEER_TIPSY,
+  BUZZING_AT,
+  CAFFEINE_OVERDOSE,
+  DIZZY_AT,
+  DOZE_AT,
+  OVERDOSE_AT,
+  TIPSY_AT,
+  beer,
+  caffeine,
+} from './intoxication'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -294,9 +305,35 @@ export function HouseShell({ data, children }: Props) {
     [bridge],
   )
 
+  // Tipsy at three beers, dizzy at five; at seven the guest dozes off and wakes on the sofa.
+  const drinkBeer = useCallback(() => {
+    updateStats((stats) => stats.beers++)
+    const lately = beer.add()
+    if (lately >= DOZE_AT) {
+      setDialogue(null)
+      updateStats((stats) => stats.dozes++)
+      // Sleeping it off clears everything, and it's morning when they wake.
+      beer.clear()
+      caffeine.clear()
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      setNight(false)
+      bridge.ui.emit('doze')
+      return
+    }
+    if (lately >= TIPSY_AT) {
+      bridge.ui.emit('effect', { source: 'beer', effect: lately >= DIZZY_AT ? BEER_DIZZY : BEER_TIPSY })
+    }
+    setDialogue('beer')
+  }, [bridge])
+
+  useEffect(() => bridge.game.on('dozed', () => setDialogue('sofa-wake')), [bridge])
+
   // Built when it opens, so a count running out mid-chat doesn't change the lines.
   const shownDialogue = useMemo(
-    () => dialogue && buildDialogue(dialogue, data, { night, buzzing: caffeine.count() >= BUZZING_AT }),
+    () =>
+      dialogue &&
+      buildDialogue(dialogue, data, { night, buzzing: caffeine.count() >= BUZZING_AT, beers: beer.count() }),
     [dialogue, data, night],
   )
 
@@ -342,6 +379,9 @@ export function HouseShell({ data, children }: Props) {
       case 'night':
         setDialogue(null)
         changeNight(choice.on)
+        break
+      case 'beer':
+        drinkBeer()
         break
       case 'close':
         setDialogue(null)

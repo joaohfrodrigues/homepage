@@ -2,7 +2,7 @@ import type { DialogueId, PanelId } from '@/game/bridge'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
-export type DialogueKey = DialogueId | 'joao-contact' | 'caffeine-overdose'
+export type DialogueKey = DialogueId | 'joao-contact' | 'caffeine-overdose' | 'beer' | 'sofa-wake'
 
 export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
@@ -10,6 +10,7 @@ export type DialogueChoice =
   | { label: string; kind: 'next'; id: DialogueKey }
   | { label: string; kind: 'panel'; panel: PanelId }
   | { label: string; kind: 'night'; on: boolean }
+  | { label: string; kind: 'beer' }
   | { label: string; kind: 'close' }
 
 export interface Dialogue {
@@ -21,7 +22,7 @@ export interface Dialogue {
 export function buildDialogue(
   id: DialogueKey,
   data: HouseData,
-  house: { night: boolean; buzzing?: boolean },
+  house: { night: boolean; buzzing?: boolean; beers?: number },
 ): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
@@ -58,6 +59,40 @@ export function buildDialogue(
         speaker: 'João',
         lines: ['Whoa. You’re vibrating.', 'Sit down, have a glass of water. The machine’s closed for a bit.'],
         choices: [{ label: 'I feel GREAT', kind: 'close' }],
+      }
+    case 'fridge':
+      return {
+        lines: ['Magnets from João’s trips all over the door. Inside: leftovers, oat milk and a row of Super Bock.'],
+        choices: [
+          { label: 'Look at the magnets', kind: 'panel', panel: 'geoguess' },
+          { label: 'Grab a Super Bock', kind: 'beer' },
+          { label: 'Close the door', kind: 'close' },
+        ],
+      }
+    case 'beer': {
+      const beers = house.beers ?? 1
+      if (beers >= 5) {
+        return {
+          lines: ['The floor tilts a little. Was it always like that?'],
+          choices: [{ label: 'Totally fine', kind: 'close' }],
+        }
+      }
+      if (beers >= 3) {
+        return { speaker: 'João', lines: ['Saúde!'], choices: [{ label: 'Saúde!', kind: 'close' }] }
+      }
+      return { lines: ['Ice cold. Very refreshing.'], choices: [{ label: 'Ahh', kind: 'close' }] }
+    }
+    case 'sofa-wake':
+      return {
+        speaker: 'João',
+        lines: [
+          'Morning. You had seven.',
+          'There’s a glass of water by the sofa, and I put the kettle on. Coffee’s ready when you are.',
+        ],
+        choices: [
+          { label: 'Water first, thanks', kind: 'close' },
+          { label: 'Coffee, please', kind: 'panel', panel: 'bica' },
+        ],
       }
     case 'letterbox':
       return {

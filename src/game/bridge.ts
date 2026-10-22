@@ -21,9 +21,10 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
+  | 'fridge'
 
 /** What a temporary effect on the guest comes from; each source has at most one going. */
-export type EffectSource = 'caffeine'
+export type EffectSource = 'caffeine' | 'beer'
 
 /**
  * A temporary change to how the guest walks and how the house looks, e.g. after
@@ -44,6 +45,8 @@ export interface PlayerEffect {
   drift?: number
   /** Colour washed over the guest. */
   tint?: number
+  /** How strongly the edges of the view darken and blur, 0–1. Kept under reduced motion. */
+  vignette?: number
   /** How long it lasts before wearing off on its own. */
   ms: number
 }
@@ -68,6 +71,8 @@ interface GameEvents {
   arrived: VisitTarget
   /** The player took a step (counted for the guestbook). */
   step: undefined
+  /** The guest came to on the sofa after a `doze`. */
+  dozed: undefined
 }
 
 interface UiEvents {
@@ -89,6 +94,8 @@ interface UiEvents {
   outfit: Outfit
   /** Start (or, with null, end) an effect on the guest. */
   effect: { source: EffectSource; effect: PlayerEffect | null }
+  /** Pass out: fade to black and wake on the living-room sofa in the morning; answered with `dozed`. */
+  doze: undefined
 }
 
 type Listener<T> = (payload: T) => void

@@ -56,7 +56,8 @@ site's sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV) and João himself.
-- **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
+- **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
+    grab a beer).
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
@@ -78,10 +79,12 @@ plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
-or until a nap. Those counts live in memory for the session only
-(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats, and the
-temporary effects (`effect` on the bridge) drop shake, jitter, sway and drift for a tint under
-`prefers-reduced-motion`.
+or until a nap. Beers from the fridge make you tipsy at three (the view sways) and dizzy at five
+(a wider sway, steps with the keys that wander, darker edges); the seventh fades to black and you
+wake on the living-room sofa in the morning, with João, water and coffee. Those counts live in
+memory for the session only (`src/components/house/intoxication.ts`), apart from the guestbook's
+lifetime stats, and the temporary effects (`effect` on the bridge) drop shake, jitter, sway and
+drift for a tint under `prefers-reduced-motion`.
 
 Where things live:
 
