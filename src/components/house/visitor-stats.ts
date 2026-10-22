@@ -1,4 +1,5 @@
 import { METRES_PER_TILE, type RoomId } from '@/game/layout'
+import { ZENO_EVENTS, type ZenoEventId } from '@/game/zeno-events'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
@@ -25,6 +26,8 @@ export interface VisitorStats {
   scoops: number
   naps: number
   outfits: number
+  /** Zeno's rare moments seen so far, each counted once. */
+  zenoEvents: ZenoEventId[]
 }
 
 function emptyStats(): VisitorStats {
@@ -47,6 +50,7 @@ function emptyStats(): VisitorStats {
     scoops: 0,
     naps: 0,
     outfits: 0,
+    zenoEvents: [],
   }
 }
 
@@ -136,6 +140,8 @@ export interface Achievement {
   /** How to earn it, shown while it's still locked. */
   hint: string
   earned: (stats: VisitorStats) => boolean
+  /** Kept a mystery in the guestbook until it's earned. */
+  secret?: boolean
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -152,4 +158,11 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
+  {
+    id: 'cat-behaviourist',
+    title: 'Cat behaviourist',
+    hint: 'Witness all of Zeno’s quirks.',
+    secret: true,
+    earned: (s) => ZENO_EVENTS.every((id) => s.zenoEvents.includes(id)),
+  },
 ]

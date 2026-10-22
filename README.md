@@ -61,6 +61,13 @@ site's sections:
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
 
+Zeno, the tuxedo cat, roams the flat: he naps in his favourite spots, bats his toy mouse around and
+visits his litter box, which visitors can scoop. Every few minutes he has a rarer moment: he knocks
+a mug off a shelf, falls asleep on the study keyboard (the desk then says so), meows by the fridge,
+or by a litter box left dirty too long, and now and then follows the visitor after a pet. Seeing all
+of them earns a secret guestbook sticker. The odds are tuned in `src/game/zeno-events.ts`, and
+animations stay still under `prefers-reduced-motion`.
+
 A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
@@ -80,7 +87,7 @@ Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
-    React.
+    React; `src/game/zeno-events.ts` - the cat's rare moments and their odds.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
     and dialogue.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's

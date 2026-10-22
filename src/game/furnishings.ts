@@ -33,6 +33,12 @@ export interface Furnishings {
     toy: Point
     /** His litter box, visited every few minutes. */
     litterBox: Point
+    /** Where he stands to swipe something off a shelf, and the shelf it falls from. */
+    shelves: { stand: Point; shelf: Point }[]
+    /** The study keyboard, his favourite place for a nap (also a perch). */
+    keyboard: Point
+    /** In front of the fridge, where he waits to be fed. */
+    fridge: Point
   }
 }
 
@@ -253,6 +259,7 @@ export function furnishHouse(): Furnishings {
         ...[4, 5, 6, 7].map((x) => ({ x, y: 6 })), // the sofa seat
         ...[14, 15].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 5, y: 17 }, // the litter box
+        { x: 20, y: 11 }, // the study keyboard
       ],
       spots: [
         { x: 5, y: 6 }, // sofa
@@ -264,6 +271,13 @@ export function furnishHouse(): Furnishings {
       ],
       toy: { x: 7, y: 8 },
       litterBox: { x: 5, y: 17 },
+      shelves: [
+        { stand: { x: 20, y: 14 }, shelf: { x: 21, y: 14 } }, // the study bookshelf
+        { stand: { x: 8, y: 13 }, shelf: { x: 7, y: 13 } }, // the hall console
+        { stand: { x: 13, y: 4 }, shelf: { x: 13, y: 3 } }, // the bedside table
+      ],
+      keyboard: { x: 20, y: 11 },
+      fridge: { x: 3, y: 14 },
     },
   }
 }

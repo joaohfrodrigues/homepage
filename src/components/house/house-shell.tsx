@@ -208,6 +208,11 @@ export function HouseShell({ data, children }: Props) {
         else if (action.id === 'zeno') updateStats((stats) => stats.pets++)
         else if (action.id === 'litterbox-dirty') updateStats((stats) => stats.scoops++)
       }),
+      bridge.game.on('zenoEvent', (id) =>
+        updateStats((stats) => {
+          if (!stats.zenoEvents.includes(id)) stats.zenoEvents.push(id)
+        }),
+      ),
     ]
     window.addEventListener('pagehide', flushStats)
     return () => {

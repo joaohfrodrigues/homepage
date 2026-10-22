@@ -29,6 +29,7 @@ import {
   CAT_FRAMES,
   drawCat,
   drawHeart,
+  drawMug,
   drawPoop,
   drawStink,
   drawFocusArrow,
@@ -62,6 +63,17 @@ import {
   type CharacterName,
   type Outfit,
 } from './characters'
+import {
+  ZENO_EVENT_GAP_MS,
+  ZENO_FIRST_EVENT_MS,
+  ZENO_FOLLOW_CHANCE,
+  ZENO_FOLLOW_MS,
+  ZENO_LITTER_NAG_MS,
+  ZENO_NAP_MS,
+  pickZenoEvent,
+  type ZenoEventId,
+  type ZenoRandomEvent,
+} from './zeno-events'
 import type { Trip } from '@/lib/photos'
 
 export interface HouseSceneConfig {
@@ -159,6 +171,14 @@ export class HouseScene extends Phaser.Scene {
   /** Busy in his litter box: not to be petted. */
   private zenoInBox = false
   private litterDirty = false
+  private litterDirtySince = 0
+  /** His rare moments (zeno-events.ts): when the next is due, what he does on arrival, and its timers. */
+  private zenoNextEventAt = 0
+  private zenoEventArrive: (() => void) | null = null
+  private zenoEventTimers: Phaser.Time.TimerEvent[] = []
+  /** Napping on the study keyboard: the desk tells the visitor instead of opening. */
+  private zenoAsleep = false
+  private zenoFollowUntil = 0
   private stink!: Phaser.GameObjects.Image
   private poop!: Phaser.GameObjects.Image
   private chairs = new Set<string>()
@@ -243,6 +263,7 @@ export class HouseScene extends Phaser.Scene {
     // His first visit to the litter box comes within a minute or so, so visitors get to see it.
     this.zenoNextPlayAt = this.time.now + between([30_000, 60_000])
     this.zenoNextLitterAt = this.time.now + between([40_000, 80_000])
+    this.zenoNextEventAt = this.time.now + between(ZENO_FIRST_EVENT_MS)
     const box = zeno.litterBox
     this.stink = this.add
       .image(box.x * TILE + 4, box.y * TILE - 2, 'litter-stink')
@@ -487,6 +508,9 @@ export class HouseScene extends Phaser.Scene {
     const heart = this.textures.createCanvas('zeno-heart', 7, 6)!
     drawHeart(heart.getContext())
     heart.refresh()
+    const mug = this.textures.createCanvas('zeno-mug', 6, 6)!
+    drawMug(mug.getContext())
+    mug.refresh()
   }
 
   private buildCollision() {
@@ -977,6 +1001,7 @@ export class HouseScene extends Phaser.Scene {
       } else {
         this.zenoPath = []
         this.zenoPlaying = false
+        this.zenoEventArrive = null
         if (this.zenoLitterTrip) {
           this.zenoLitterTrip = false
           this.zenoNextLitterAt = this.time.now + 5000
@@ -986,7 +1011,13 @@ export class HouseScene extends Phaser.Scene {
     }
 
     const now = this.time.now
+    if (now < this.zenoFollowUntil && this.followGuest()) return
     if (now >= this.zenoNextLitterAt && this.goToLitterBox()) return
+    if (now >= this.zenoNextEventAt) {
+      // If he can't get there right now, he'll think about it again shortly.
+      this.zenoNextEventAt = now + 10_000
+      if (this.startZenoEvent(pickZenoEvent(Math.random, this.litterNeglected()))) return
+    }
 
     // A cat's afternoon: mostly ambling about in short, wandering bursts, with
     // plenty of stopping to look around, the odd sit-down, a trip to a favourite
@@ -1048,6 +1079,7 @@ export class HouseScene extends Phaser.Scene {
     this.updateHint()
     this.time.delayedCall(between([3500, 6000]), () => {
       this.zenoInBox = false
+      if (!this.litterDirty) this.litterDirtySince = this.time.now
       this.litterDirty = true
       this.poop.setVisible(true)
       this.stink.setVisible(true)
@@ -1073,7 +1105,11 @@ export class HouseScene extends Phaser.Scene {
     if (target.x === this.toyTile.x && target.y === this.toyTile.y) this.batToy(direction)
     this.moveWalker(zeno, target, ZENO_STEP_MS, () => {
       this.setIdle(zeno)
-      if (this.zenoLitterTrip && this.zenoPath.length === 0) {
+      if (this.zenoEventArrive && this.zenoPath.length === 0) {
+        const arrive = this.zenoEventArrive
+        this.zenoEventArrive = null
+        arrive()
+      } else if (this.zenoLitterTrip && this.zenoPath.length === 0) {
         this.enterLitterBox()
       } else if (this.zenoOnTrip && this.zenoPath.length === 0) {
         this.zenoOnTrip = false
@@ -1164,6 +1200,7 @@ export class HouseScene extends Phaser.Scene {
     this.zenoPath = []
     this.zenoOnTrip = false
     this.zenoPlaying = false
+    this.cancelZenoEvent()
     if (this.zenoLitterTrip) {
       this.zenoLitterTrip = false
       this.zenoNextLitterAt = this.time.now + 15_000
@@ -1171,23 +1208,205 @@ export class HouseScene extends Phaser.Scene {
     if (Math.abs(this.zeno.tile.x - this.player.tile.x) + Math.abs(this.zeno.tile.y - this.player.tile.y) === 1) {
       this.zeno.facing = opposite[this.player.facing]
     }
-    this.restZeno(6000, 10000, true)
+    // Now and then a pet wins a shadow for a while.
+    this.zenoFollowUntil = 0
+    const follows = Math.random() < ZENO_FOLLOW_CHANCE
+    this.restZeno(follows ? 1500 : 6000, follows ? 2500 : 10000, true)
+    if (follows) this.startFollowing()
     const heart = this.add
       .image(this.zeno.sprite.x, this.zeno.sprite.y - TILE, 'zeno-heart')
       .setOrigin(0.5, 1)
       .setDepth(33)
+    this.floatAway(heart)
+  }
+
+  /** Drifts something up and fades it out (under reduced motion it just shows for a moment). */
+  private floatAway(target: Phaser.GameObjects.Image | Phaser.GameObjects.Text, duration = 1100) {
     if (this.reducedMotion) {
-      this.time.delayedCall(900, () => heart.destroy())
+      this.time.delayedCall(duration, () => target.destroy())
       return
     }
     this.tweens.add({
-      targets: heart,
-      y: heart.y - 10,
+      targets: target,
+      y: target.y - 10,
       alpha: 0,
-      duration: 1100,
+      duration,
       ease: 'Sine.easeOut',
-      onComplete: () => heart.destroy(),
+      onComplete: () => target.destroy(),
     })
+  }
+
+  /** A word floating up from Zeno or the floor: a meow, a snore, a crash. */
+  private floatText(text: string, x: number, y: number, color = '#f4ecd8') {
+    const label = this.add
+      .text(Math.round(x), Math.round(y), text, this.textStyle(color, '#2a2233'))
+      .setOrigin(0.5, 1)
+      .setDepth(34)
+    this.floatAway(label)
+  }
+
+  // -------------------------------------------------------------------------
+  // Zeno's rare moments
+
+  /** Starts one of his moments now. Exposed for tests (the game is on window.__house in dev). */
+  forceZenoEvent(id: ZenoEventId): boolean {
+    if (this.zenoInBox) return false
+    this.cancelZenoEvent()
+    this.zenoPath = []
+    this.zenoLitterTrip = false
+    this.zenoRestUntil = 0
+    this.zenoFollowUntil = 0
+    if (id !== 'follow') return this.startZenoEvent(id)
+    this.startFollowing()
+    return true
+  }
+
+  /** Sets off for a moment's spot; `arrive` runs once he gets there. False if he can't. */
+  private startZenoEvent(id: ZenoRandomEvent): boolean {
+    const zeno = this.furnishings.zeno
+    const pathTo = (goals: Point[]) => this.findPath(goals, this.zeno.tile, (x, y) => this.zenoCanWalk(x, y))
+    let started = false
+    if (id === 'crash') {
+      // The shelf nearest the visitor, so it's more likely to happen in front of them.
+      const guest = this.player.tile
+      const away = (p: Point) => Math.abs(p.x - guest.x) + Math.abs(p.y - guest.y)
+      const shelf = zeno.shelves
+        .map((s) => ({ ...s, path: pathTo([s.stand]) }))
+        .filter((s) => s.path)
+        .sort((a, b) => away(a.stand) - away(b.stand))[0]
+      started = shelf !== undefined && this.sendZeno(shelf.path, () => this.knockOff(shelf.shelf))
+    } else if (id === 'keyboard') {
+      started = this.sendZeno(pathTo([zeno.keyboard]), () => this.napOnKeyboard())
+    } else if (this.litterNeglected()) {
+      const beside = this.neighbours([zeno.litterBox]).filter((t) => !this.zenoPerches.has(key(t)))
+      started = this.sendZeno(pathTo(beside), () => this.meowAt(zeno.litterBox))
+    } else {
+      started = this.sendZeno(pathTo([zeno.fridge]), () => this.meowAt({ x: zeno.fridge.x, y: zeno.fridge.y - 1 }))
+    }
+    if (started) this.zenoNextEventAt = this.time.now + between(ZENO_EVENT_GAP_MS)
+    return started
+  }
+
+  private sendZeno(path: Point[] | null, arrive: () => void): boolean {
+    if (!path) return false
+    this.zenoPath = path
+    this.zenoOnTrip = false
+    this.zenoPlaying = false
+    if (path.length === 0) arrive()
+    else this.zenoEventArrive = arrive
+    return true
+  }
+
+  /** Drops whatever moment he was in the middle of (a pet, a blocked path, a nap ending). */
+  private cancelZenoEvent() {
+    this.zenoEventArrive = null
+    this.zenoEventTimers.forEach((timer) => timer.remove())
+    this.zenoEventTimers = []
+    if (this.zenoAsleep) {
+      this.zenoAsleep = false
+      this.updateHint()
+    }
+  }
+
+  private litterNeglected(): boolean {
+    return this.litterDirty && this.time.now - this.litterDirtySince > ZENO_LITTER_NAG_MS
+  }
+
+  /** Tells the guestbook about one of his moments, if it happened on screen. */
+  private witnessZeno(id: ZenoEventId, at: Point) {
+    if (!this.cameras.main.worldView.contains(at.x * TILE + TILE / 2, at.y * TILE + TILE / 2)) return
+    this.cfg.bridge.game.emit('zenoEvent', id)
+  }
+
+  /** A paw on the shelf, a nudge, and the mug hits the floor. Then off he goes, all innocence. */
+  private knockOff(shelf: Point) {
+    const cat = this.zeno
+    this.face(cat, this.directionToward(cat.tile, [shelf]))
+    this.zenoRestUntil = Infinity
+    this.zenoEventTimers.push(
+      this.time.delayedCall(800, () => {
+        const tile = { ...cat.tile }
+        // It lands at his feet, on the shelf's side (or just beside him, under a shelf ahead).
+        const side = Math.sign(shelf.x - tile.x) || 1
+        const land = { x: tile.x * TILE + TILE / 2 + side * 5, y: (tile.y + 1) * TILE - 1 }
+        const mug = this.add
+          .image(shelf.x * TILE + TILE / 2, shelf.y * TILE + 8, 'zeno-mug')
+          .setOrigin(0.5, 1)
+          .setDepth(33)
+        const landed = () => {
+          mug.setPosition(land.x, land.y).setDepth(10 + tile.y / 100 - 0.005)
+          this.floatText('CRASH!', land.x, land.y - 8, '#f2a43a')
+          this.witnessZeno('crash', tile)
+          this.time.delayedCall(30_000, () => mug.destroy())
+          // Petted mid-swipe: he's already moved on.
+          if (this.zenoRestUntil !== Infinity) return
+          this.zenoRestUntil = 0
+          if (!this.goToSpot()) this.restZeno(500, 1500, false)
+        }
+        if (this.reducedMotion) landed()
+        else this.tweens.add({ targets: mug, x: land.x, y: land.y, duration: 420, ease: 'Bounce.easeOut', onComplete: landed })
+      }),
+    )
+  }
+
+  /** Curls up on the study keyboard for a while, snoring gently. */
+  private napOnKeyboard() {
+    this.zenoAsleep = true
+    this.zeno.facing = 'down'
+    this.restZeno(0, 0, true)
+    this.zenoRestUntil = Infinity
+    this.witnessZeno('keyboard', this.zeno.tile)
+    this.updateHint()
+    const snore = () => this.floatText('z', this.zeno.sprite.x + 4, this.zeno.sprite.y - TILE + 4)
+    snore()
+    this.zenoEventTimers.push(
+      this.time.addEvent({ delay: 1600, loop: true, callback: snore }),
+      this.time.delayedCall(between(ZENO_NAP_MS), () => {
+        this.cancelZenoEvent()
+        this.zenoRestUntil = 0
+      }),
+    )
+  }
+
+  /** Sits facing the fridge (or the neglected litter box) and makes his case, loudly. */
+  private meowAt(toward: Point) {
+    this.face(this.zeno, this.directionToward(this.zeno.tile, [toward]))
+    this.zenoRestUntil = Infinity
+    let left = 4
+    const meow = () => {
+      this.floatText('Meow!', this.zeno.sprite.x, this.zeno.sprite.y - TILE)
+      this.witnessZeno('meow', this.zeno.tile)
+      if (--left > 0) return
+      this.cancelZenoEvent()
+      this.restZeno(2000, 4000, true)
+    }
+    meow()
+    this.zenoEventTimers.push(this.time.addEvent({ delay: 1800, loop: true, callback: meow }))
+  }
+
+  private startFollowing() {
+    this.zenoFollowUntil = this.time.now + between(ZENO_FOLLOW_MS)
+    this.witnessZeno('follow', this.zeno.tile)
+  }
+
+  /**
+   * Trots after the visitor, settling a step or two behind them, but never in a
+   * doorway, where he'd be in the way. False once they're out of reach.
+   */
+  private followGuest(): boolean {
+    const zeno = this.zeno
+    const guest = this.player.tile
+    const distance = Math.abs(zeno.tile.x - guest.x) + Math.abs(zeno.tile.y - guest.y)
+    if (distance <= 2 && cellAt(zeno.tile.x, zeno.tile.y) === '.') {
+      this.face(zeno, this.directionToward(zeno.tile, [guest]))
+      this.restZeno(300, 800, false)
+      return true
+    }
+    const path = this.findPath(this.neighbours([guest]), zeno.tile, (x, y) => this.zenoCanWalk(x, y))
+    const direction = path?.[0] && this.directionTo(zeno.tile, path[0])
+    if (!direction) return false
+    this.stepZeno(direction)
+    return true
   }
 
   // -------------------------------------------------------------------------
@@ -1195,7 +1414,7 @@ export class HouseScene extends Phaser.Scene {
 
   private targetAt(tile: Point): Target | null {
     if (this.npc.tile.x === tile.x && this.npc.tile.y === tile.y) return { kind: 'npc' }
-    if (!this.zenoInBox && this.zeno.tile.x === tile.x && this.zeno.tile.y === tile.y) return { kind: 'zeno' }
+    if (!this.zenoInBox && !this.zenoAsleep && this.zeno.tile.x === tile.x && this.zeno.tile.y === tile.y) return { kind: 'zeno' }
     const object = this.objectsByTile.get(key(tile))
     return object ? { kind: 'object', object } : null
   }
@@ -1220,6 +1439,7 @@ export class HouseScene extends Phaser.Scene {
   private targetLabel(target: Target): string {
     if (target.kind === 'npc') return 'Talk to João'
     if (target.kind === 'zeno') return 'Pet Zeno'
+    if (this.zenoAsleep && target.object.id === 'home-server') return 'Desk — Zeno’s asleep on the keyboard'
     return target.object.label
   }
 
@@ -1250,6 +1470,9 @@ export class HouseScene extends Phaser.Scene {
       this.litterDirty = false
       this.poop.setVisible(false)
       this.stink.setVisible(false)
+    } else if (target.object.id === 'home-server' && this.zenoAsleep) {
+      action = { type: 'dialogue', id: 'desk-zeno' }
+      this.witnessZeno('keyboard', this.zeno.tile)
     } else {
       action = target.object.action
     }
