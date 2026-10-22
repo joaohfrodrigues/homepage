@@ -20,6 +20,7 @@ import {
 import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
+import { WeatherLayer } from './weather-layer'
 import {
   LIGHT_SOURCES,
   MAP_WALL,
@@ -167,6 +168,7 @@ export class HouseScene extends Phaser.Scene {
   private reducedMotion = false
   private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
   private nightOverlay!: Phaser.GameObjects.Rectangle
+  private weather!: WeatherLayer
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -213,6 +215,7 @@ export class HouseScene extends Phaser.Scene {
     this.addAmbience()
 
     this.bakeCues()
+    this.weather = new WeatherLayer(this, this.reducedMotion)
 
     const start = getRoom(this.cfg.startRoom).spawn
     this.player = this.addWalker('guest', start, this.spawnFacing(this.cfg.startRoom))
@@ -1486,6 +1489,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('teleport', (room) => this.teleport(room)),
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
+      ui.on('weather', (weather) => this.weather.set(weather)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {

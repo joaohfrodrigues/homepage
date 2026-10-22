@@ -1,5 +1,6 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
 import type { HouseData } from '@/lib/house'
+import type { Weather } from '@/lib/weather'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
 export type DialogueKey = DialogueId | 'joao-contact'
@@ -18,7 +19,7 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
-export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean }): Dialogue {
+export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean; weather: Weather }): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
@@ -114,20 +115,49 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         choices: [{ label: 'Leave it be', kind: 'close' }],
       }
     case 'balcony':
-      return house.night
-        ? {
-            lines: [
-              'The street lamps are on, and the river is a dark ribbon past the rooftops.',
-              'Somewhere downhill, someone is singing fado.',
-            ],
-            choices: [{ label: 'Listen a while', kind: 'close' }],
-          }
-        : {
-            lines: [
-              'Terracotta rooftops tumble down towards the Tejo.',
-              'A tram squeals round the corner below, and a neighbour’s washing flaps in the breeze.',
-            ],
-            choices: [{ label: 'Back inside', kind: 'close' }],
-          }
+      return {
+        lines: balconyView(house.night, house.weather),
+        choices: [{ label: house.night ? 'Listen a while' : 'Back inside', kind: 'close' }],
+      }
+  }
+}
+
+/** The view from the balcony, by time of day and Lisbon's actual sky. */
+function balconyView(night: boolean, weather: Weather): string[] {
+  switch (weather) {
+    case 'clear':
+      return night
+        ? [
+            'The street lamps are on, and the river is a dark ribbon past the rooftops.',
+            'Somewhere downhill, someone is singing fado.',
+          ]
+        : [
+            'Terracotta rooftops tumble down towards the Tejo.',
+            'A tram squeals round the corner below, and a neighbour’s washing flaps in the breeze.',
+          ]
+    case 'cloudy':
+      return night
+        ? [
+            'No stars tonight: the clouds sit low over the rooftops, orange with the city’s light.',
+            'Somewhere downhill, someone is singing fado.',
+          ]
+        : [
+            'A grey lid of cloud sits over the city, and the Tejo has gone the colour of pewter.',
+            'Across the street, a neighbour takes the washing in, just in case.',
+          ]
+    case 'rain':
+      return night
+        ? [
+            'Raining in Lisbon. Again.',
+            'The street lamps smear gold across the wet cobbles, and the fado downhill has moved indoors.',
+          ]
+        : ['Raining in Lisbon. Again.', 'The rooftops shine, and the tram below hisses through the puddles.']
+    case 'storm':
+      return [
+        'Thunder rolls in over the Tejo, and the rain comes down sideways.',
+        night
+          ? 'Each flash lights up the whole city for a heartbeat.'
+          : 'The tram below gives up and waits it out with its doors shut.',
+      ]
   }
 }

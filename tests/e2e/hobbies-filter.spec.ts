@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 // Gear/event content here (Hoka, Roland, Sony) is stable, manually maintained
 // yaml — safe to assert on by name. Watch items are Plex-synced and rotate,
