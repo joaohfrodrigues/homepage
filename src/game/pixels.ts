@@ -1251,6 +1251,18 @@ export function drawHeart(ctx: Ctx) {
   })
 }
 
+/** A little mug for Zeno to swipe off a shelf: 6x6, handle on the right. */
+export function drawMug(ctx: Ctx) {
+  const rows = ['kkkk..', 'kwwkkk', 'kwrk.k', 'kwrkkk', 'kwwk..', '.kk...']
+  rows.forEach((row, y) => {
+    for (let x = 0; x < row.length; x++) {
+      if (row[x] === 'k') rect(ctx, x, y, 1, 1, PALETTE.ink)
+      if (row[x] === 'w') rect(ctx, x, y, 1, 1, '#f4f1ea')
+      if (row[x] === 'r') rect(ctx, x, y, 1, 1, '#c8553d')
+    }
+  })
+}
+
 /** Two clumps in the litter sand, drawn over the tray until the box is cleaned. */
 export function drawPoop(ctx: Ctx) {
   for (const [x, y] of [

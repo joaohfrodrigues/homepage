@@ -213,6 +213,7 @@ export function GuestbookPanel({ onClose }: Props) {
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {ACHIEVEMENTS.map((achievement) => {
             const got = earned.includes(achievement)
+            const hidden = achievement.secret && !got
             return (
               <li
                 key={achievement.id}
@@ -226,10 +227,10 @@ export function GuestbookPanel({ onClose }: Props) {
                 </span>
                 <span>
                   <span className="font-pixel block text-xs">
-                    {achievement.title}
+                    {hidden ? 'Secret sticker' : achievement.title}
                     <span className="sr-only">{got ? ' (earned)' : ' (locked)'}</span>
                   </span>
-                  <span className="block text-xs">{achievement.hint}</span>
+                  <span className="block text-xs">{hidden ? 'Keep an eye on the cat.' : achievement.hint}</span>
                 </span>
               </li>
             )

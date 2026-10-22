@@ -1,4 +1,5 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
+import { getTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -107,6 +108,17 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
       return {
         lines: ['You scoop out Zeno’s litter box. He watches from a safe distance, faintly offended.'],
         choices: [{ label: 'All fresh again', kind: 'close' }],
+      }
+    case 'desk-zeno':
+      return {
+        lines: [
+          'Zeno is fast asleep on the keyboard, one paw on the space bar.',
+          'The terminal fills with a slow, steady stream of blank lines.',
+        ],
+        choices: [
+          { label: 'Peek at the home server →', kind: 'link', href: getTopic('home-server').href },
+          { label: 'Let him sleep', kind: 'close' },
+        ],
       }
     case 'litterbox-clean':
       return {

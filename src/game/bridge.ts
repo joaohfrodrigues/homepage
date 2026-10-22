@@ -1,5 +1,6 @@
 import type { Direction, RoomId } from './layout'
 import type { Outfit } from './characters'
+import type { ZenoEventId } from './zeno-events'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
 export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
@@ -21,6 +22,7 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
+  | 'desk-zeno'
 
 /** Something the directory can take the guest to: an interactable's id, or João himself. */
 export type VisitTarget = string
@@ -42,6 +44,8 @@ interface GameEvents {
   arrived: VisitTarget
   /** The player took a step (counted for the guestbook). */
   step: undefined
+  /** One of Zeno's rare moments happened where the visitor could see it. */
+  zenoEvent: ZenoEventId
 }
 
 interface UiEvents {
