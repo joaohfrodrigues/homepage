@@ -15,6 +15,7 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { ScoresPanel, loadChalkboard } from './scores-panel'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -220,6 +221,20 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
+
+  // The kitchen chalkboard's top scores: fetched once the house is up, so a
+  // slow or failed fetch never holds it back, and checked again whenever a
+  // panel closes in case a score went in (otherwise it comes from a short cache).
+  useEffect(() => {
+    if (!ready || panel !== null) return
+    let cancelled = false
+    loadChalkboard().then((pages) => {
+      if (!cancelled) bridge.ui.emit('chalkboard', pages)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [bridge, ready, panel])
 
   // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
@@ -432,6 +447,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+      {panel === 'chalkboard' && <ScoresPanel onClose={() => setPanel(null)} />}
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>

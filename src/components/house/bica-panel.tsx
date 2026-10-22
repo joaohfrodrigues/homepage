@@ -40,6 +40,8 @@ export function BicaPanel({ onClose }: Props) {
   const [streak, setStreak] = useState(0)
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
   const [best, setBest] = useState(() => readStats().bicaBestStreak)
+  // The best when the panel opened: beating it is what earns the offer to submit.
+  const [startBest] = useState(best)
   const frame = useRef<number | null>(null)
   const angle = useRef(-Math.PI / 2)
   const actionRef = useRef<HTMLButtonElement>(null)
@@ -87,7 +89,13 @@ export function BicaPanel({ onClose }: Props) {
   const needle = (bar / MAX_BAR) * 100
 
   return (
-    <PanelWindow eyebrow="Kitchen · Coffee machine" title="Pull a bica" width="narrow" onClose={onClose}>
+    <PanelWindow
+      eyebrow="Kitchen · Coffee machine"
+      title="Pull a bica"
+      width="narrow"
+      onClose={onClose}
+      board={{ id: 'bica', best, offer: phase === 'done' && best > startBest }}
+    >
       <p className="mb-4 text-sm text-[#6d6359]">
         A good bica pulls at about 9 bar. Start the pull, then stop the needle in the gold zone.
       </p>

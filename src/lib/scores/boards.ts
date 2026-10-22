@@ -10,6 +10,10 @@ export type ScoreMeta = Record<string, number | boolean>
 export interface Board {
   id: string
   title: string
+  /** A few letters for tight spots, like the kitchen chalkboard. */
+  short: string
+  /** What the score counts, after the number in a list ("4200 pts"). */
+  unit: string
   /** Lowest and highest score accepted, inclusive. Scores are whole numbers. */
   min: number
   max: number
@@ -24,14 +28,16 @@ export interface Board {
 
 export const BOARDS = {
   // Five photos at up to 1000 points each.
-  geoguess: { id: 'geoguess', title: 'Fridge magnets', min: 0, max: 5000, order: 'score' },
+  geoguess: { id: 'geoguess', title: 'Fridge magnets', short: 'Magnets', unit: 'pts', min: 0, max: 5000, order: 'score' },
   // The needle tops out at its fastest after eight perfect pulls; past 100 in
   // a row is a script, not a barista.
-  bica: { id: 'bica', title: 'Bica streak', min: 1, max: 100, order: 'score' },
+  bica: { id: 'bica', title: 'Bica streak', short: 'Bica', unit: 'in a row', min: 1, max: 100, order: 'score' },
   // Score is the stickers earned when signing; `total` is how many existed then.
   'hall-of-fame': {
     id: 'hall-of-fame',
     title: 'Hall of Fame',
+    short: 'Fame',
+    unit: 'stickers',
     min: 1,
     max: 100,
     order: 'recent',

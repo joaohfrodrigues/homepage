@@ -390,6 +390,7 @@ export type PropName =
   | 'stove'
   | 'sink'
   | 'fridge'
+  | 'chalkboard'
   | 'kcounter'
   | 'khob'
   | 'litterbox'
@@ -430,6 +431,7 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   stove: { w: 16, h: 32 },
   sink: { w: 16, h: 32 },
   fridge: { w: 16, h: 32 },
+  chalkboard: { w: 32, h: 32 }, // a café A-frame board, 1m tall
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
   khob: { w: 16, h: 16 },
   litterbox: { w: 16, h: 16 },
@@ -446,6 +448,8 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
 
 /** Where the scene paints the trip map inside the wall map's frame, in prop pixels. */
 export const MAP_WALL = { x: 3, y: 4, w: 42, h: 24 }
+/** The slate of the kitchen chalkboard, where the scene chalks up the top scores, in prop pixels. */
+export const CHALK_SLATE = { x: 4, y: 2, w: 24, h: 21 }
 /** Status LEDs on the Pi's disk enclosure, blinked by the scene. */
 export const DESK_LEDS = [
   { x: 43, y: 11 },
@@ -951,6 +955,24 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       }
       r(5, 13, 5, 4, PALETTE.paper)
       r(0, 31, 16, 1, PALETTE.shadow)
+      break
+    }
+    case 'chalkboard': {
+      // The A-frame menu board every pastelaria puts out, here with the house's top scores.
+      r(2, 0, 28, 27, PALETTE.ink)
+      r(3, 1, 26, 25, PALETTE.wood)
+      r(3, 1, 26, 1, PALETTE.woodHighlight)
+      r(CHALK_SLATE.x, CHALK_SLATE.y, CHALK_SLATE.w, CHALK_SLATE.h, '#2f4a3a')
+      // Old chalk that never quite wiped off, along the bottom edge.
+      r(6, 21, 5, 1, '#4b6656')
+      // The ledge with a stub of chalk, and the legs splayed under it.
+      r(3, 23, 26, 2, PALETTE.woodDark)
+      r(21, 23, 3, 1, PALETTE.paper)
+      r(3, 26, 3, 5, PALETTE.ink)
+      r(4, 26, 1, 4, PALETTE.woodDark)
+      r(26, 26, 3, 5, PALETTE.ink)
+      r(27, 26, 1, 4, PALETTE.woodDark)
+      r(2, 31, 28, 1, PALETTE.shadow)
       break
     }
     case 'kcounter':

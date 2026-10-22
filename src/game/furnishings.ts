@@ -129,6 +129,13 @@ export function furnishHouse(): Furnishings {
     tiles: prop('fridge', 3, 12),
     action: { type: 'panel', panel: 'geoguess' },
   })
+  // The chalkboard stands in the corner by the counters, out of the way of both doors.
+  interactables.push({
+    id: 'chalkboard',
+    label: 'Chalkboard — top scores',
+    tiles: prop('chalkboard', 2, 16),
+    action: { type: 'panel', panel: 'chalkboard' },
+  })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
   prop('kcounter', 1, 16)
