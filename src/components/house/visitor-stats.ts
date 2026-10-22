@@ -1,4 +1,5 @@
 import { METRES_PER_TILE, type RoomId } from '@/game/layout'
+import { isMissionComplete } from '@/game/missions'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
@@ -25,6 +26,8 @@ export interface VisitorStats {
   scoops: number
   naps: number
   outfits: number
+  /** Mission steps done, as `mission/step` (see `src/game/missions.ts`). */
+  missionSteps: string[]
 }
 
 function emptyStats(): VisitorStats {
@@ -47,6 +50,7 @@ function emptyStats(): VisitorStats {
     scoops: 0,
     naps: 0,
     outfits: 0,
+    missionSteps: [],
   }
 }
 
@@ -61,7 +65,11 @@ function load(): VisitorStats {
     const saved = window.localStorage.getItem(STATS_KEY)
     if (saved) {
       const parsed = JSON.parse(saved) as Partial<VisitorStats>
-      Object.assign(stats, parsed, { bicas: { ...stats.bicas, ...parsed.bicas }, rooms: { ...parsed.rooms } })
+      Object.assign(stats, parsed, {
+        bicas: { ...stats.bicas, ...parsed.bicas },
+        rooms: { ...parsed.rooms },
+        missionSteps: Array.isArray(parsed.missionSteps) ? parsed.missionSteps : [],
+      })
     }
   } catch {
     // Private mode or a mangled entry: start a fresh page.
@@ -127,7 +135,10 @@ export function metresWalked(stats: VisitorStats): number {
   return Math.round(stats.steps * METRES_PER_TILE)
 }
 
-/** Rooms a visitor can actually walk into (the bathroom stays occupied). */
+/**
+ * Rooms a visitor can walk into from the start. The bathroom only opens with
+ * its mission, so it stays out and earlier tours still count.
+ */
 export const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
 
 export interface Achievement {
@@ -152,4 +163,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
+  { id: 'bath-time', title: 'Bath time', hint: 'Find out who’s always in the bathroom.', earned: (s) => isMissionComplete(s, 'bathroom') },
 ]

@@ -4,7 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
-import { getRoom, type RoomId } from '@/game/layout'
+import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
+import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
@@ -15,8 +16,15 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import {
+  buildMissionDialogue,
+  isMissionDialogue,
+  missionReplyKey,
+  withMissionChoices,
+  type MissionDialogueKey,
+} from './mission-dialogues'
 import { TouchControls } from './touch-controls'
-import { countVisit, flushStats, updateStats } from './visitor-stats'
+import { countVisit, flushStats, readStats, updateStats, type BicaResult } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
 import { WelcomeCard } from './welcome-card'
 
@@ -64,6 +72,11 @@ function startRoomFor(pathname: string): RoomId {
   return 'hall'
 }
 
+/** What missions have opened, in a stable order so unchanged sets compare equal. */
+function readUnlocks(): UnlockId[] {
+  return [...unlocksOf(readStats())].sort()
+}
+
 /**
  * Hosts the Phaser house and everything React draws over it: HUD, dialogue,
  * directory and the overlay pages passed in as children. Lives in the (house)
@@ -78,7 +91,7 @@ export function HouseShell({ data, children }: Props) {
   const [ready, setReady] = useState(false)
   const [hint, setHint] = useState<Hint | null>(null)
   const [room, setRoom] = useState<RoomId | null>(null)
-  const [dialogue, setDialogue] = useState<DialogueKey | null>(null)
+  const [dialogue, setDialogue] = useState<DialogueKey | MissionDialogueKey | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
@@ -88,7 +101,8 @@ export function HouseShell({ data, children }: Props) {
   // hydration mismatch.
   const [night, setNight] = useState(() => typeof window !== 'undefined' && isNightNow())
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
-  const initialLook = useRef({ night, outfit })
+  const [unlocks, setUnlocks] = useState<UnlockId[]>(() => (typeof window !== 'undefined' ? readUnlocks() : []))
+  const initialLook = useRef({ night, outfit, unlocks })
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
@@ -221,6 +235,29 @@ export function HouseShell({ data, children }: Props) {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
 
+  // Missions open parts of the house (and a guestbook reset shuts them again).
+  useEffect(() => {
+    if (ready) bridge.ui.emit('unlocks', unlocks)
+  }, [bridge, ready, unlocks])
+
+  /** Picks up anything a mission step just opened, or a reset just shut. */
+  const syncUnlocks = useCallback(() => {
+    const next = readUnlocks()
+    setUnlocks((current) => (current.join() === next.join() ? current : next))
+  }, [])
+
+  /** A perfect bica can be a mission step; what that step says shows under the cup. */
+  const bicaResult = useCallback(
+    (result: BicaResult) => {
+      if (result !== 'perfect') return undefined
+      let note: string | undefined
+      updateStats((stats) => (note = missionEvent(stats, 'perfect-bica').find((step) => step.feedback)?.feedback))
+      syncUnlocks()
+      return note
+    },
+    [syncUnlocks],
+  )
+
   // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
     const shortcuts: Record<string, PanelId> = { m: 'directory', g: 'guestbook' }
@@ -323,6 +360,17 @@ export function HouseShell({ data, children }: Props) {
       case 'close':
         setDialogue(null)
         break
+      case 'mission': {
+        const step = choice.step
+        if (step === undefined) {
+          setDialogue(`mission-hint:${choice.mission}` as const)
+          break
+        }
+        updateStats((stats) => completeStep(stats, choice.mission, step))
+        setDialogue(missionReplyKey(choice.mission, step))
+        syncUnlocks()
+        break
+      }
     }
   }
 
@@ -405,7 +453,11 @@ export function HouseShell({ data, children }: Props) {
       {dialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night })}
+          dialogue={
+            isMissionDialogue(dialogue)
+              ? buildMissionDialogue(dialogue, readStats())
+              : withMissionChoices(buildDialogue(dialogue, data, { night }), dialogue, readStats())
+          }
           onChoose={choose}
           onClose={() => setDialogue(null)}
           touch={coarsePointer}
@@ -418,6 +470,7 @@ export function HouseShell({ data, children }: Props) {
         <DirectoryPanel
           currentRoom={room}
           night={night}
+          unlocks={unlocks}
           onTeleport={teleport}
           onVisit={visit}
           onContact={() => setDialogue('letterbox')}
@@ -429,9 +482,9 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'wardrobe' && (
         <WardrobePanel outfit={outfit} onChange={changeOutfit} onClose={() => setPanel(null)} />
       )}
-      {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
+      {panel === 'bica' && <BicaPanel onResult={bicaResult} onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
-      {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+      {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onClose={() => setPanel(null)} />}
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>

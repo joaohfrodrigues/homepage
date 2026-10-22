@@ -60,6 +60,15 @@ site's sections:
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
+- **Bathroom** - shut and "occupied" until its mission opens it.
+
+Missions are multi-step activities that open up parts of the house. The first, *Who's in there?*,
+starts once you've knocked on the bathroom door three times: ask João who is in there, pull a
+perfect bica and take it to the door, and the bathroom opens for good. Steps are checked against
+the guestbook's stats, things that happen (a perfect bica) or a choice in dialogue; João offers a
+hint for any mission under way, and the guestbook shows each one's progress. Missions are defined
+in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and
+tearing out the guestbook page shuts everything again.
 
 A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
 films & series and About, or a button to explore the house. Dismissing it is remembered in
@@ -79,6 +88,7 @@ plain HTML version for screen readers, crawlers and visitors without JavaScript.
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
+    `src/game/missions.ts` - missions and what they unlock;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
@@ -259,7 +269,7 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters
+│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions
 │   ├── lib/              # Data access, utilities
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js

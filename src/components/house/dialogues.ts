@@ -1,4 +1,5 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
+import type { MissionId } from '@/game/missions'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -11,6 +12,8 @@ export type DialogueChoice =
   | { label: string; kind: 'panel'; panel: PanelId }
   | { label: string; kind: 'night'; on: boolean }
   | { label: string; kind: 'close' }
+  /** Does a mission's step (see `mission-dialogues.ts`), or with no step asks João for a hint. */
+  | { label: string; kind: 'mission'; mission: MissionId; step?: string }
 
 export interface Dialogue {
   speaker?: string

@@ -1,4 +1,4 @@
-import type { Direction, RoomId } from './layout'
+import type { Direction, RoomId, UnlockId } from './layout'
 import type { Outfit } from './characters'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
@@ -61,6 +61,8 @@ interface UiEvents {
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
+  /** Everything missions have opened so far; anything left out is (or goes back to being) shut. */
+  unlocks: UnlockId[]
 }
 
 type Listener<T> = (payload: T) => void

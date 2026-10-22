@@ -2,13 +2,13 @@ import * as Phaser from 'phaser'
 import type { HouseBridge, Hint, InteractAction, VisitTarget } from './bridge'
 import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
-  FLOOR_PLAN,
   MAP_HEIGHT,
   MAP_WIDTH,
   TILE,
   cellAt,
   getRoom,
   isFloorCell,
+  isRoomOpen,
   roomAt,
   roomBelow,
   roomOf,
@@ -16,6 +16,7 @@ import {
   type Direction,
   type Point,
   type RoomId,
+  type UnlockId,
 } from './layout'
 import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
@@ -71,6 +72,8 @@ export interface HouseSceneConfig {
   fontFamily: string
   night: boolean
   outfit: Outfit
+  /** What missions have opened up already. */
+  unlocks: UnlockId[]
 }
 
 const DELTAS: Record<Direction, Point> = {
@@ -124,6 +127,7 @@ export class HouseScene extends Phaser.Scene {
   private cfg!: HouseSceneConfig
   private furnishings!: Furnishings
   private solid = new Set<string>()
+  private unlocks = new Set<UnlockId>()
   private objectsByTile = new Map<string, Interactable>()
   private player!: Walker
   private npc!: Walker
@@ -196,6 +200,7 @@ export class HouseScene extends Phaser.Scene {
 
   init(cfg: HouseSceneConfig) {
     this.cfg = cfg
+    this.unlocks = new Set(cfg.unlocks)
     this.furnishings = furnishHouse()
   }
 
@@ -318,17 +323,24 @@ export class HouseScene extends Phaser.Scene {
   // Baking the static house into one texture
 
   private bakeHouse() {
-    const width = MAP_WIDTH * TILE
-    const height = MAP_HEIGHT * TILE
-    const texture = this.textures.createCanvas('house-base', width, height)!
+    const texture = this.textures.createCanvas('house-base', MAP_WIDTH * TILE, MAP_HEIGHT * TILE)!
+    this.paintHouse(texture)
+    this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
+  }
+
+  /** Draws the plan, as far as missions have opened it, and the furniture onto the base texture. */
+  private paintHouse(texture: Phaser.Textures.CanvasTexture) {
     const ctx = texture.getContext()
     ctx.imageSmoothingEnabled = false
+    ctx.clearRect(0, 0, texture.width, texture.height)
+    // Shut doors that missions have opened read as doorways.
+    const openCellAt = (x: number, y: number) => cellAt(x, y, this.unlocks)
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
         const ox = x * TILE
         const oy = y * TILE
-        const cell = FLOOR_PLAN[y][x]
+        const cell = openCellAt(x, y)
         const below = roomBelow(x, y)
         if (cell === ' ') {
           // Outside the flat: leave it to the camera's dark background.
@@ -340,12 +352,12 @@ export class HouseScene extends Phaser.Scene {
         } else if (cell === '.') {
           drawFloor(ctx, ox, oy, roomAt(x, y)?.floor ?? 'oak', x, y)
         } else if (cell === 'F') {
-          drawFrontDoor(ctx, ox, oy, cellAt(x - 1, y) === 'F' ? 'right' : 'left')
+          drawFrontDoor(ctx, ox, oy, openCellAt(x - 1, y) === 'F' ? 'right' : 'left')
         } else if (cell === 'd') {
           drawSideDoorway(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'oak', roomAt(x + 1, y)?.floor ?? 'oak', x, y)
         } else {
           const part = wallPartAt(x, y)
-          const edges = { left: cellAt(x - 1, y) !== cell, right: cellAt(x + 1, y) !== cell }
+          const edges = { left: openCellAt(x - 1, y) !== cell, right: openCellAt(x + 1, y) !== cell }
           if (cell === 'W' && (part === 'cap' || !below)) {
             drawCapWindow(ctx, ox, oy, edges)
           } else if (part === 'cap' || !below) {
@@ -353,7 +365,7 @@ export class HouseScene extends Phaser.Scene {
           } else if (cell === 'W') {
             drawWindow(ctx, ox, oy, below.wall, part, edges)
           } else if (cell === 'X') {
-            drawClosedDoor(ctx, ox, oy, below.wall, part, cellAt(x - 1, y) === 'X' ? 'right' : 'left')
+            drawClosedDoor(ctx, ox, oy, below.wall, part, openCellAt(x - 1, y) === 'X' ? 'right' : 'left')
           } else if (cell === 'D') {
             drawDoorway(ctx, ox, oy, below.floor, part, x, y, edges)
           } else {
@@ -367,7 +379,6 @@ export class HouseScene extends Phaser.Scene {
 
     this.drawWallMap(ctx)
     texture.refresh()
-    this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
   }
 
   /** The trip map in its frame on the study wall, one pin per trip. */
@@ -489,10 +500,13 @@ export class HouseScene extends Phaser.Scene {
     heart.refresh()
   }
 
+  /** Solid tiles and who stands where to use what; rebuilt when a mission opens something. */
   private buildCollision() {
+    this.solid.clear()
+    this.objectsByTile.clear()
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
-        if (!isFloorCell(x, y)) this.solid.add(key({ x, y }))
+        if (!isFloorCell(x, y, this.unlocks)) this.solid.add(key({ x, y }))
       }
     }
     for (const item of this.furnishings.decor) {
@@ -501,9 +515,42 @@ export class HouseScene extends Phaser.Scene {
       const tiles = decorTiles(item)
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
-    for (const object of this.furnishings.interactables) {
+    for (const object of this.interactables()) {
       object.tiles.forEach((tile) => this.objectsByTile.set(key(tile), object))
     }
+  }
+
+  /** The interactables still there, given what's been unlocked. */
+  private interactables(): Interactable[] {
+    return this.furnishings.interactables.filter((object) => !object.until || !this.unlocks.has(object.until))
+  }
+
+  /**
+   * Opens (or, after a guestbook reset, shuts again) whatever missions unlock:
+   * repaints the plan and rebuilds collision. Anyone left standing inside a
+   * room that just shut is moved out to its doorstep.
+   */
+  private setUnlocks(unlocks: UnlockId[]) {
+    const next = new Set(unlocks)
+    if (next.size === this.unlocks.size && unlocks.every((id) => this.unlocks.has(id))) return
+    this.unlocks = next
+    this.paintHouse(this.textures.get('house-base') as Phaser.Textures.CanvasTexture)
+    this.buildCollision()
+    const shut = (tile: Point) => {
+      const room = roomAt(tile.x, tile.y)
+      return this.solid.has(key(tile)) || (room !== undefined && !isRoomOpen(room, this.unlocks))
+    }
+    if (shut(this.player.tile)) {
+      const corridor = getRoom('corridor')
+      this.placeGuest(corridor.spawn, corridor.spawnFacing)
+    }
+    if (shut(this.zeno.tile)) {
+      const start = this.furnishings.zeno.start
+      this.zenoPath = []
+      this.zeno.tile = { ...start }
+      this.zeno.sprite.setPosition(start.x * TILE + TILE / 2, (start.y + 1) * TILE).setDepth(10 + start.y / 100)
+    }
+    this.updateHint()
   }
 
   private textStyle(color: string, background?: string, fontSize = '6px'): Phaser.Types.GameObjects.Text.TextStyle {
@@ -697,7 +744,8 @@ export class HouseScene extends Phaser.Scene {
 
   /** Within two tiles, and in the same room — walls shouldn't leak sparkles. */
   private isNear(objectId: string): boolean {
-    const object = this.furnishings.interactables.find((o) => o.id === objectId)!
+    const object = this.interactables().find((o) => o.id === objectId)
+    if (!object) return false
     const { x, y } = this.player.tile
     const here = roomAt(x, y)?.id ?? this.currentRoom
     if (roomOf(object.tiles)?.id !== here) return false
@@ -1359,7 +1407,7 @@ export class HouseScene extends Phaser.Scene {
       targetId === 'joao'
         ? { kind: 'npc' }
         : (() => {
-            const object = this.furnishings.interactables.find((o) => o.id === targetId)
+            const object = this.interactables().find((o) => o.id === targetId)
             return object ? { kind: 'object', object } : null
           })()
     const arrive = () => this.cfg.bridge.game.emit('arrived', targetId)
@@ -1487,6 +1535,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
+      ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
         // A quick flick that lets go before the next frame still takes one step.
