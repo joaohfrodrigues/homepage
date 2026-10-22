@@ -63,6 +63,7 @@ import {
   type Outfit,
 } from './characters'
 import type { Trip } from '@/lib/photos'
+import type { Season } from './seasons'
 
 export interface HouseSceneConfig {
   bridge: HouseBridge
@@ -71,6 +72,8 @@ export interface HouseSceneConfig {
   fontFamily: string
   night: boolean
   outfit: Outfit
+  /** Holiday decorations to put up, if any. */
+  season: Season | null
 }
 
 const DELTAS: Record<Direction, Point> = {
@@ -196,7 +199,7 @@ export class HouseScene extends Phaser.Scene {
 
   init(cfg: HouseSceneConfig) {
     this.cfg = cfg
-    this.furnishings = furnishHouse()
+    this.furnishings = furnishHouse(cfg.season)
   }
 
   preload() {
@@ -456,11 +459,13 @@ export class HouseScene extends Phaser.Scene {
     frame.width = TILE
     frame.height = TILE
     const frameCtx = frame.getContext('2d')!
+    // He dresses up for Halloween, whether he likes it or not.
+    const costume = this.cfg.season === 'halloween' ? 'witch' : undefined
     CAT_FRAMES.forEach((name, i) => {
-      drawCat(sheet.getContext(), i * TILE, 0, name)
+      drawCat(sheet.getContext(), i * TILE, 0, name, costume)
       sheet.add(`zeno-${name}`, 0, i * TILE, 0, TILE, TILE)
       frameCtx.clearRect(0, 0, TILE, TILE)
-      drawCat(frameCtx, 0, 0, name)
+      drawCat(frameCtx, 0, 0, name, costume)
       outlines.getContext().drawImage(traceSilhouette(frame).outline, i * OUT, 0)
       outlines.add(`zeno-${name}`, 0, i * OUT, 0, OUT, OUT)
     })

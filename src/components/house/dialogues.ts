@@ -1,4 +1,5 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
+import type { Season } from '@/game/seasons'
 import type { HouseData } from '@/lib/house'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -18,7 +19,16 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
-export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean }): Dialogue {
+/** What João has to say about the decorations, if any are up. */
+const SEASON_GREETINGS: Record<Season, string> = {
+  xmas: 'Feliz Natal! There’s bolo-rei on the table. Whoever finds the fava buys next year’s.',
+  santos: 'Santos Populares! Smell that? Half of Lisbon is grilling sardines tonight. Take a manjerico on your way out.',
+  halloween: 'Happy Halloween! Zeno agreed to the costume for exactly one treat. Mind the pumpkin by the door.',
+  newyear: 'Feliz Ano Novo! Twelve raisins at midnight, one wish each. I always run out of wishes first.',
+  birthday: 'You came on my birthday! Grab a balloon on your way through.',
+}
+
+export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean; season: Season | null }): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
@@ -31,6 +41,7 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
         speaker: 'João',
         lines: [
           "Hey, welcome in! I'm João.",
+          ...(house.season ? [SEASON_GREETINGS[house.season]] : []),
           ...(data.aboutIntro ? [data.aboutIntro] : []),
           'Make yourself at home. The map in the study has every trip I’ve photographed, and most things around the flat have a story.',
         ],
@@ -100,7 +111,12 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
             choices: [{ label: 'Blink back', kind: 'close' }],
           }
         : {
-            lines: ['Zeno, the tuxedo cat, bumps his head into your hand.', 'Prrrrrrrr…'],
+            lines: [
+              house.season === 'halloween'
+                ? 'Zeno, the tuxedo cat, bumps his head into your hand. His witch’s hat slips over one eye.'
+                : 'Zeno, the tuxedo cat, bumps his head into your hand.',
+              'Prrrrrrrr…',
+            ],
             choices: [{ label: 'Scratch behind the ears', kind: 'close' }],
           }
     case 'litterbox-dirty':

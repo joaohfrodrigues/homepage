@@ -6,6 +6,7 @@ import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
+import { currentSeason } from '@/game/seasons'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 import { BicaPanel } from './bica-panel'
@@ -88,7 +89,9 @@ export function HouseShell({ data, children }: Props) {
   // hydration mismatch.
   const [night, setNight] = useState(() => typeof window !== 'undefined' && isNightNow())
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
-  const initialLook = useRef({ night, outfit })
+  // The holidays go by the visitor's calendar too; `?season=` previews one.
+  const [season] = useState(() => (typeof window !== 'undefined' ? currentSeason(window.location.search) : null))
+  const initialLook = useRef({ night, outfit, season })
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
@@ -405,7 +408,7 @@ export function HouseShell({ data, children }: Props) {
       {dialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night })}
+          dialogue={buildDialogue(dialogue, data, { night, season })}
           onChoose={choose}
           onClose={() => setDialogue(null)}
           touch={coarsePointer}
