@@ -108,7 +108,12 @@ export function furnishHouse(): Furnishings {
   prop('chairup', 2, 10, false)
   prop('chairup', 4, 10, false)
   // The right-hand side stays clear: it's the way in from the hall.
-  prop('recordplayer', 9, 5)
+  interactables.push({
+    id: 'recordplayer',
+    label: 'Record player — put some music on',
+    tiles: prop('recordplayer', 9, 5),
+    action: { type: 'panel', panel: 'recordplayer' },
+  })
   limezu('leafyPlant', 2, 3)
   limezu('tallBush', 9, 3)
 

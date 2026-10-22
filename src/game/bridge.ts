@@ -2,7 +2,7 @@ import type { Direction, RoomId } from './layout'
 import type { Outfit } from './characters'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
-export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook'
+export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook' | 'recordplayer'
 
 /** What happens when the visitor interacts with something in the house. */
 export type InteractAction =

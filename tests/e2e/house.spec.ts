@@ -184,6 +184,68 @@ test.describe('House', () => {
     await expect(guestbook).toContainText('this is your first visit')
     await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
   })
+
+  test('the record player only plays when asked, remembers its volume and stops in a hidden tab', async ({ page }) => {
+    // Count audio contexts, to show nothing makes a sound before the click.
+    await page.addInitScript(() => {
+      const win = window as unknown as { __audioContexts: number }
+      win.__audioContexts = 0
+      const Original = window.AudioContext
+      window.AudioContext = class extends Original {
+        constructor(options?: AudioContextOptions) {
+          super(options)
+          win.__audioContexts++
+        }
+      }
+    })
+    const audioContexts = () => page.evaluate(() => (window as unknown as { __audioContexts: number }).__audioContexts)
+    const openRecordPlayer = async () => {
+      await page.keyboard.press('m')
+      await page.getByRole('button', { name: 'Go to the living room' }).click()
+      await expect(page.getByText('Living room', { exact: true })).toBeVisible()
+      // A click walks up to the turntable and uses it.
+      const { x, y } = await screenPointOf(page, recordPlayer)
+      await page.mouse.click(x, y)
+      const panel = page.getByRole('dialog', { name: 'Record player' })
+      await expect(panel).toBeVisible()
+      return panel
+    }
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const panel = await openRecordPlayer()
+    await expect(panel.getByText('Needle up')).toBeVisible()
+    expect(await audioContexts()).toBe(0)
+
+    await panel.getByRole('button', { name: 'Play the record' }).click()
+    await expect(panel.getByText('Now playing')).toBeVisible()
+    expect(await audioContexts()).toBe(1)
+    await panel.getByRole('slider', { name: 'Volume' }).fill('20')
+    await panel.getByRole('button', { name: 'Mute' }).click()
+    await expect(panel.getByText('Playing (muted)')).toBeVisible()
+
+    // The music carries on in the house, with a way to stop it from the HUD.
+    await page.keyboard.press('Escape')
+    await expect(panel).not.toBeVisible()
+    const stopMusic = page.getByRole('button', { name: 'Stop the music' })
+    await expect(stopMusic).toBeVisible()
+
+    // Switching tabs lifts the needle.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await expect(stopMusic).not.toBeVisible()
+
+    // Volume and mute are remembered; playing isn't.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const again = await openRecordPlayer()
+    await expect(again.getByText('Needle up')).toBeVisible()
+    expect(await audioContexts()).toBe(0)
+    await again.getByRole('button', { name: 'Unmute' }).click()
+    await expect(again.getByRole('slider', { name: 'Volume' })).toHaveValue('20')
+  })
 })
 
 /** A fresh tab: Back from the first page it loads leaves for here. */
@@ -457,6 +519,7 @@ async function tapTile(page: Page, tile: Point) {
 // The guestbook stand, near the hall spawn: a tap has to walk there before it
 // can be used.
 const guestbookStand = furnishHouse().interactables.find((object) => object.id === 'guestbook')!.tiles[0]
+const recordPlayer = furnishHouse().interactables.find((object) => object.id === 'recordplayer')!.tiles[0]
 
 test.describe('House on a touch screen', () => {
   // Real touch events, so the game sees `pointer.wasTouch` the way a phone would.

@@ -55,7 +55,8 @@ you're already facing it) uses it, so nothing opens by surprise. Furniture and p
 site's sections:
 
 - **Entrance hall** - running and hiking kit.
-- **Living room** - the TV (film & TV) and João himself.
+- **Living room** - the TV (film & TV), João himself, and a record player that puts on a short
+    lo-fi loop.
 - **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
@@ -73,6 +74,12 @@ steps back over its entry, and a page opened from a panel takes over the panel's
 from that page returns to the house. The welcome card gets no entry: Back from it leaves, as from
 any first page.
 
+The record player's music is synthesised in the browser with the Web Audio API
+(`src/components/house/record-player.ts`), so there's no audio file. It is off by default and only
+starts when the visitor presses play; it keeps playing around the house (with a stop button in the
+HUD), stops when the tab is hidden, and remembers its volume and mute (not whether it was playing)
+in `localStorage`.
+
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
@@ -81,7 +88,7 @@ Where things live:
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
-- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
+- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel map, ...)
     and dialogue.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
@@ -201,6 +208,8 @@ Vercel then picks up the change on the next deploy.
 
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
+- **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
+    player's lo-fi loop, synthesised in the browser
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
 - **[Bun](https://bun.sh/)** - JavaScript package manager and script runner
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
