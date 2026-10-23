@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { PanelWindow } from './panel-window'
+import { bicaResult, steam } from './sfx'
 import { readStats, updateStats, type BicaResult } from './visitor-stats'
 
 interface Props {
@@ -68,6 +69,7 @@ export function BicaPanel({ onClose }: Props) {
     if (phase === 'pulling') {
       const outcome = judge(bar)
       const nextStreak = outcome === 'perfect' ? streak + 1 : 0
+      bicaResult(outcome)
       setResult(outcome)
       setStreak(nextStreak)
       setPhase('done')
@@ -77,6 +79,7 @@ export function BicaPanel({ onClose }: Props) {
         stats.bicaBestStreak = Math.max(stats.bicaBestStreak, nextStreak)
       })
     } else {
+      steam()
       angle.current = -Math.PI / 2
       setResult(null)
       setPhase('pulling')

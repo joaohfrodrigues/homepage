@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from 'react'
 import { Play, Square, Volume2, VolumeX } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getServerSoundOn, isSoundOn, setSoundOn, subscribeSound } from './audio'
 import { PanelWindow } from './panel-window'
 import { getServerState, getState, play, setMuted, setVolume, stop, subscribe } from './record-player'
 
@@ -20,6 +21,7 @@ export function useRecordPlayer() {
  */
 export function RecordPlayerPanel({ onClose }: Props) {
   const { playing, volume, muted } = useRecordPlayer()
+  const soundOn = useSyncExternalStore(subscribeSound, isSoundOn, getServerSoundOn)
 
   return (
     <PanelWindow title="Record player" eyebrow="Living room" onClose={onClose} width="narrow">
@@ -71,6 +73,14 @@ export function RecordPlayerPanel({ onClose }: Props) {
           />
         </label>
       </div>
+      {!soundOn && (
+        <p className="mt-4 text-sm">
+          All the house&rsquo;s sounds are off.{' '}
+          <button type="button" className="underline" onClick={() => setSoundOn(true)}>
+            Turn them on
+          </button>
+        </p>
+      )}
       <p className="mt-4 text-xs text-[#6d6359]">The record stops when you switch to another tab.</p>
     </PanelWindow>
   )

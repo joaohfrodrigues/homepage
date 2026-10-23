@@ -88,6 +88,13 @@ starts when the visitor presses play; it keeps playing around the house (with a 
 HUD), stops when the tab is hidden, and remembers its volume and mute (not whether it was playing)
 in `localStorage`.
 
+The house also has sound effects, synthesised the same way (`src/components/house/sfx.ts`): quiet
+footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom door,
+Zeno's meow, the coffee machine and a chime for each new sticker. They are on by default but stay
+silent until the visitor first clicks or presses a key. The speaker button in the HUD mutes every
+sound, the record included, and is remembered in `localStorage`. The music and the effects share
+one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
+
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
@@ -97,7 +104,7 @@ Where things live:
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
-    map, ...), dialogue and the sticker toast.
+    map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`).
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
@@ -217,7 +224,7 @@ Vercel then picks up the change on the next deploy.
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
 - **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
-    player's lo-fi loop, synthesised in the browser
+    player's lo-fi loop and the house's sound effects, synthesised in the browser
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
 - **[Bun](https://bun.sh/)** - JavaScript package manager and script runner
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content

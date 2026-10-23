@@ -6,6 +6,22 @@ import { TILE, type Point } from '../../src/game/layout'
 const subjects = (page: Page) =>
   page.getByRole('dialog', { name: 'What are you after?' }).getByRole('navigation', { name: 'Subjects' })
 
+/** Counts the audio contexts the page makes; read the count with the returned function. */
+async function countAudioContexts(page: Page) {
+  await page.addInitScript(() => {
+    const win = window as unknown as { __audioContexts: number }
+    win.__audioContexts = 0
+    const Original = window.AudioContext
+    window.AudioContext = class extends Original {
+      constructor(options?: AudioContextOptions) {
+        super(options)
+        win.__audioContexts++
+      }
+    }
+  })
+  return () => page.evaluate(() => (window as unknown as { __audioContexts: number }).__audioContexts)
+}
+
 test.describe('House', () => {
   // These tests are about the house itself, so skip the first-visit welcome card.
   test.beforeEach(async ({ page }) => {
@@ -186,19 +202,8 @@ test.describe('House', () => {
   })
 
   test('the record player only plays when asked, remembers its volume and stops in a hidden tab', async ({ page }) => {
-    // Count audio contexts, to show nothing makes a sound before the click.
-    await page.addInitScript(() => {
-      const win = window as unknown as { __audioContexts: number }
-      win.__audioContexts = 0
-      const Original = window.AudioContext
-      window.AudioContext = class extends Original {
-        constructor(options?: AudioContextOptions) {
-          super(options)
-          win.__audioContexts++
-        }
-      }
-    })
-    const audioContexts = () => page.evaluate(() => (window as unknown as { __audioContexts: number }).__audioContexts)
+    // The footsteps on the way to the turntable may wake the house's one audio context; the record shares it.
+    const audioContexts = await countAudioContexts(page)
     const openRecordPlayer = async () => {
       await page.keyboard.press('m')
       await page.getByRole('button', { name: 'Go to the living room' }).click()
@@ -215,7 +220,7 @@ test.describe('House', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     const panel = await openRecordPlayer()
     await expect(panel.getByText('Needle up')).toBeVisible()
-    expect(await audioContexts()).toBe(0)
+    expect(await audioContexts()).toBeLessThanOrEqual(1)
 
     await panel.getByRole('button', { name: 'Play the record' }).click()
     await expect(panel.getByText('Now playing')).toBeVisible()
@@ -242,9 +247,35 @@ test.describe('House', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     const again = await openRecordPlayer()
     await expect(again.getByText('Needle up')).toBeVisible()
-    expect(await audioContexts()).toBe(0)
     await again.getByRole('button', { name: 'Unmute' }).click()
     await expect(again.getByRole('slider', { name: 'Volume' })).toHaveValue('20')
+  })
+
+  test('sounds are on by default, wait for the first key press and can be muted', async ({ page }) => {
+    const audioContexts = await countAudioContexts(page)
+    const walk = async () => {
+      await page.keyboard.down('ArrowDown')
+      await page.waitForTimeout(500)
+      await page.keyboard.up('ArrowDown')
+    }
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(300)
+    expect(await audioContexts()).toBe(0)
+    // Footsteps.
+    await walk()
+    await expect.poll(audioContexts).toBe(1)
+
+    await page.getByRole('button', { name: 'Mute sounds' }).click()
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toHaveAttribute('aria-pressed', 'true')
+
+    // Remembered: after a reload, walking stays silent.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeVisible()
+    await walk()
+    expect(await audioContexts()).toBe(0)
   })
 
   test('a new sticker gets a toast once, which opens the guestbook', async ({ page }) => {

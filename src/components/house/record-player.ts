@@ -6,6 +6,8 @@
  * it was playing.
  */
 
+import { hold, noiseBuffer, release, wake } from './audio'
+
 const SETTINGS_KEY = 'house:record-player'
 
 export interface RecordPlayerState {
@@ -61,7 +63,6 @@ const listeners = new Set<() => void>()
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let session: { bus: GainNode; timer: number; nextBar: number; bar: number } | null = null
-let noise: AudioBuffer | null = null
 
 function current(): RecordPlayerState {
   state ??= { playing: false, ...readSettings() }
@@ -81,14 +82,6 @@ function save() {
   } catch {
     // Private mode: the settings last until the tab closes.
   }
-}
-
-function noiseBuffer(audio: AudioContext): AudioBuffer {
-  if (noise) return noise
-  noise = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate)
-  const data = noise.getChannelData(0)
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
-  return noise
 }
 
 /** One note with a soft attack and release, on two slightly detuned oscillators. */
@@ -166,14 +159,16 @@ function onVisibility() {
 
 export function play() {
   if (session) return
-  ctx ??= new AudioContext()
+  const audio = wake()
+  if (!audio) return
+  ctx = audio.ctx
   if (!master) {
     master = ctx.createGain()
-    master.connect(ctx.destination)
+    master.connect(audio.out)
   }
   const { volume, muted } = current()
   master.gain.value = muted ? 0 : volume
-  void ctx.resume()
+  hold()
   // A warm low-pass over the whole mix, faded in so the needle doesn't thump.
   const bus = ctx.createGain()
   const warmth = ctx.createBiquadFilter()
@@ -195,12 +190,10 @@ export function stop() {
     window.clearInterval(timer)
     bus.gain.cancelScheduledValues(ctx.currentTime)
     bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05)
-    window.setTimeout(() => {
-      bus.disconnect()
-      // Nothing left to play: let the audio device sleep.
-      if (!session) void ctx?.suspend()
-    }, 400)
+    window.setTimeout(() => bus.disconnect(), 400)
     session = null
+    // Nothing left to play: the audio device can sleep.
+    release()
   }
   if (current().playing) update({ playing: false })
 }

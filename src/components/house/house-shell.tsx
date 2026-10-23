@@ -1,13 +1,14 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Music, Sun } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { BookOpen, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
+import { getServerSoundOn, isSoundOn, setSoundOn, subscribeSound } from './audio'
 import { BicaPanel } from './bica-panel'
 import { DialogueBox } from './dialogue-box'
 import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
@@ -17,9 +18,10 @@ import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
 import { stop as stopRecord } from './record-player'
 import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
+import * as sfx from './sfx'
 import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
-import { countVisit, flushStats, updateStats } from './visitor-stats'
+import { countVisit, flushStats, onStickerEarned, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
 import { WelcomeCard } from './welcome-card'
 
@@ -101,6 +103,7 @@ export function HouseShell({ data, children }: Props) {
     () => typeof window !== 'undefined' && pathname === '/' && !readWelcomed(),
   )
   const record = useRecordPlayer()
+  const soundOn = useSyncExternalStore(subscribeSound, isSoundOn, getServerSoundOn)
 
   const overlayOpen = pathname !== '/'
   const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
@@ -200,6 +203,21 @@ export function HouseShell({ data, children }: Props) {
     return () => offs.forEach((off) => off())
   }, [bridge, handleInteract])
 
+  // Sound effects; each is silent until the visitor has clicked or pressed a key.
+  useEffect(() => {
+    const offs = [
+      bridge.game.on('step', sfx.step),
+      bridge.game.on('interact', (action) => {
+        if (action.type !== 'dialogue') sfx.pop()
+        else if (action.id === 'zeno') sfx.meow()
+        else if (action.id === 'bathroom') sfx.knock()
+        else sfx.blip()
+      }),
+      onStickerEarned(sfx.chime),
+    ]
+    return () => offs.forEach((off) => off())
+  }, [bridge])
+
   // The guestbook's tallies, kept in this browser only.
   useEffect(() => {
     countVisit()
@@ -276,6 +294,7 @@ export function HouseShell({ data, children }: Props) {
   const changeNight = useCallback(
     (on: boolean) => {
       setNight(on)
+      sfx.lightSwitch()
       if (on) updateStats((stats) => stats.naps++)
       bridge.ui.emit('night', { on, animate: true })
     },
@@ -358,6 +377,16 @@ export function HouseShell({ data, children }: Props) {
                   <span className="hidden sm:inline">Stop music</span>
                 </button>
               )}
+              <button
+                type="button"
+                className="pixel-button pointer-events-auto"
+                onClick={() => setSoundOn(!soundOn)}
+                aria-pressed={!soundOn}
+                aria-label={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+                title={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+              >
+                {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              </button>
               <button
                 type="button"
                 className="pixel-button pointer-events-auto"
