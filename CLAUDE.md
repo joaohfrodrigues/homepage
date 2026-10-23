@@ -1,5 +1,20 @@
 # CLAUDE.md
 
+## Sound in the house
+
+New house features are expected to come with sound wherever the action would intuitively make one
+(a door, a pour, a bottle opening, an animal, a reward). Add each sound as a small function in
+[src/components/house/sfx.ts](./src/components/house/sfx.ts) and call it where the action happens.
+Synthesise it with the Web Audio API by default; use a recording only where a real sound is clearly
+better (an animal, a specific object). Recordings go in `public/house/sounds/` as short mono-ish
+MP3s (well under 100 KB), need a licence that allows use on a public site, are credited in
+`public/house/sounds/CREDITS.txt`, get a gain in `RECORDINGS` in `sfx.ts`, and keep a synthesised
+fallback in case the file fails to load. Sounds play
+through the shared context in [audio.ts](./src/components/house/audio.ts), so they follow the house's
+volume and mute and stay silent until the visitor's first click or key press. Keep frequent sounds
+(footsteps, anything that repeats) quiet, and leave out sounds for actions that would be silent in
+real life. If a feature has no sound, say why in the PR description.
+
 ## Documentation pass before every Pull Request
 
 Before creating any Pull Request, do a documentation pass and update every doc the branch's changes
