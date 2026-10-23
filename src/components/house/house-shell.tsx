@@ -17,6 +17,7 @@ import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
 import { stop as stopRecord } from './record-player'
 import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
+import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -443,6 +444,9 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
+
+      {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
+      <StickerToast onOpen={() => setPanel('guestbook')} />
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>
