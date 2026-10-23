@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { caffeine, ordinal, OVERDOSE_AT } from './intoxication'
 import { PanelWindow } from './panel-window'
+import { bicaResult, steam } from './sfx'
 import { readStats, updateStats, type BicaResult } from './visitor-stats'
 
 interface Props {
   onClose: () => void
+  /** Called after each pull with how many bicas the visitor has had lately. */
+  onPull?: (lately: number) => void
 }
 
 type Phase = 'ready' | 'pulling' | 'done'
@@ -33,13 +37,14 @@ function judge(bar: number): Result {
  * The kitchen's espresso machine: start the pull, then stop the pressure
  * needle as close to 9 bar as possible. Perfect pulls in a row speed it up.
  */
-export function BicaPanel({ onClose }: Props) {
+export function BicaPanel({ onClose, onPull }: Props) {
   const [phase, setPhase] = useState<Phase>('ready')
   const [bar, setBar] = useState(0)
   const [result, setResult] = useState<Result | null>(null)
   const [streak, setStreak] = useState(0)
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
   const [best, setBest] = useState(() => readStats().bicaBestStreak)
+  const [lately, setLately] = useState(() => caffeine.count())
   const frame = useRef<number | null>(null)
   const angle = useRef(-Math.PI / 2)
   const actionRef = useRef<HTMLButtonElement>(null)
@@ -68,6 +73,7 @@ export function BicaPanel({ onClose }: Props) {
     if (phase === 'pulling') {
       const outcome = judge(bar)
       const nextStreak = outcome === 'perfect' ? streak + 1 : 0
+      bicaResult(outcome)
       setResult(outcome)
       setStreak(nextStreak)
       setPhase('done')
@@ -76,12 +82,16 @@ export function BicaPanel({ onClose }: Props) {
         stats.bicas[outcome]++
         stats.bicaBestStreak = Math.max(stats.bicaBestStreak, nextStreak)
       })
+      const count = caffeine.add()
+      setLately(count)
+      onPull?.(count)
     } else {
+      steam()
       angle.current = -Math.PI / 2
       setResult(null)
       setPhase('pulling')
     }
-  }, [phase, bar, streak, best])
+  }, [phase, bar, streak, best, onPull])
 
   const outcome = result ? RESULTS[result] : null
   const needle = (bar / MAX_BAR) * 100
@@ -139,6 +149,11 @@ export function BicaPanel({ onClose }: Props) {
           {phase === 'pulling' ? 'Stop!' : phase === 'done' ? 'Another one' : 'Start the pull'}
         </button>
       </div>
+      {phase !== 'pulling' && lately + 1 >= OVERDOSE_AT - 1 && (
+        <p className="font-pixel mt-3 text-center text-xs text-[#8e2a20]">
+          Are you sure? That&rsquo;s your {ordinal(lately + 1)}.
+        </p>
+      )}
     </PanelWindow>
   )
 }

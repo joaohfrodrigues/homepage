@@ -1,19 +1,18 @@
 /**
  * The living room record player: a short lo-fi loop synthesised with the Web
  * Audio API, so there's no audio file to download or license. It never starts
- * on its own (only from `play()`, called from a click), stops when the tab is
- * hidden, and remembers its volume and mute in localStorage, but not whether
- * it was playing.
+ * on its own (only from `play()`, called from a click) and stops when the tab
+ * is hidden. Its volume is the game's (see audio.ts).
  */
 
-const SETTINGS_KEY = 'house:record-player'
+import { hold, noiseBuffer, release, wake } from './audio'
 
 export interface RecordPlayerState {
   playing: boolean
-  /** 0 to 1. */
-  volume: number
-  muted: boolean
 }
+
+/** The music's level against the sound effects, at any game volume. */
+const MUSIC_LEVEL = 0.5
 
 const BPM = 72
 const BEAT = 60 / BPM
@@ -43,17 +42,7 @@ const MELODY: [number, number, number, number][] = [
 
 const hz = (note: number) => 440 * 2 ** ((note - 69) / 12)
 
-function readSettings(): Pick<RecordPlayerState, 'volume' | 'muted'> {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? 'null') as Partial<RecordPlayerState> | null
-    const volume = typeof saved?.volume === 'number' ? Math.min(Math.max(saved.volume, 0), 1) : 0.5
-    return { volume, muted: saved?.muted === true }
-  } catch {
-    return { volume: 0.5, muted: false }
-  }
-}
-
-const SERVER_STATE: RecordPlayerState = { playing: false, volume: 0.5, muted: false }
+const SERVER_STATE: RecordPlayerState = { playing: false }
 
 let state: RecordPlayerState | null = null
 const listeners = new Set<() => void>()
@@ -61,34 +50,15 @@ const listeners = new Set<() => void>()
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let session: { bus: GainNode; timer: number; nextBar: number; bar: number } | null = null
-let noise: AudioBuffer | null = null
 
 function current(): RecordPlayerState {
-  state ??= { playing: false, ...readSettings() }
+  state ??= { playing: false }
   return state
 }
 
 function update(patch: Partial<RecordPlayerState>) {
   state = { ...current(), ...patch }
-  if (master && ctx) master.gain.setTargetAtTime(state.muted ? 0 : state.volume, ctx.currentTime, 0.05)
   listeners.forEach((fn) => fn())
-}
-
-function save() {
-  const { volume, muted } = current()
-  try {
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ volume, muted }))
-  } catch {
-    // Private mode: the settings last until the tab closes.
-  }
-}
-
-function noiseBuffer(audio: AudioContext): AudioBuffer {
-  if (noise) return noise
-  noise = audio.createBuffer(1, audio.sampleRate * 2, audio.sampleRate)
-  const data = noise.getChannelData(0)
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
-  return noise
 }
 
 /** One note with a soft attack and release, on two slightly detuned oscillators. */
@@ -166,14 +136,15 @@ function onVisibility() {
 
 export function play() {
   if (session) return
-  ctx ??= new AudioContext()
+  const audio = wake()
+  if (!audio) return
+  ctx = audio.ctx
   if (!master) {
     master = ctx.createGain()
-    master.connect(ctx.destination)
+    master.gain.value = MUSIC_LEVEL
+    master.connect(audio.out)
   }
-  const { volume, muted } = current()
-  master.gain.value = muted ? 0 : volume
-  void ctx.resume()
+  hold()
   // A warm low-pass over the whole mix, faded in so the needle doesn't thump.
   const bus = ctx.createGain()
   const warmth = ctx.createBiquadFilter()
@@ -195,24 +166,12 @@ export function stop() {
     window.clearInterval(timer)
     bus.gain.cancelScheduledValues(ctx.currentTime)
     bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05)
-    window.setTimeout(() => {
-      bus.disconnect()
-      // Nothing left to play: let the audio device sleep.
-      if (!session) void ctx?.suspend()
-    }, 400)
+    window.setTimeout(() => bus.disconnect(), 400)
     session = null
+    // Nothing left to play: the audio device can sleep.
+    release()
   }
   if (current().playing) update({ playing: false })
-}
-
-export function setVolume(volume: number) {
-  update({ volume: Math.min(Math.max(volume, 0), 1), muted: false })
-  save()
-}
-
-export function setMuted(muted: boolean) {
-  update({ muted })
-  save()
 }
 
 export function subscribe(fn: () => void): () => void {
