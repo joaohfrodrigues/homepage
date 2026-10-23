@@ -66,6 +66,14 @@ A first visit to the home page opens with a welcome card from João: shortcuts t
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
 
+The guestbook in the hall keeps the visitor's own tallies (rooms visited, distance walked, bicas,
+fridge-magnet scores) and a page of stickers to collect, all in this browser's `localStorage`
+(`src/components/house/visitor-stats.ts`; stickers are its `ACHIEVEMENTS`). Earning a sticker pops
+up a toast ("★ First sip unlocked") under the HUD for a few seconds, also announced to screen
+readers; clicking it opens the guestbook. Announced sticker ids are saved under
+`house:stickers-seen`, so a reload doesn't repeat a toast, and stickers earned before toasts existed
+are marked seen quietly. A new sticker needs only an entry in `ACHIEVEMENTS` to get its toast.
+
 Pages over the house have real URLs, so Back closes them. Panels, dialogue and the photo lightbox
 aren't pages, but each gets a history entry at the same URL while it is open
 (`useHistoryLayer` in `src/components/house/house-navigation.tsx`), so the browser's Back or a
@@ -91,8 +99,8 @@ Where things live:
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
-- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
-    and dialogue.
+- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...),
+    dialogue and the sticker toast.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
