@@ -184,6 +184,51 @@ test.describe('House', () => {
     await expect(guestbook).toContainText('this is your first visit')
     await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
   })
+
+  test('a new sticker gets a toast once, which opens the guestbook', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+
+    const toast = page.getByRole('status').getByRole('button', { name: 'First sip unlocked' })
+    await expect(toast).toBeVisible()
+    await toast.click()
+    await expect(page.getByRole('dialog', { name: 'Guestbook' })).toBeVisible()
+    await expect(toast).not.toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // Already announced: neither a reload nor more coffee shows it again.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await expect(bica.getByRole('button', { name: 'Another one' })).toBeVisible()
+    await expect(page.getByRole('status').getByRole('button')).toHaveCount(0)
+  })
+
+  test('stickers earned before toasts existed are not announced', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (window.localStorage.getItem('house:stats')) return
+      window.localStorage.setItem('house:stats', JSON.stringify({ visits: 1, chats: 5, pets: 5 }))
+    })
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    // Counting the visit already checked for new stickers: Chatterbox and Cat person stay quiet.
+    await expect(page.getByText('João’s house')).toBeVisible()
+    await expect(page.getByRole('status')).toBeEmpty()
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await expect(page.getByRole('status').getByRole('button', { name: 'First sip unlocked' })).toBeVisible()
+  })
 })
 
 /** A fresh tab: Back from the first page it loads leaves for here. */
