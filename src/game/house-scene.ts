@@ -621,11 +621,13 @@ export class HouseScene extends Phaser.Scene {
    */
   private applyEffects(time: number) {
     const combined: Omit<PlayerEffect, 'ms'> = {}
+    let pounding = false
     for (const [source, { effect, until }] of this.effects) {
       if (time >= until) {
         this.effects.delete(source)
         continue
       }
+      if (effect.shake) pounding = true
       if (effect.speed) combined.speed = (combined.speed ?? 1) * effect.speed
       if (effect.tint !== undefined) combined.tint = effect.tint
       for (const name of ['vignette', 'blur'] as const) {
@@ -649,9 +651,10 @@ export class HouseScene extends Phaser.Scene {
     }
     const sway = combined.sway ?? 0
     camera.setFollowOffset(Math.sin(time / 900) * sway, Math.sin(time / 1400) * sway * 0.5)
-    if (combined.shake && time >= this.nextShakeAt) {
+    if (pounding && time >= this.nextShakeAt) {
       this.nextShakeAt = time + SHAKE_GAP_MS
-      camera.shake(160, combined.shake)
+      if (combined.shake) camera.shake(160, combined.shake)
+      this.cfg.bridge.game.emit('heartbeat')
     }
     // The edges breathe in and out, and the view slides out of focus now and
     // then; both hold still, the blur fainter, under reduced motion.

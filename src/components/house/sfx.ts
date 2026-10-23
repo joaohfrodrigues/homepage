@@ -1,6 +1,7 @@
 /**
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
- * meow, the coffee machine and a chime for new stickers. Like the record
+ * meow, the coffee machine, a chime for new stickers, and the hidden
+ * behaviours' heartbeat, beers, snores and morning birds. Like the record
  * player they're synthesised with the Web Audio API, so there are no files to
  * download. They're on by default but stay silent until the visitor has
  * clicked or pressed a key, and the HUD's sound button turns them off.
@@ -151,5 +152,62 @@ export function lightSwitch() {
   play((audio, t) => {
     burst(audio, t, { length: 0.02, level: 0.12, filter: 'highpass', cutoff: 2000 })
     note(audio, t, { from: 1400, length: 0.025, level: 0.04, type: 'square' })
+  })
+}
+
+/** Lub-dub, with each thump of a caffeine overdose. */
+export function heartbeat() {
+  play((audio, t) => {
+    note(audio, t, { from: 70, to: 40, length: 0.14, level: 0.2 })
+    note(audio, t + 0.17, { from: 60, to: 38, length: 0.12, level: 0.13 })
+  })
+}
+
+/** A bottle opening: the cap, then the fizz. A hiccup follows once the beers have gone to your head. */
+export function beer(hiccup: boolean) {
+  play((audio, t) => {
+    note(audio, t, { from: 1100, to: 380, length: 0.06, level: 0.1 })
+    burst(audio, t + 0.03, { length: 0.5, level: 0.05, filter: 'highpass', cutoff: 4000, attack: 0.02 })
+    if (hiccup) {
+      note(audio, t + 0.8, { from: 280, to: 720, length: 0.1, level: 0.09, type: 'triangle' })
+      burst(audio, t + 0.8, { length: 0.05, level: 0.04, filter: 'bandpass', cutoff: 1500 })
+    }
+  })
+}
+
+/** Glasses clinking for the toast. */
+export function clink() {
+  play((audio, t) => {
+    // Inharmonic partials make it ring like glass rather than a bell.
+    for (const [from, level] of [
+      [2350, 0.05],
+      [3620, 0.03],
+      [5110, 0.02],
+    ])
+      note(audio, t, { from, length: 0.6, level })
+  })
+}
+
+/** Nodding off: two slow snores. */
+export function snore() {
+  play((audio, t) => {
+    for (const at of [0.2, 1.7]) {
+      burst(audio, t + at, { length: 0.9, level: 0.06, filter: 'lowpass', cutoff: 380, attack: 0.5 })
+      note(audio, t + at + 0.2, { from: 72, to: 64, length: 0.7, level: 0.035, type: 'sawtooth' })
+    }
+  })
+}
+
+/** Morning on the sofa: birds outside. */
+export function birdsong() {
+  play((audio, t) => {
+    for (const [at, from, to] of [
+      [0.1, 2600, 3900],
+      [0.25, 2800, 4100],
+      [0.9, 3300, 2500],
+      [1.05, 3300, 2500],
+      [1.2, 3400, 2600],
+    ])
+      note(audio, t + at, { from, to, length: 0.09, level: 0.03 })
   })
 }

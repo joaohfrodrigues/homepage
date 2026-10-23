@@ -221,6 +221,7 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     const offs = [
       bridge.game.on('step', sfx.step),
+      bridge.game.on('heartbeat', sfx.heartbeat),
       bridge.game.on('interact', (action) => {
         if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
@@ -340,6 +341,7 @@ export function HouseShell({ data, children }: Props) {
   const drinkBeer = useCallback(() => {
     updateStats((stats) => stats.beers++)
     const lately = beer.add()
+    sfx.beer(lately >= DIZZY_AT)
     if (lately >= DOZE_AT) {
       setDialogue(null)
       updateStats((stats) => stats.dozes++)
@@ -361,6 +363,13 @@ export function HouseShell({ data, children }: Props) {
     setDialogue(lately === TIPSY_AT ? null : 'beer')
     if (lately === TIPSY_AT) setComic('cheers')
   }, [bridge])
+
+  // Each close-up has its sound: the toast, the snoring, the birds next morning.
+  useEffect(() => {
+    if (comic === 'cheers') sfx.clink()
+    else if (comic === 'doze') sfx.snore()
+    else if (comic === 'wake') sfx.birdsong()
+  }, [comic])
 
   // The scene brings the morning in behind the fade; the day/night toggle follows only then.
   useEffect(

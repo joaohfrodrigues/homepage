@@ -75,6 +75,8 @@ interface GameEvents {
   step: undefined
   /** The guest came to on the sofa after a `doze`. */
   dozed: undefined
+  /** A beat of the pounding heart while an effect shakes (even when reduced motion keeps the camera still). */
+  heartbeat: undefined
 }
 
 interface UiEvents {

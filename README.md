@@ -91,7 +91,9 @@ in `localStorage`.
 
 The house also has sound effects, synthesised the same way (`src/components/house/sfx.ts`): quiet
 footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom door,
-Zeno's meow, the coffee machine and a chime for each new sticker. They are on by default but stay
+Zeno's meow, the coffee machine and a chime for each new sticker, plus the hidden behaviours' own:
+a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
+clink for the toast, snoring as the guest nods off and birds when they wake. They are on by default but stay
 silent until the visitor first clicks or presses a key. The speaker button in the HUD mutes every
 sound, the record included, and is remembered in `localStorage`. The music and the effects share
 one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
