@@ -1,11 +1,13 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { furnishHouse } from '../../src/game/furnishings'
 import { TILE, type Point } from '../../src/game/layout'
 
 interface SceneHandle {
   cfg: { bridge: { ui: { emit(event: string, payload?: unknown): void } } }
   effects: Map<string, unknown>
-  effect: { sway?: number; drift?: number; vignette?: number; tint?: number }
+  effect: { sway?: number; drift?: number; vignette?: number; blur?: number; tint?: number }
+  vignette?: { style: { opacity: string; transform: string } }
+  blur?: { strength: number } | null
   player: { tile: Point; sprite: { isTinted: boolean } }
   nightOverlay: { alpha: number }
   cameras: { main: { worldView: { x: number; y: number }; zoom: number } }
@@ -36,9 +38,30 @@ async function grabBeer(page: Page) {
   await fridge.getByRole('button', { name: 'Grab a Super Bock' }).click()
 }
 
+/** Naps until evening, or wakes up, from the directory's bed entry. */
+async function toggleNight(page: Page) {
+  await page.keyboard.press('m')
+  await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: /^Nap until evening|^Wake up/ }).click()
+}
+
+/** Clicks through the dialogue's lines until the choice shows. */
+async function reveal(dialogue: Locator, name: string) {
+  const choice = dialogue.getByRole('button', { name })
+  await expect(async () => {
+    if (!(await choice.isVisible())) await dialogue.click()
+    await expect(choice).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 15_000 })
+  return choice
+}
+
+/** Clicks through the dialogue's lines until the choice shows, then picks it. */
+async function choose(dialogue: Locator, name: string) {
+  await (await reveal(dialogue, name)).click()
+}
+
 async function closeDialogue(page: Page) {
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: /^Notice|^Talking to/ })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: /^Notice|^Talking to|^Comic/ })).toHaveCount(0)
 }
 
 test.describe('Beers from the fridge', () => {
@@ -57,6 +80,10 @@ test.describe('Beers from the fridge', () => {
 
   test('tipsy, then dizzy, then a doze that ends on the sofa', async ({ page }) => {
     test.slow()
+    // Start at night, so waking up has to bring the morning, and the toggle, round.
+    if (await page.getByLabel('Day').isVisible()) await toggleNight(page)
+    await expect(page.getByLabel('Night')).toBeVisible()
+
     await goToFridge(page)
     for (let i = 0; i < 2; i++) {
       await grabBeer(page)
@@ -65,10 +92,18 @@ test.describe('Beers from the fridge', () => {
     }
     expect((await guestEffect(page)).sources).toEqual([])
 
+    // The third goes to your head: a close-up of the two of you clinking bottles.
     await grabBeer(page)
-    await expect(page.getByRole('dialog', { name: 'Talking to João' })).toContainText('Saúde!')
-    await closeDialogue(page)
-    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 3, tinted: true })
+    const cheers = page.getByRole('dialog', { name: 'Comic: Saúde!' })
+    await expect(cheers).toBeVisible()
+    await expect(cheers.getByRole('img', { name: 'You' })).toBeVisible()
+    // One click lands every panel at once, the next one moves on.
+    await cheers.click()
+    await expect(cheers.getByText('CLINK!')).toBeVisible()
+    await expect(cheers.getByRole('img', { name: 'João' })).toBeVisible()
+    await cheers.click()
+    await expect(cheers).toHaveCount(0)
+    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 3, vignette: 0.2, tinted: true })
     expect((await guestEffect(page)).drift).toBeUndefined()
 
     await grabBeer(page)
@@ -76,7 +111,11 @@ test.describe('Beers from the fridge', () => {
     await grabBeer(page)
     await expect(page.getByRole('dialog', { name: 'Notice' })).toContainText('The floor tilts')
     await closeDialogue(page)
-    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 6, drift: 0.15, vignette: 0.5 })
+    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 6, drift: 0.15, vignette: 0.5, blur: 0.7 })
+    // The edges breathe and the focus comes and goes, rather than sitting still.
+    const filters = () => scene(page, (s) => `${s.vignette?.style.opacity} ${s.blur?.strength.toFixed(3)}`)
+    const before = await filters()
+    await expect.poll(filters).not.toBe(before)
 
     // Clicking the floor still walks straight there, however wobbly the keys are.
     const start = await scene(page, (s) => ({ ...s.player.tile }))
@@ -91,21 +130,36 @@ test.describe('Beers from the fridge', () => {
 
     await goToFridge(page)
     await grabBeer(page)
+    // No warning on the sixth: it's just as wobbly as the fifth.
+    await expect(page.getByRole('dialog', { name: 'Notice' })).toContainText('The floor tilts')
     await closeDialogue(page)
     await grabBeer(page)
 
-    // The seventh: lights out, and João is there when you come to.
+    // The seventh: you nod off in close-up (still night), then come to in close-up, with João.
+    const dozing = page.getByRole('dialog', { name: 'Comic: Nodding off' })
+    await expect(dozing).toBeVisible()
+    await expect(page.getByLabel('Night')).toBeVisible()
+    await page.keyboard.press('Escape')
+    const waking = page.getByRole('dialog', { name: 'Comic: Waking up' })
+    await expect(waking).toBeVisible({ timeout: 10_000 })
+    await expect(waking).toContainText('You alive?')
+    await page.keyboard.press('Escape')
     const wake = page.getByRole('dialog', { name: 'Talking to João' })
-    await expect(wake).toContainText('Morning. You had seven.', { timeout: 10_000 })
+    await expect(wake).toContainText('Morning, sunshine', { timeout: 10_000 })
     expect(await scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x + 1, y: sofa.y + 1 })
     expect(await scene(page, (s) => s.nightOverlay.alpha)).toBe(0)
+    await expect(page.getByLabel('Day')).toBeVisible()
     expect((await guestEffect(page)).sources).toEqual([])
-    // One click finishes typing the first line or moves on; two always reach the second.
-    await wake.click()
-    await wake.click()
-    await expect(wake).toContainText('glass of water')
-    await expect(wake.getByRole('button', { name: 'Coffee, please' })).toBeVisible()
-    await closeDialogue(page)
+
+    // Ask what happened, then how many; each answer still offers water or coffee.
+    await choose(wake, 'Ughhh… what happened??')
+    await expect(wake).toContainText('You found the Super Bock')
+    await choose(wake, 'How many did I have?')
+    await expect(wake).toContainText('7. In about a minute.')
+    const water = await reveal(wake, 'Water, thanks')
+    await expect(wake.getByRole('button')).toHaveCount(2)
+    await water.click()
+    await expect(wake).toHaveCount(0)
 
     await page.keyboard.press('g')
     const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
@@ -119,7 +173,22 @@ test.describe('Beers from the fridge', () => {
     await expect(page.getByRole('dialog', { name: 'Notice' })).toContainText('Ice cold')
   })
 
-  test('under reduced motion being dizzy is a tint and fuzzy edges, not a sway', async ({ page }) => {
+  test('a nap sleeps the beers off', async ({ page }) => {
+    await goToFridge(page)
+    for (let i = 0; i < 3; i++) {
+      await grabBeer(page)
+      await closeDialogue(page)
+    }
+    expect((await guestEffect(page)).sources).toEqual(['beer'])
+
+    await toggleNight(page)
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: [], tinted: false })
+    await goToFridge(page)
+    await grabBeer(page)
+    await expect(page.getByRole('dialog', { name: 'Notice' })).toContainText('Ice cold')
+  })
+
+  test('under reduced motion being dizzy is a tint, still edges and a faint blur, not a sway', async ({ page }) => {
     // The scene reads the setting as it boots.
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.reload()
@@ -127,11 +196,19 @@ test.describe('Beers from the fridge', () => {
     await goToFridge(page)
     for (let i = 0; i < 5; i++) {
       await grabBeer(page)
+      // The third's close-up has every panel up at once.
+      if (i === 2) await expect(page.getByRole('dialog', { name: 'Comic: Saúde!' }).getByText('CLINK!')).toBeVisible()
       await closeDialogue(page)
     }
     const effect = await guestEffect(page)
-    expect(effect).toMatchObject({ sources: ['beer'], vignette: 0.5, tinted: true })
+    expect(effect).toMatchObject({ sources: ['beer'], vignette: 0.5, blur: 0.7, tinted: true })
     expect(effect.sway).toBeUndefined()
     expect(effect.drift).toBeUndefined()
+    const filters = () =>
+      scene(page, (s) => [s.vignette?.style.opacity, s.vignette?.style.transform, s.blur?.strength])
+    await expect.poll(filters).toEqual(['0.85', 'scale(1.04)', expect.closeTo(0.245, 3)])
+    const still = await filters()
+    await page.waitForTimeout(500)
+    expect(await filters()).toEqual(still)
   })
 })

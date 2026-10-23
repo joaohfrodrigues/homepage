@@ -133,6 +133,14 @@
 }
 
 /* A sticker toast drops in from under the HUD (only with motion allowed). */
+/* A comic panel slapped down onto the page. */
+@keyframes comic-panel-in {
+    from {
+        transform: scale(1.25) rotate(-4deg);
+        opacity: 0;
+    }
+}
+
 @keyframes sticker-toast-in {
     from {
         transform: translateY(-1rem);

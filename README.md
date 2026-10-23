@@ -87,12 +87,17 @@ plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
-or until a nap. Beers from the fridge make you tipsy at three (the view sways) and dizzy at five
-(a wider sway, steps with the keys that wander, darker edges); the seventh fades to black and you
-wake on the living-room sofa in the morning, with João, water and coffee. Those counts live in
-memory for the session only (`src/components/house/intoxication.ts`), apart from the guestbook's
-lifetime stats, and the temporary effects (`effect` on the bridge) drop shake, jitter, sway and
-drift for a tint under `prefers-reduced-motion`.
+or until a nap. Beers from the fridge make you tipsy at three (the view sways and the edges
+breathe) and dizzy at five (a wider sway, steps with the keys that wander, darker edges and a view
+that keeps slipping out of focus). The seventh fades to black and you wake on the living-room
+sofa in the morning, where João can tell you what happened and how many you had (and how fast)
+before you take the glass of water he left you. The third beer, nodding off and waking up each
+cut to a comic-book strip of close-ups drawn from the character sprites
+(`src/components/house/comic-strip.tsx`), which a click or key skips. A nap sleeps off the beers
+as well as the bicas. Those counts live in memory for the session only
+(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats. Under
+`prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
+and drift, hold the vignette and blur still, and the comic panels appear all at once.
 
 Where things live:
 

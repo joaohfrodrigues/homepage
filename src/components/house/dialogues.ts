@@ -1,8 +1,24 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
 import type { HouseData } from '@/lib/house'
+import { DOZE_AT } from './intoxication'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
-export type DialogueKey = DialogueId | 'joao-contact' | 'caffeine-overdose' | 'beer' | 'sofa-wake'
+export type DialogueKey =
+  | DialogueId
+  | 'joao-contact'
+  | 'caffeine-overdose'
+  | 'beer'
+  | 'sofa-wake'
+  | 'sofa-what'
+  | 'sofa-count'
+
+/** The night that ended on the sofa, for João to recount when the guest wakes. */
+export interface Binge {
+  beers: number
+  minutes: number
+  /** Bicas pulled lately on top of the beers. */
+  bicas: number
+}
 
 export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
@@ -22,13 +38,15 @@ export interface Dialogue {
 export function buildDialogue(
   id: DialogueKey,
   data: HouseData,
-  house: { night: boolean; buzzing?: boolean; beers?: number },
+  house: { night: boolean; buzzing?: boolean; beers?: number; binge?: Binge | null },
 ): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
     href: link.href,
   }))
+  // Every turn of the wake-up conversation can end it with the glass of water.
+  const morningAfter: DialogueChoice[] = [{ label: 'Water, thanks', kind: 'close' }]
 
   switch (id) {
     case 'joao':
@@ -86,14 +104,41 @@ export function buildDialogue(
       return {
         speaker: 'João',
         lines: [
-          'Morning. You had seven.',
-          'There’s a glass of water by the sofa, and I put the kettle on. Coffee’s ready when you are.',
+          'Morning, sunshine. Easy, don’t sit up too fast.',
+          'There’s a glass of water by the sofa. Drink all of it.',
         ],
         choices: [
-          { label: 'Water first, thanks', kind: 'close' },
-          { label: 'Coffee, please', kind: 'panel', panel: 'bica' },
+          { label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' },
+          { label: 'How many did I have?', kind: 'next', id: 'sofa-count' },
+          ...morningAfter,
         ],
       }
+    case 'sofa-what': {
+      const bicas = house.binge?.bicas ?? 0
+      return {
+        speaker: 'João',
+        lines: [
+          'You found the Super Bock in the fridge. Then you found the rest of the Super Bock.',
+          'Somewhere around the fifth you started telling Zeno how much he means to you. He was not convinced.',
+          ...(bicas > 0
+            ? [`You’d had ${bicas === 1 ? 'a bica' : `${bicas} bicas`} too, which made for a very energetic speech.`]
+            : []),
+          'Then you sat down “just for a second”, and that was that. I put a blanket on you.',
+        ],
+        choices: [{ label: 'How many did I have?', kind: 'next', id: 'sofa-count' }, ...morningAfter],
+      }
+    }
+    case 'sofa-count': {
+      const binge = house.binge ?? { beers: DOZE_AT, minutes: 1, bicas: 0 }
+      return {
+        speaker: 'João',
+        lines: [
+          `${binge.beers}. In about ${binge.minutes <= 1 ? 'a minute' : `${binge.minutes} minutes`}.`,
+          binge.minutes <= 3 ? 'I’ve honestly never seen anything like it.' : 'Pace yourself next time, yeah?',
+        ],
+        choices: [{ label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' }, ...morningAfter],
+      }
+    }
     case 'letterbox':
       return {
         lines: [

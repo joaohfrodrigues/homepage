@@ -78,8 +78,9 @@ test.describe('Too many bicas', () => {
     // The tenth: the machine closes and João comments.
     await expect(bica).not.toBeVisible()
     await expect(talk).toContainText('You’re vibrating.')
+    // The scene takes the effect on at its next frame.
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['caffeine'], speed: 1.5, tinted: true })
     const effect = await guestEffect(page)
-    expect(effect).toMatchObject({ sources: ['caffeine'], speed: 1.5, tinted: true })
     expect(effect.shake).toBeGreaterThan(0)
     expect(effect.jitter).toBeGreaterThan(0)
     await page.keyboard.press('Escape')
@@ -146,8 +147,8 @@ test.describe('Too many bicas', () => {
     await openBica(page)
     await pull(page, 10)
     await expect(page.getByRole('dialog', { name: 'Talking to João' })).toContainText('You’re vibrating.')
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['caffeine'], tinted: true })
     const effect = await guestEffect(page)
-    expect(effect).toMatchObject({ sources: ['caffeine'], tinted: true })
     expect(effect.shake).toBeUndefined()
     expect(effect.jitter).toBeUndefined()
   })

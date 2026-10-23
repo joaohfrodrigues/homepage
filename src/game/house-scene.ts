@@ -106,6 +106,9 @@ const ZENO_LITTER_GAP_MS: [number, number] = [120_000, 240_000]
 /** Gap between an effect's camera-shake bursts, and between jitters of the guest. */
 const SHAKE_GAP_MS = 1100
 const JITTER_MS = 70
+/** Pace of a drunk vignette's breathing and of the view sliding in and out of focus (ms per radian). */
+const VIGNETTE_BREATH_MS = 700
+const BLUR_DRIFT_MS = 1100
 /** People leave chairs to visitors and cats; João stays off them. */
 const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
 
@@ -198,8 +201,9 @@ export class HouseScene extends Phaser.Scene {
   private effect: Omit<PlayerEffect, 'ms'> = {}
   private nextShakeAt = 0
   private nextJitterAt = 0
-  /** Made on first use; null on renderers without camera filters. */
-  private vignette?: Phaser.Filters.Vignette | null
+  /** Made on first use: a soft dark ring over the view, and (null on renderers without camera filters) a blur. */
+  private vignette?: HTMLDivElement
+  private blur?: Phaser.Filters.Blur | null
   /** Passed out: the keys wait until the guest comes to. */
   private dozing = false
 
@@ -624,7 +628,9 @@ export class HouseScene extends Phaser.Scene {
       }
       if (effect.speed) combined.speed = (combined.speed ?? 1) * effect.speed
       if (effect.tint !== undefined) combined.tint = effect.tint
-      if (effect.vignette) combined.vignette = Math.max(combined.vignette ?? 0, effect.vignette)
+      for (const name of ['vignette', 'blur'] as const) {
+        if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
+      }
       if (this.reducedMotion) continue
       for (const name of ['shake', 'jitter', 'sway', 'drift'] as const) {
         if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
@@ -647,11 +653,44 @@ export class HouseScene extends Phaser.Scene {
       this.nextShakeAt = time + SHAKE_GAP_MS
       camera.shake(160, combined.shake)
     }
-    if (combined.vignette) this.vignette ??= camera.filters?.external.addVignette(0.5, 0.5, 0.6, 0) ?? null
+    // The edges breathe in and out, and the view slides out of focus now and
+    // then; both hold still, the blur fainter, under reduced motion.
+    if (combined.vignette) this.vignette ??= this.makeVignette()
     if (this.vignette) {
-      this.vignette.active = !!combined.vignette
-      this.vignette.strength = combined.vignette ?? 0
+      // Breathing in, the ring darkens and closes in a little.
+      const breath = this.reducedMotion ? 0 : Math.sin(time / VIGNETTE_BREATH_MS)
+      const { style } = this.vignette
+      style.display = combined.vignette ? '' : 'none'
+      style.opacity = (Math.min(1, (combined.vignette ?? 0) * 2) * (0.85 + 0.15 * breath)).toFixed(3)
+      // Never below full size, or the view's edges would show past it.
+      style.transform = `scale(${(1.04 - 0.04 * breath).toFixed(3)})`
     }
+    if (combined.blur) this.blur ??= camera.filters?.external.addBlur(0, 2, 2, 0) ?? null
+    if (this.blur) {
+      const focus = this.reducedMotion ? 0.35 : Math.max(0, Math.sin(time / BLUR_DRIFT_MS)) ** 2
+      this.blur.active = !!combined.blur
+      this.blur.strength = (combined.blur ?? 0) * focus
+    }
+  }
+
+  /**
+   * The vignette is a CSS gradient over the canvas rather than something the
+   * game draws: Phaser's vignette filter goes solid past its radius, leaving a
+   * hard ring when it's faint, while a radial gradient eases from clear in the
+   * middle to dark in the corners. It sits under the HUD, which comes later in the page.
+   */
+  private makeVignette() {
+    const vignette = document.createElement('div')
+    vignette.dataset.vignette = ''
+    vignette.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'pointer-events:none',
+      'background:radial-gradient(ellipse at center, transparent 15%, rgb(8 5 14 / 0.35) 35%, rgb(8 5 14 / 0.7) 55%, rgb(8 5 14 / 0.9) 75%, rgb(8 5 14) 90%)',
+    ].join(';')
+    this.game.canvas.parentElement?.appendChild(vignette)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => vignette.remove())
+    return vignette
   }
 
   /**
