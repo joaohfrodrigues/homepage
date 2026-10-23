@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { onStickerEarned, type Achievement } from './visitor-stats'
 
 /** How long each sticker stays up before the next one (or nothing) takes its place. */
-const SHOW_MS = 3000
+const SHOW_MS = 5000
 
 interface Props {
   onOpen: () => void
@@ -37,13 +37,13 @@ export function StickerToast({ onOpen }: Props) {
         <button
           key={current.id}
           type="button"
-          className="pixel-button pointer-events-auto motion-safe:animate-[sticker-toast-in_200ms_steps(4)]"
+          className="pixel-button pointer-events-auto motion-safe:animate-[sticker-toast-in_200ms_steps(4)] sm:gap-3 sm:px-5 sm:py-3 sm:text-lg"
           onClick={() => {
             setQueue([])
             onOpen()
           }}
         >
-          <span className="text-[#e8c95a]" aria-hidden>
+          <span className="text-[#e8c95a] sm:text-2xl" aria-hidden>
             ★
           </span>
           {current.title} unlocked
