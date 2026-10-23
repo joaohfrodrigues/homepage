@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { BookOpen, Map as MapIcon, Moon, Music, Sun } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
@@ -15,6 +15,8 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { stop as stopRecord } from './record-player'
+import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
 import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
@@ -98,6 +100,7 @@ export function HouseShell({ data, children }: Props) {
   const [welcome, setWelcome] = useState(
     () => typeof window !== 'undefined' && pathname === '/' && !readWelcomed(),
   )
+  const record = useRecordPlayer()
 
   const overlayOpen = pathname !== '/'
   const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
@@ -173,6 +176,7 @@ export function HouseShell({ data, children }: Props) {
     return () => {
       cancelled = true
       game?.destroy(true)
+      stopRecord()
     }
   }, [bridge, data.trips])
 
@@ -348,6 +352,12 @@ export function HouseShell({ data, children }: Props) {
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
             <div className="flex gap-2">
+              {record.playing && (
+                <button type="button" className="pixel-button pointer-events-auto" onClick={stopRecord} aria-label="Stop the music">
+                  <Music size={14} />
+                  <span className="hidden sm:inline">Stop music</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="pixel-button pointer-events-auto"
@@ -433,6 +443,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+      {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
       <StickerToast onOpen={() => setPanel('guestbook')} />
