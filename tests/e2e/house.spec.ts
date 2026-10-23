@@ -282,6 +282,33 @@ test.describe('House', () => {
     expect(await audioContexts()).toBe(0)
   })
 
+  test('the coffee machine sound plays once, through, however many bicas are pulled', async ({ page }) => {
+    // Count starts of the long coffee recording (nothing else lasts over three seconds).
+    await page.addInitScript(() => {
+      const win = window as unknown as { __coffeeStarts: number }
+      win.__coffeeStarts = 0
+      const start = AudioBufferSourceNode.prototype.start
+      AudioBufferSourceNode.prototype.start = function (...args: Parameters<typeof start>) {
+        if ((this.buffer?.duration ?? 0) > 3) win.__coffeeStarts++
+        return start.apply(this, args)
+      }
+    })
+    const coffeeStarts = () => page.evaluate(() => (window as unknown as { __coffeeStarts: number }).__coffeeStarts)
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await expect.poll(coffeeStarts).toBe(1)
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await bica.getByRole('button', { name: 'Another one' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await page.waitForTimeout(500)
+    expect(await coffeeStarts()).toBe(1)
+  })
+
   test('a new sticker gets a toast once, which opens the guestbook', async ({ page }) => {
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })

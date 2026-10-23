@@ -17,36 +17,38 @@ type Sound = (audio: Audio, start: number) => void
 const RECORDINGS = { 'zeno-meow': 0.35, beer: 0.12, coffee: 0.6 } as const
 type Recording = keyof typeof RECORDINGS
 
-/** A recording that has started, so it can be faded out early. */
-interface Playing {
-  ctx: AudioContext
-  gain: GainNode
-}
-
 let preloaded = false
 
-function play(sound: Sound) {
-  if (!isSoundOn()) return
+/** Plays a sound now; false if it can't be heard (sounds off, or no click or key press yet). */
+function play(sound: Sound): boolean {
+  if (!isSoundOn()) return false
   const audio = wake()
-  if (!audio) return
+  if (!audio) return false
   // The first sound of the visit starts fetching the recordings, so they're ready when needed.
   if (!preloaded) {
     preloaded = true
     for (const name of Object.keys(RECORDINGS) as Recording[]) void sample(audio.ctx, name)
   }
   sound(audio, audio.ctx.currentTime + 0.01)
+  return true
 }
 
-/** Plays a recording, or `fallback` if it won't load; `then` gets the time it ends. */
-function recorded(name: Recording, fallback: Sound, then?: (audio: Audio, end: number) => void): Promise<Playing | null> {
-  return new Promise((resolve) =>
-    play((audio, t) => {
+/**
+ * Plays a recording, or `fallback` if it won't load; `then` gets the time it
+ * ends. Resolves with the milliseconds until it ends, or null if it didn't play.
+ */
+function recorded(name: Recording, fallback: Sound, then?: (audio: Audio, end: number) => void): Promise<number | null> {
+  return new Promise((resolve) => {
+    const played = play((audio, t) => {
       void sample(audio.ctx, name).then((buffer) => {
         const start = Math.max(t, audio.ctx.currentTime + 0.01)
+        const ended = (end: number) => {
+          then?.(audio, end)
+          resolve((end - audio.ctx.currentTime) * 1000)
+        }
         if (!buffer) {
           fallback(audio, start)
-          then?.(audio, start + 0.5)
-          return resolve(null)
+          return ended(start + 0.7)
         }
         const source = audio.ctx.createBufferSource()
         source.buffer = buffer
@@ -54,11 +56,11 @@ function recorded(name: Recording, fallback: Sound, then?: (audio: Audio, end: n
         gain.gain.value = RECORDINGS[name]
         source.connect(gain).connect(audio.out)
         source.start(start)
-        then?.(audio, start + buffer.duration)
-        resolve({ ctx: audio.ctx, gain })
+        ended(start + buffer.duration)
       })
-    }),
-  )
+    })
+    if (!played) resolve(null)
+  })
 }
 
 const hz = (note: number) => 440 * 2 ** ((note - 69) / 12)
@@ -164,21 +166,24 @@ const synthMeow: Sound = ({ ctx, out }, t) => {
   osc.stop(t + 0.8)
 }
 
-let pouring: Promise<Playing | null> | null = null
+let pouring = false
 
-/** The coffee machine starts pulling; it runs until `bicaResult` or the end of the recording. */
+/**
+ * The coffee machine starts pulling. The recording outlasts a pull in the
+ * game, so it always plays to the end, and pulls made meanwhile don't start
+ * another over it.
+ */
 export function steam() {
-  pouring = recorded('coffee', (audio, t) => {
+  if (pouring) return
+  pouring = true
+  void recorded('coffee', (audio, t) => {
     burst(audio, t, { length: 0.7, level: 0.05, filter: 'highpass', cutoff: 3500, attack: 0.1 })
     note(audio, t, { from: 60, length: 0.5, level: 0.05, type: 'triangle' })
-  })
+  }).then((ms) => window.setTimeout(() => (pouring = false), ms ?? 0))
 }
 
 /** How the bica came out: a bright ding for a perfect one, a dull clunk for a bad one. */
 export function bicaResult(result: 'perfect' | 'good' | 'under' | 'over') {
-  // The machine stops with the pull.
-  void pouring?.then((playing) => playing?.gain.gain.setTargetAtTime(0, playing.ctx.currentTime, 0.08))
-  pouring = null
   play((audio, t) => {
     if (result === 'perfect') {
       note(audio, t, { from: hz(88), length: 0.9, level: 0.07 })
