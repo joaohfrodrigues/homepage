@@ -10,8 +10,8 @@ better (an animal, a specific object). Recordings go in `public/house/sounds/` a
 MP3s (well under 100 KB), need a licence that allows use on a public site, are credited in
 `public/house/sounds/CREDITS.txt`, get a gain in `RECORDINGS` in `sfx.ts`, and keep a synthesised
 fallback in case the file fails to load. Sounds play
-through the shared context in [audio.ts](./src/components/house/audio.ts), so they respect the HUD's
-mute button and stay silent until the visitor's first click or key press. Keep frequent sounds
+through the shared context in [audio.ts](./src/components/house/audio.ts), so they follow the house's
+volume and mute and stay silent until the visitor's first click or key press. Keep frequent sounds
 (footsteps, anything that repeats) quiet, and leave out sounds for actions that would be silent in
 real life. If a feature has no sound, say why in the PR description.
 

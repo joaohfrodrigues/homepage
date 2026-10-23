@@ -1,21 +1,18 @@
 /**
  * The living room record player: a short lo-fi loop synthesised with the Web
  * Audio API, so there's no audio file to download or license. It never starts
- * on its own (only from `play()`, called from a click), stops when the tab is
- * hidden, and remembers its volume and mute in localStorage, but not whether
- * it was playing.
+ * on its own (only from `play()`, called from a click) and stops when the tab
+ * is hidden. Its volume is the game's (see audio.ts).
  */
 
 import { hold, noiseBuffer, release, wake } from './audio'
 
-const SETTINGS_KEY = 'house:record-player'
-
 export interface RecordPlayerState {
   playing: boolean
-  /** 0 to 1. */
-  volume: number
-  muted: boolean
 }
+
+/** The music's level against the sound effects, at any game volume. */
+const MUSIC_LEVEL = 0.5
 
 const BPM = 72
 const BEAT = 60 / BPM
@@ -45,17 +42,7 @@ const MELODY: [number, number, number, number][] = [
 
 const hz = (note: number) => 440 * 2 ** ((note - 69) / 12)
 
-function readSettings(): Pick<RecordPlayerState, 'volume' | 'muted'> {
-  try {
-    const saved = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? 'null') as Partial<RecordPlayerState> | null
-    const volume = typeof saved?.volume === 'number' ? Math.min(Math.max(saved.volume, 0), 1) : 0.5
-    return { volume, muted: saved?.muted === true }
-  } catch {
-    return { volume: 0.5, muted: false }
-  }
-}
-
-const SERVER_STATE: RecordPlayerState = { playing: false, volume: 0.5, muted: false }
+const SERVER_STATE: RecordPlayerState = { playing: false }
 
 let state: RecordPlayerState | null = null
 const listeners = new Set<() => void>()
@@ -65,23 +52,13 @@ let master: GainNode | null = null
 let session: { bus: GainNode; timer: number; nextBar: number; bar: number } | null = null
 
 function current(): RecordPlayerState {
-  state ??= { playing: false, ...readSettings() }
+  state ??= { playing: false }
   return state
 }
 
 function update(patch: Partial<RecordPlayerState>) {
   state = { ...current(), ...patch }
-  if (master && ctx) master.gain.setTargetAtTime(state.muted ? 0 : state.volume, ctx.currentTime, 0.05)
   listeners.forEach((fn) => fn())
-}
-
-function save() {
-  const { volume, muted } = current()
-  try {
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ volume, muted }))
-  } catch {
-    // Private mode: the settings last until the tab closes.
-  }
 }
 
 /** One note with a soft attack and release, on two slightly detuned oscillators. */
@@ -164,10 +141,9 @@ export function play() {
   ctx = audio.ctx
   if (!master) {
     master = ctx.createGain()
+    master.gain.value = MUSIC_LEVEL
     master.connect(audio.out)
   }
-  const { volume, muted } = current()
-  master.gain.value = muted ? 0 : volume
   hold()
   // A warm low-pass over the whole mix, faded in so the needle doesn't thump.
   const bus = ctx.createGain()
@@ -196,16 +172,6 @@ export function stop() {
     release()
   }
   if (current().playing) update({ playing: false })
-}
-
-export function setVolume(volume: number) {
-  update({ volume: Math.min(Math.max(volume, 0), 1), muted: false })
-  save()
-}
-
-export function setMuted(muted: boolean) {
-  update({ muted })
-  save()
 }
 
 export function subscribe(fn: () => void): () => void {

@@ -2,19 +2,32 @@
  * The house's one AudioContext, shared by the record player and the sound
  * effects. It's only made once the visitor has clicked or pressed a key
  * (browsers won't play anything before that), everything goes through one
- * output that the HUD's sound button mutes, and the audio device goes back to
- * sleep when nothing has played for a moment. The sound setting is remembered
- * in localStorage and is on by default.
+ * output, set by the game's volume (the record player's slider) and muted by
+ * the HUD's sound button, and the audio device goes back to sleep when nothing
+ * has played for a moment. Volume and mute are remembered in localStorage;
+ * sound is on by default.
  */
+
+import { useSyncExternalStore } from 'react'
 
 const SETTINGS_KEY = 'house:sound'
 /** How long after the last sound effect the context is suspended. */
 const IDLE_MS = 3000
+/** The volume a first visit starts at, where every sound plays at the level it was tuned to. */
+const DEFAULT_VOLUME = 0.7
+/** How far the arrow keys move the volume. */
+export const VOLUME_STEP = 0.1
 
 export interface Audio {
   ctx: AudioContext
-  /** The shared output, muted by the sound button. */
+  /** The shared output: the game's volume, or silence when muted. */
   out: GainNode
+}
+
+export interface SoundSettings {
+  on: boolean
+  /** 0 to 1. */
+  volume: number
 }
 
 let audio: Audio | null = null
@@ -22,39 +35,63 @@ let noise: AudioBuffer | null = null
 let holds = 0
 let idleTimer: number | null = null
 
-let soundOn: boolean | null = null
+const SERVER_SETTINGS: SoundSettings = { on: true, volume: DEFAULT_VOLUME }
+
+let settings: SoundSettings | null = null
 const listeners = new Set<() => void>()
 
-function readSoundOn(): boolean {
+const clamp = (volume: number) => Math.min(Math.max(volume, 0), 1)
+
+function readSettings(): SoundSettings {
   try {
-    return window.localStorage.getItem(SETTINGS_KEY) !== 'off'
+    const saved = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? 'null') as Partial<SoundSettings> | null
+    return {
+      on: saved?.on !== false,
+      volume: typeof saved?.volume === 'number' ? clamp(saved.volume) : DEFAULT_VOLUME,
+    }
   } catch {
-    return true
+    return SERVER_SETTINGS
   }
 }
 
-export function isSoundOn(): boolean {
-  soundOn ??= readSoundOn()
-  return soundOn
+export function getSound(): SoundSettings {
+  settings ??= readSettings()
+  return settings
 }
 
-export function setSoundOn(on: boolean) {
-  soundOn = on
-  if (audio) audio.out.gain.setTargetAtTime(on ? 1 : 0, audio.ctx.currentTime, 0.05)
+export const isSoundOn = () => getSound().on
+
+/** The output's gain: the default volume plays every sound at its own level. */
+const gainFor = ({ on, volume }: SoundSettings) => (on ? volume / DEFAULT_VOLUME : 0)
+
+function update(patch: Partial<SoundSettings>) {
+  settings = { ...getSound(), ...patch }
+  if (audio) audio.out.gain.setTargetAtTime(gainFor(settings), audio.ctx.currentTime, 0.05)
   try {
-    window.localStorage.setItem(SETTINGS_KEY, on ? 'on' : 'off')
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   } catch {
-    // Private mode: the setting lasts until the tab closes.
+    // Private mode: the settings last until the tab closes.
   }
   listeners.forEach((fn) => fn())
 }
 
-export function subscribeSound(fn: () => void): () => void {
+export function setSoundOn(on: boolean) {
+  update({ on })
+}
+
+/** Sets the game's volume; turning it up (or down) also unmutes. */
+export function setVolume(volume: number) {
+  update({ volume: clamp(Math.round(volume * 100) / 100), on: true })
+}
+
+function subscribe(fn: () => void): () => void {
   listeners.add(fn)
   return () => listeners.delete(fn)
 }
 
-export const getServerSoundOn = () => true
+export function useSound(): SoundSettings {
+  return useSyncExternalStore(subscribe, getSound, () => SERVER_SETTINGS)
+}
 
 function scheduleSleep() {
   if (idleTimer !== null) window.clearTimeout(idleTimer)
@@ -75,7 +112,7 @@ export function wake(): Audio | null {
     if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return null
     const ctx = new AudioContext()
     const out = ctx.createGain()
-    out.gain.value = isSoundOn() ? 1 : 0
+    out.gain.value = gainFor(getSound())
     out.connect(ctx.destination)
     audio = { ctx, out }
   }

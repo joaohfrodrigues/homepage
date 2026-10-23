@@ -85,9 +85,9 @@ any first page.
 
 The record player's music is synthesised in the browser with the Web Audio API
 (`src/components/house/record-player.ts`), so there's no audio file. It is off by default and only
-starts when the visitor presses play; it keeps playing around the house (with a stop button in the
-HUD), stops when the tab is hidden, and remembers its volume and mute (not whether it was playing)
-in `localStorage`.
+starts when the visitor presses play (or Enter in its window); it keeps playing around the house
+(with a stop button in the HUD) and stops when the tab is hidden. Its volume slider, which the left
+and right arrows also move, is the volume of the whole house, music and sound effects alike.
 
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
@@ -96,9 +96,10 @@ own: a heartbeat with each thump of a caffeine overdose, a bottle opening (and a
 a clink for the toast, snoring as the guest nods off and birds when they wake. Zeno's meow, the
 Super Bock and the coffee machine are recordings in `public/house/sounds/` (credited in
 `CREDITS.txt` there), with a synthesised stand-in if a file fails to load. They are on by default
-but stay silent until the visitor first clicks or presses a key. The speaker button in the HUD mutes
-every sound, the record included, and is remembered in `localStorage`. The music and the effects
-share one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
+but stay silent until the visitor first clicks or presses a key. The speaker button in the HUD (or
+the record player's mute) mutes every sound, the record included; it and the house's volume are
+remembered in `localStorage`. The music and the effects share one audio context
+(`src/components/house/audio.ts`), which sleeps when nothing is playing.
 
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.

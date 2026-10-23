@@ -1,14 +1,14 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
-import { getServerSoundOn, isSoundOn, setSoundOn, subscribeSound } from './audio'
+import { setSoundOn, useSound } from './audio'
 import { BicaPanel } from './bica-panel'
 import { ComicStrip, type ComicId } from './comic-strip'
 import { DialogueBox } from './dialogue-box'
@@ -117,7 +117,7 @@ export function HouseShell({ data, children }: Props) {
     () => typeof window !== 'undefined' && pathname === '/' && !readWelcomed(),
   )
   const record = useRecordPlayer()
-  const soundOn = useSyncExternalStore(subscribeSound, isSoundOn, getServerSoundOn)
+  const { on: soundOn } = useSound()
 
   const overlayOpen = pathname !== '/'
   const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome

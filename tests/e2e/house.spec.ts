@@ -204,21 +204,10 @@ test.describe('House', () => {
   test('the record player only plays when asked, remembers its volume and stops in a hidden tab', async ({ page }) => {
     // The footsteps on the way to the turntable may wake the house's one audio context; the record shares it.
     const audioContexts = await countAudioContexts(page)
-    const openRecordPlayer = async () => {
-      await page.keyboard.press('m')
-      await page.getByRole('button', { name: 'Go to the living room' }).click()
-      await expect(page.getByText('Living room', { exact: true })).toBeVisible()
-      // A click walks up to the turntable and uses it.
-      const { x, y } = await screenPointOf(page, recordPlayer)
-      await page.mouse.click(x, y)
-      const panel = page.getByRole('dialog', { name: 'Record player' })
-      await expect(panel).toBeVisible()
-      return panel
-    }
 
     await page.goto('/')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
-    const panel = await openRecordPlayer()
+    const panel = await openRecordPlayer(page)
     await expect(panel.getByText('Needle up')).toBeVisible()
     expect(await audioContexts()).toBeLessThanOrEqual(1)
 
@@ -228,6 +217,8 @@ test.describe('House', () => {
     await panel.getByRole('slider', { name: 'Volume' }).fill('20')
     await panel.getByRole('button', { name: 'Mute' }).click()
     await expect(panel.getByText('Playing (muted)')).toBeVisible()
+    // It's the whole house's mute, the same as the HUD's.
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeVisible()
 
     // The music carries on in the house, with a way to stop it from the HUD.
     await page.keyboard.press('Escape')
@@ -245,10 +236,42 @@ test.describe('House', () => {
     // Volume and mute are remembered; playing isn't.
     await page.reload()
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
-    const again = await openRecordPlayer()
+    const again = await openRecordPlayer(page)
     await expect(again.getByText('Needle up')).toBeVisible()
     await again.getByRole('button', { name: 'Unmute' }).click()
     await expect(again.getByRole('slider', { name: 'Volume' })).toHaveValue('20')
+  })
+
+  test('in the record player, Enter plays and stops and the side arrows set the house volume', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const panel = await openRecordPlayer(page)
+    const volume = panel.getByRole('slider', { name: 'Volume' })
+    await expect(volume).toHaveValue('70')
+
+    await page.keyboard.press('Enter')
+    await expect(panel.getByText('Now playing')).toBeVisible()
+    await page.keyboard.press('ArrowRight')
+    await expect(volume).toHaveValue('80')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await expect(volume).toHaveValue('50')
+    await page.keyboard.press('Enter')
+    await expect(panel.getByText('Needle up')).toBeVisible()
+
+    // Turning it up from muted unmutes the whole house.
+    await panel.getByRole('button', { name: 'Mute', exact: true }).click()
+    await expect(volume).toHaveValue('0')
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeAttached()
+    await page.keyboard.press('ArrowRight')
+    await expect(volume).toHaveValue('60')
+    await expect(page.getByRole('button', { name: 'Mute sounds' })).toBeAttached()
+
+    // The volume is the house's: it's still there after a reload.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect((await openRecordPlayer(page)).getByRole('slider', { name: 'Volume' })).toHaveValue('60')
   })
 
   test('sounds are on by default, wait for the first key press and can be muted', async ({ page }) => {
@@ -592,6 +615,19 @@ test.describe('Welcome card', () => {
 })
 
 /** Where a map tile's centre sits on screen, read from the house camera (exposed in dev). */
+/** Walks to the living room's turntable and opens it. */
+async function openRecordPlayer(page: Page) {
+  await page.keyboard.press('m')
+  await page.getByRole('button', { name: 'Go to the living room' }).click()
+  await expect(page.getByText('Living room', { exact: true })).toBeVisible()
+  // A click walks up to the turntable and uses it.
+  const { x, y } = await screenPointOf(page, recordPlayer)
+  await page.mouse.click(x, y)
+  const panel = page.getByRole('dialog', { name: 'Record player' })
+  await expect(panel).toBeVisible()
+  return panel
+}
+
 async function screenPointOf(page: Page, tile: Point) {
   return page.evaluate(
     ({ tile, size }) => {
