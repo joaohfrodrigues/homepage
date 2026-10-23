@@ -263,9 +263,13 @@ test.describe('House', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.waitForTimeout(300)
     expect(await audioContexts()).toBe(0)
-    // Footsteps.
+    // Footsteps; the first sound also fetches the recordings.
+    const recordings = ['zeno-meow', 'beer', 'coffee'].map((name) =>
+      page.waitForResponse((response) => response.url().endsWith(`/house/sounds/${name}.mp3`) && response.ok()),
+    )
     await walk()
     await expect.poll(audioContexts).toBe(1)
+    await Promise.all(recordings)
 
     await page.getByRole('button', { name: 'Mute sounds' }).click()
     await expect(page.getByRole('button', { name: 'Unmute sounds' })).toHaveAttribute('aria-pressed', 'true')

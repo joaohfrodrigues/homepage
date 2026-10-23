@@ -102,3 +102,18 @@ export function noiseBuffer(ctx: AudioContext): AudioBuffer {
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
   return noise
 }
+
+const samples = new Map<string, Promise<AudioBuffer | null>>()
+
+/** A recorded sound from `public/house/sounds/`, fetched and decoded once; null if it won't load. */
+export function sample(ctx: AudioContext, name: string): Promise<AudioBuffer | null> {
+  let loading = samples.get(name)
+  if (!loading) {
+    loading = fetch(`/house/sounds/${name}.mp3`)
+      .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error(response.statusText))))
+      .then((data) => ctx.decodeAudioData(data))
+      .catch(() => null)
+    samples.set(name, loading)
+  }
+  return loading
+}

@@ -89,14 +89,16 @@ starts when the visitor presses play; it keeps playing around the house (with a 
 HUD), stops when the tab is hidden, and remembers its volume and mute (not whether it was playing)
 in `localStorage`.
 
-The house also has sound effects, synthesised the same way (`src/components/house/sfx.ts`): quiet
-footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom door,
-Zeno's meow, the coffee machine and a chime for each new sticker, plus the hidden behaviours' own:
-a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
-clink for the toast, snoring as the guest nods off and birds when they wake. They are on by default but stay
-silent until the visitor first clicks or presses a key. The speaker button in the HUD mutes every
-sound, the record included, and is remembered in `localStorage`. The music and the effects share
-one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
+The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
+quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
+door, Zeno's meow, the coffee machine and a chime for each new sticker, plus the hidden behaviours'
+own: a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy),
+a clink for the toast, snoring as the guest nods off and birds when they wake. Zeno's meow, the
+Super Bock and the coffee machine are recordings in `public/house/sounds/` (credited in
+`CREDITS.txt` there), with a synthesised stand-in if a file fails to load. They are on by default
+but stay silent until the visitor first clicks or presses a key. The speaker button in the HUD mutes
+every sound, the record included, and is remembered in `localStorage`. The music and the effects
+share one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
 
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
