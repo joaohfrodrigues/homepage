@@ -1,7 +1,8 @@
 /**
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
  * meow, the coffee machine, a chime for new stickers, and the hidden
- * behaviours' heartbeat, beers, snores and morning birds. Most are
+ * behaviours' heartbeat, beers, snores and morning birds, and Dona Rosa's
+ * shower and her exit through the front door. Most are
  * synthesised with the Web Audio API; Zeno, the Super Bock and the coffee
  * machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
@@ -269,5 +270,28 @@ export function birdsong() {
       [1.2, 3400, 2600],
     ])
       note(audio, t + at, { from, to, length: 0.09, level: 0.03 })
+  })
+}
+
+/** A shower running behind the bathroom door, muffled by it. */
+export function showerRunning() {
+  play((audio, t) => burst(audio, t + 0.3, { length: 1.6, level: 0.04, filter: 'lowpass', cutoff: 1200, attack: 0.3 }))
+}
+
+/** Dona Rosa shuts off the shower: a squeak of the tap, then the last of the water. */
+export function showerOff() {
+  play((audio, t) => {
+    note(audio, t, { from: 1250, to: 1650, length: 0.14, level: 0.035, type: 'square' })
+    burst(audio, t, { length: 0.9, level: 0.05, filter: 'highpass', cutoff: 2600, attack: 0.01 })
+    for (const at of [0.7, 1.05, 1.5]) note(audio, t + at, { from: 1500, to: 900, length: 0.05, level: 0.03 })
+  })
+}
+
+/** The front door shutting behind someone: a thud, then the latch. */
+export function frontDoor() {
+  play((audio, t) => {
+    note(audio, t, { from: 85, to: 50, length: 0.25, level: 0.18 })
+    burst(audio, t, { length: 0.12, level: 0.07, filter: 'lowpass', cutoff: 600 })
+    burst(audio, t + 0.12, { length: 0.03, level: 0.06, filter: 'bandpass', cutoff: 2500 })
   })
 }

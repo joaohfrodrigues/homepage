@@ -62,11 +62,13 @@ site's sections:
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
-- **Bathroom** - shut and "occupied" until its mission opens it.
+- **Bathroom** - shut and "occupied" until its mission opens it; until then Dona Rosa, a neighbour
+    from upstairs, is a shape behind the steamed-up shower glass.
 
 Missions are multi-step activities that open up parts of the house. The first, *Who's in there?*,
 starts once you've knocked on the bathroom door three times: ask João who is in there, pull a
-perfect bica and take it to the door, and the bathroom opens for good. Steps are checked against
+perfect bica and take it to the door. Dona Rosa turns off the water, comes to the door to thank
+you and lets herself out the front door, and the bathroom is open for good. Steps are checked against
 the guestbook's stats, things that happen (a perfect bica) or a choice in dialogue; João offers a
 hint for any mission under way, and the guestbook shows each one's progress. Missions are defined
 in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and

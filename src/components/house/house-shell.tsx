@@ -236,10 +236,18 @@ export function HouseShell({ data, children }: Props) {
     const offs = [
       bridge.game.on('step', sfx.step),
       bridge.game.on('heartbeat', sfx.heartbeat),
+      bridge.game.on('rosa', (moment) => {
+        if (moment === 'tap') sfx.showerOff()
+        else if (moment === 'thanks') sfx.blip()
+        else sfx.frontDoor()
+      }),
       bridge.game.on('interact', (action) => {
         if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
-        else if (action.id === 'bathroom') sfx.knock()
+        else if (action.id === 'bathroom') {
+          sfx.knock()
+          sfx.showerRunning()
+        }
         else sfx.blip()
       }),
       onStickerEarned(sfx.chime),
@@ -283,6 +291,12 @@ export function HouseShell({ data, children }: Props) {
     const next = readUnlocks()
     setUnlocks((current) => (current.join() === next.join() ? current : next))
   }, [])
+
+  /** Closing a dialogue opens whatever a mission choice in it unlocked, so it happens in view (Dona Rosa leaving). */
+  const closeDialogue = useCallback(() => {
+    setDialogue(null)
+    syncUnlocks()
+  }, [syncUnlocks])
 
   /** A perfect bica can be a mission step; what that step says shows under the cup. */
   const bicaResult = useCallback(
@@ -494,7 +508,7 @@ export function HouseShell({ data, children }: Props) {
         drinkBeer()
         break
       case 'close':
-        setDialogue(null)
+        closeDialogue()
         break
       case 'mission': {
         const step = choice.step
@@ -502,9 +516,9 @@ export function HouseShell({ data, children }: Props) {
           setDialogue(`mission-hint:${choice.mission}` as const)
           break
         }
+        // What the step opens waits for its reply to close (see closeDialogue).
         updateStats((stats) => completeStep(stats, choice.mission, step))
         setDialogue(missionReplyKey(choice.mission, step))
-        syncUnlocks()
         break
       }
     }
@@ -607,7 +621,7 @@ export function HouseShell({ data, children }: Props) {
           key={dialogue}
           dialogue={shownDialogue}
           onChoose={choose}
-          onClose={() => setDialogue(null)}
+          onClose={closeDialogue}
           touch={coarsePointer}
         />
       )}

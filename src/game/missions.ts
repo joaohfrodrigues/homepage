@@ -86,8 +86,7 @@ export const MISSIONS: Mission[] = [
           reply: {
             lines: [
               'The door opens a crack, and a hand takes the bica.',
-              '“Ai, que maravilha! Obrigada, querido.”',
-              'Dona Rosa shuffles out in a towel turban, cup in hand, and lets herself out. The bathroom is free at last!',
+              '“Ai, que maravilha! Um momentinho, I’ll be right out…”',
             ],
           },
         },
