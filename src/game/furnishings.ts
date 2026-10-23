@@ -1,5 +1,5 @@
 import type { InteractAction } from './bridge'
-import type { Point } from './layout'
+import type { Point, UnlockId } from './layout'
 import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
@@ -15,6 +15,8 @@ export interface Interactable {
   label: string
   tiles: Point[]
   action: InteractAction
+  /** Gone once this is unlocked, like the knock on a door that now stands open. */
+  until?: UnlockId
 }
 
 export interface Furnishings {
@@ -218,7 +220,7 @@ export function furnishHouse(): Furnishings {
     action: { type: 'dialogue', id: 'balcony' },
   })
 
-  // --- Bathroom (2 × 2.5m), behind a shut door ------------------------------
+  // --- Bathroom (2 × 2.5m), behind a shut door until its mission -------------
   interactables.push({
     id: 'bathroom-door',
     label: 'Bathroom door',
@@ -229,6 +231,7 @@ export function furnishHouse(): Furnishings {
       { x: 14, y: 14 },
     ],
     action: { type: 'dialogue', id: 'bathroom' },
+    until: 'bathroom',
   })
   prop('toilet', 11, 14)
   prop('basin', 12, 14)

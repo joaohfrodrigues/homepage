@@ -1,4 +1,4 @@
-import type { Direction, RoomId } from './layout'
+import type { Direction, RoomId, UnlockId } from './layout'
 import type { Outfit } from './characters'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
@@ -75,6 +75,8 @@ interface GameEvents {
   step: undefined
   /** The guest came to on the sofa after a `doze`. */
   dozed: undefined
+  /** Dona Rosa leaving the shower: the water goes off, she thanks the guest, the front door shuts behind her. */
+  rosa: 'tap' | 'thanks' | 'gone'
   /** A beat of the pounding heart while an effect shakes (even when reduced motion keeps the camera still). */
   heartbeat: undefined
 }
@@ -96,6 +98,8 @@ interface UiEvents {
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
+  /** Everything missions have opened so far; anything left out is (or goes back to being) shut. */
+  unlocks: UnlockId[]
   /** Start (or, with null, end) an effect on the guest. */
   effect: { source: EffectSource; effect: PlayerEffect | null }
   /** Pass out: fade to black and wake on the living-room sofa in the morning; answered with `dozed`. */

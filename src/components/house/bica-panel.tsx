@@ -8,6 +8,8 @@ import { bicaResult, steam } from './sfx'
 import { readStats, updateStats, type BicaResult } from './visitor-stats'
 
 interface Props {
+  /** Told about every pull; may answer with a note to show under it (a mission step it did). */
+  onResult?: (result: Result) => string | undefined
   onClose: () => void
   /** Called after each pull with how many bicas the visitor has had lately. */
   onPull?: (lately: number) => void
@@ -37,11 +39,12 @@ function judge(bar: number): Result {
  * The kitchen's espresso machine: start the pull, then stop the pressure
  * needle as close to 9 bar as possible. Perfect pulls in a row speed it up.
  */
-export function BicaPanel({ onClose, onPull }: Props) {
+export function BicaPanel({ onResult, onClose, onPull }: Props) {
   const [phase, setPhase] = useState<Phase>('ready')
   const [bar, setBar] = useState(0)
   const [result, setResult] = useState<Result | null>(null)
   const [streak, setStreak] = useState(0)
+  const [note, setNote] = useState<string | undefined>()
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
   const [best, setBest] = useState(() => readStats().bicaBestStreak)
   const [lately, setLately] = useState(() => caffeine.count())
@@ -82,6 +85,7 @@ export function BicaPanel({ onClose, onPull }: Props) {
         stats.bicas[outcome]++
         stats.bicaBestStreak = Math.max(stats.bicaBestStreak, nextStreak)
       })
+      setNote(onResult?.(outcome))
       const count = caffeine.add()
       setLately(count)
       onPull?.(count)
@@ -89,9 +93,10 @@ export function BicaPanel({ onClose, onPull }: Props) {
       steam()
       angle.current = -Math.PI / 2
       setResult(null)
+      setNote(undefined)
       setPhase('pulling')
     }
-  }, [phase, bar, streak, best, onPull])
+  }, [phase, bar, streak, best, onResult, onPull])
 
   const outcome = result ? RESULTS[result] : null
   const needle = (bar / MAX_BAR) * 100
@@ -138,6 +143,7 @@ export function BicaPanel({ onClose, onPull }: Props) {
         </div>
         <div className="text-sm">
           {outcome && <p className="mb-1 text-[#6d6359]">{outcome.text}</p>}
+          {note && <p className="mb-1 font-semibold text-[#8e2a20]">{note}</p>}
           <p className="font-pixel text-xs text-[#6d6359]">
             Perfect streak: {streak} · Best: {best}
           </p>
