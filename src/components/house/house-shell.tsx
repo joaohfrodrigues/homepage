@@ -9,13 +9,26 @@ import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 import { BicaPanel } from './bica-panel'
+import { ComicStrip, type ComicId } from './comic-strip'
 import { DialogueBox } from './dialogue-box'
-import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
+import { buildDialogue, type Binge, type DialogueChoice, type DialogueKey } from './dialogues'
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
-import { BUZZING_AT, CAFFEINE_OVERDOSE, OVERDOSE_AT, caffeine } from './intoxication'
+import {
+  BEER_DIZZY,
+  BEER_TIPSY,
+  BUZZING_AT,
+  CAFFEINE_OVERDOSE,
+  DIZZY_AT,
+  DOZE_AT,
+  OVERDOSE_AT,
+  TIPSY_AT,
+  beer,
+  caffeine,
+} from './intoxication'
+import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
 import { countVisit, flushStats, updateStats } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
@@ -80,6 +93,7 @@ export function HouseShell({ data, children }: Props) {
   const [hint, setHint] = useState<Hint | null>(null)
   const [room, setRoom] = useState<RoomId | null>(null)
   const [dialogue, setDialogue] = useState<DialogueKey | null>(null)
+  const [comic, setComic] = useState<ComicId | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
@@ -100,7 +114,7 @@ export function HouseShell({ data, children }: Props) {
   )
 
   const overlayOpen = pathname !== '/'
-  const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
+  const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome
 
   // A page opening (from the directory, say) takes the place of any panel, so
   // closing the page goes straight back to the house.
@@ -273,9 +287,11 @@ export function HouseShell({ data, children }: Props) {
     (on: boolean) => {
       setNight(on)
       if (on) updateStats((stats) => stats.naps++)
-      // A nap sleeps off the coffee.
+      // A nap sleeps off the coffee and the beers.
       caffeine.clear()
+      beer.clear()
       bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
       bridge.ui.emit('night', { on, animate: true })
     },
     [bridge],
@@ -294,10 +310,66 @@ export function HouseShell({ data, children }: Props) {
     [bridge],
   )
 
+  // The night that ended on the sofa, kept for João to recount when the guest wakes.
+  const [binge, setBinge] = useState<Binge | null>(null)
+
+  // Tipsy at three beers, dizzy at five; at seven the guest dozes off and wakes on the sofa.
+  const drinkBeer = useCallback(() => {
+    updateStats((stats) => stats.beers++)
+    const lately = beer.add()
+    if (lately >= DOZE_AT) {
+      setDialogue(null)
+      updateStats((stats) => stats.dozes++)
+      setBinge({
+        beers: lately,
+        minutes: Math.max(1, Math.round(beer.span() / 60_000)),
+        bicas: caffeine.count(),
+      })
+      // Sleeping it off clears everything, and it's morning when they wake.
+      beer.clear()
+      caffeine.clear()
+      setComic('doze')
+      return
+    }
+    if (lately >= TIPSY_AT) {
+      bridge.ui.emit('effect', { source: 'beer', effect: lately >= DIZZY_AT ? BEER_DIZZY : BEER_TIPSY })
+    }
+    // The first round that goes to your head gets a close-up of the toast.
+    setDialogue(lately === TIPSY_AT ? null : 'beer')
+    if (lately === TIPSY_AT) setComic('cheers')
+  }, [bridge])
+
+  // The scene brings the morning in behind the fade; the day/night toggle follows only then.
+  useEffect(
+    () =>
+      bridge.game.on('dozed', () => {
+        setNight(false)
+        setComic('wake')
+      }),
+    [bridge],
+  )
+
+  // What follows each close-up: the fade to the sofa after nodding off, João's chat after waking.
+  const finishComic = useCallback(() => {
+    setComic(null)
+    if (comic === 'doze') {
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('doze')
+    } else if (comic === 'wake') setDialogue('sofa-wake')
+  }, [bridge, comic])
+
   // Built when it opens, so a count running out mid-chat doesn't change the lines.
   const shownDialogue = useMemo(
-    () => dialogue && buildDialogue(dialogue, data, { night, buzzing: caffeine.count() >= BUZZING_AT }),
-    [dialogue, data, night],
+    () =>
+      dialogue &&
+      buildDialogue(dialogue, data, {
+        night,
+        buzzing: caffeine.count() >= BUZZING_AT,
+        beers: beer.count(),
+        binge,
+      }),
+    [dialogue, data, night, binge],
   )
 
   const dismissWelcome = useCallback(() => {
@@ -342,6 +414,9 @@ export function HouseShell({ data, children }: Props) {
       case 'night':
         setDialogue(null)
         changeNight(choice.on)
+        break
+      case 'beer':
+        drinkBeer()
         break
       case 'close':
         setDialogue(null)
@@ -455,6 +530,10 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'bica' && <BicaPanel onPull={pulledBica} onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+
+      {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
+      {comic && <ComicStrip key={comic} id={comic} outfit={outfit} onDone={finishComic} />}
+      <StickerToast onOpen={() => setPanel('guestbook')} />
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>

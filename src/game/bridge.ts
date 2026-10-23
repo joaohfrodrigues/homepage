@@ -21,15 +21,16 @@ export type DialogueId =
   | 'zeno'
   | 'litterbox-clean'
   | 'litterbox-dirty'
+  | 'fridge'
 
 /** What a temporary effect on the guest comes from; each source has at most one going. */
-export type EffectSource = 'caffeine'
+export type EffectSource = 'caffeine' | 'beer'
 
 /**
  * A temporary change to how the guest walks and how the house looks, e.g. after
  * too many bicas. Effects from different sources stack. Under
- * `prefers-reduced-motion` the scene drops shake, jitter, sway and drift and
- * keeps only the tint.
+ * `prefers-reduced-motion` the scene drops shake, jitter, sway and drift, and
+ * holds the vignette and blur still.
  */
 export interface PlayerEffect {
   /** Walking speed multiplier. */
@@ -44,6 +45,10 @@ export interface PlayerEffect {
   drift?: number
   /** Colour washed over the guest. */
   tint?: number
+  /** How strongly the edges of the view darken, 0–1; it breathes in and out, and holds still under reduced motion. */
+  vignette?: number
+  /** How far the view drifts out of focus, 0–1, coming and going; held faint and steady under reduced motion. */
+  blur?: number
   /** How long it lasts before wearing off on its own. */
   ms: number
 }
@@ -68,6 +73,8 @@ interface GameEvents {
   arrived: VisitTarget
   /** The player took a step (counted for the guestbook). */
   step: undefined
+  /** The guest came to on the sofa after a `doze`. */
+  dozed: undefined
 }
 
 interface UiEvents {
@@ -89,6 +96,8 @@ interface UiEvents {
   outfit: Outfit
   /** Start (or, with null, end) an effect on the guest. */
   effect: { source: EffectSource; effect: PlayerEffect | null }
+  /** Pass out: fade to black and wake on the living-room sofa in the morning; answered with `dozed`. */
+  doze: undefined
 }
 
 type Listener<T> = (payload: T) => void

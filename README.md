@@ -56,7 +56,8 @@ site's sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV) and João himself.
-- **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
+- **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
+    grab a beer).
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
@@ -64,6 +65,14 @@ site's sections:
 A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
+
+The guestbook in the hall keeps the visitor's own tallies (rooms visited, distance walked, bicas,
+fridge-magnet scores) and a page of stickers to collect, all in this browser's `localStorage`
+(`src/components/house/visitor-stats.ts`; stickers are its `ACHIEVEMENTS`). Earning a sticker pops
+up a toast ("★ First sip unlocked") under the HUD for a few seconds, also announced to screen
+readers; clicking it opens the guestbook. Announced sticker ids are saved under
+`house:stickers-seen`, so a reload doesn't repeat a toast, and stickers earned before toasts existed
+are marked seen quietly. A new sticker needs only an entry in `ACHIEVEMENTS` to get its toast.
 
 Pages over the house have real URLs, so Back closes them. Panels, dialogue and the photo lightbox
 aren't pages, but each gets a history entry at the same URL while it is open
@@ -78,18 +87,25 @@ plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
-or until a nap. Those counts live in memory for the session only
-(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats, and the
-temporary effects (`effect` on the bridge) drop shake, jitter, sway and drift for a tint under
-`prefers-reduced-motion`.
+or until a nap. Beers from the fridge make you tipsy at three (the view sways and the edges
+breathe) and dizzy at five (a wider sway, steps with the keys that wander, darker edges and a view
+that keeps slipping out of focus). The seventh fades to black and you wake on the living-room
+sofa in the morning, where João can tell you what happened and how many you had (and how fast)
+before you take the glass of water he left you. The third beer, nodding off and waking up each
+cut to a comic-book strip of close-ups drawn from the character sprites
+(`src/components/house/comic-strip.tsx`), which a click or key skips. A nap sleeps off the beers
+as well as the bicas. Those counts live in memory for the session only
+(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats. Under
+`prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
+and drift, hold the vignette and blur still, and the comic panels appear all at once.
 
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
-- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
-    and dialogue.
+- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...),
+    dialogue and the sticker toast.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.

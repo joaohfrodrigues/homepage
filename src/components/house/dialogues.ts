@@ -1,8 +1,24 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
 import type { HouseData } from '@/lib/house'
+import { DOZE_AT } from './intoxication'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
-export type DialogueKey = DialogueId | 'joao-contact' | 'caffeine-overdose'
+export type DialogueKey =
+  | DialogueId
+  | 'joao-contact'
+  | 'caffeine-overdose'
+  | 'beer'
+  | 'sofa-wake'
+  | 'sofa-what'
+  | 'sofa-count'
+
+/** The night that ended on the sofa, for João to recount when the guest wakes. */
+export interface Binge {
+  beers: number
+  minutes: number
+  /** Bicas pulled lately on top of the beers. */
+  bicas: number
+}
 
 export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
@@ -10,6 +26,7 @@ export type DialogueChoice =
   | { label: string; kind: 'next'; id: DialogueKey }
   | { label: string; kind: 'panel'; panel: PanelId }
   | { label: string; kind: 'night'; on: boolean }
+  | { label: string; kind: 'beer' }
   | { label: string; kind: 'close' }
 
 export interface Dialogue {
@@ -21,13 +38,15 @@ export interface Dialogue {
 export function buildDialogue(
   id: DialogueKey,
   data: HouseData,
-  house: { night: boolean; buzzing?: boolean },
+  house: { night: boolean; buzzing?: boolean; beers?: number; binge?: Binge | null },
 ): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
     href: link.href,
   }))
+  // Every turn of the wake-up conversation can end it with the glass of water.
+  const morningAfter: DialogueChoice[] = [{ label: 'Water, thanks', kind: 'close' }]
 
   switch (id) {
     case 'joao':
@@ -59,6 +78,67 @@ export function buildDialogue(
         lines: ['Whoa. You’re vibrating.', 'Sit down, have a glass of water. The machine’s closed for a bit.'],
         choices: [{ label: 'I feel GREAT', kind: 'close' }],
       }
+    case 'fridge':
+      return {
+        lines: ['Magnets from João’s trips all over the door. Inside: leftovers, oat milk and a row of Super Bock.'],
+        choices: [
+          { label: 'Look at the magnets', kind: 'panel', panel: 'geoguess' },
+          { label: 'Grab a Super Bock', kind: 'beer' },
+          { label: 'Close the door', kind: 'close' },
+        ],
+      }
+    case 'beer': {
+      const beers = house.beers ?? 1
+      if (beers >= 5) {
+        return {
+          lines: ['The floor tilts a little. Was it always like that?'],
+          choices: [{ label: 'Totally fine', kind: 'close' }],
+        }
+      }
+      if (beers >= 3) {
+        return { speaker: 'João', lines: ['Saúde!'], choices: [{ label: 'Saúde!', kind: 'close' }] }
+      }
+      return { lines: ['Ice cold. Very refreshing.'], choices: [{ label: 'Ahh', kind: 'close' }] }
+    }
+    case 'sofa-wake':
+      return {
+        speaker: 'João',
+        lines: [
+          'Morning, sunshine. Easy, don’t sit up too fast.',
+          'There’s a glass of water by the sofa. Drink all of it.',
+        ],
+        choices: [
+          { label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' },
+          { label: 'How many did I have?', kind: 'next', id: 'sofa-count' },
+          ...morningAfter,
+        ],
+      }
+    case 'sofa-what': {
+      const bicas = house.binge?.bicas ?? 0
+      return {
+        speaker: 'João',
+        lines: [
+          'You found the Super Bock in the fridge. Then you found the rest of the Super Bock.',
+          'Somewhere around the fifth you started telling Zeno how much he means to you. He was not convinced.',
+          ...(bicas > 0
+            ? [`You’d had ${bicas === 1 ? 'a bica' : `${bicas} bicas`} too, which made for a very energetic speech.`]
+            : []),
+          'Then you sat down “just for a second”, and that was that. I put a blanket on you.',
+        ],
+        choices: [{ label: 'How many did I have?', kind: 'next', id: 'sofa-count' }, ...morningAfter],
+      }
+    }
+    case 'sofa-count': {
+      const binge = house.binge ?? { beers: DOZE_AT, minutes: 1, bicas: 0 }
+      return {
+        speaker: 'João',
+        lines: [
+          `${binge.beers}. In about ${binge.minutes <= 1 ? 'a minute' : `${binge.minutes} minutes`}.`,
+          binge.minutes <= 3 ? 'I’ve honestly never seen anything like it.' : 'Pace yourself next time, yeah?',
+        ],
+        choices: [{ label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' }, ...morningAfter],
+      }
+    }
     case 'letterbox':
       return {
         lines: [

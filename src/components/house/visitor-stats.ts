@@ -2,6 +2,8 @@ import { METRES_PER_TILE, type RoomId } from '@/game/layout'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
+/** Sticker ids already announced with a toast, so a reload doesn't announce them again. */
+const SEEN_KEY = 'house:stickers-seen'
 
 export type BicaResult = 'perfect' | 'good' | 'under' | 'over'
 
@@ -27,6 +29,9 @@ export interface VisitorStats {
   outfits: number
   /** Times the visitor had so many bicas so fast that they started vibrating. */
   overdoses: number
+  /** Super Bocks from the fridge, and times they ended in a nap on the sofa. */
+  beers: number
+  dozes: number
 }
 
 function emptyStats(): VisitorStats {
@@ -50,6 +55,8 @@ function emptyStats(): VisitorStats {
     naps: 0,
     outfits: 0,
     overdoses: 0,
+    beers: 0,
+    dozes: 0,
   }
 }
 
@@ -93,6 +100,7 @@ export function readStats(): VisitorStats {
 export function updateStats(change: (stats: VisitorStats) => void) {
   change(load())
   saveTimer ??= setTimeout(save, 1000)
+  announceStickers()
 }
 
 /** Writes any batched changes now, e.g. before the tab goes away. */
@@ -116,10 +124,58 @@ export function countVisit() {
   })
 }
 
+let seen: Set<string> | null = null
+const stickerListeners = new Set<(achievement: Achievement) => void>()
+
+function earnedIds(stats: VisitorStats): string[] {
+  return ACHIEVEMENTS.filter((achievement) => achievement.earned(stats)).map((achievement) => achievement.id)
+}
+
+function saveSeen(ids: Set<string>): Set<string> {
+  seen = ids
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify([...ids]))
+  } catch {
+    // Private mode: the stickers already shown are remembered until the tab closes.
+  }
+  return ids
+}
+
+function loadSeen(): Set<string> {
+  if (seen) return seen
+  try {
+    const saved = window.localStorage.getItem(SEEN_KEY)
+    if (saved) return (seen = new Set(JSON.parse(saved) as string[]))
+  } catch {
+    // Private mode or a mangled entry: treat it like a first look below.
+  }
+  // Stickers earned before toasts existed count as seen, so returning visitors aren't flooded.
+  return saveSeen(new Set(earnedIds(load())))
+}
+
+/** Tells the sticker listeners about any sticker earned since they last heard. */
+function announceStickers() {
+  // Nobody to show them yet: they wait, unseen, for the next change.
+  if (stickerListeners.size === 0) return
+  const known = loadSeen()
+  const fresh = ACHIEVEMENTS.filter((achievement) => !known.has(achievement.id) && achievement.earned(load()))
+  if (fresh.length === 0) return
+  saveSeen(new Set([...known, ...fresh.map((achievement) => achievement.id)]))
+  fresh.forEach((achievement) => stickerListeners.forEach((fn) => fn(achievement)))
+}
+
+/** Calls `fn` with each sticker the visitor newly earns. Returns the unsubscribe. */
+export function onStickerEarned(fn: (achievement: Achievement) => void): () => void {
+  loadSeen()
+  stickerListeners.add(fn)
+  return () => stickerListeners.delete(fn)
+}
+
 /** Tears the page out of the guestbook: everything starts again from this visit. */
 export function resetStats() {
   cache = { ...emptyStats(), visits: 1, firstVisit: new Date().toISOString() }
   save()
+  saveSeen(new Set(earnedIds(cache)))
 }
 
 export function totalBicas(stats: VisitorStats): number {
@@ -155,5 +211,6 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
+  { id: 'sofa-surfer', title: 'Sofa surfer', hint: 'Wake up somewhere you didn’t fall asleep.', earned: (s) => s.dozes >= 1 },
   { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
 ]

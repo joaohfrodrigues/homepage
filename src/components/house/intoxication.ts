@@ -21,6 +21,11 @@ export class Tally {
     return this.times.length
   }
 
+  /** How long ago the oldest one within the window was, in ms; 0 if there are none. */
+  span(now = Date.now()): number {
+    return this.count(now) ? now - this.times[0] : 0
+  }
+
   clear() {
     this.times = []
   }
@@ -33,6 +38,29 @@ export const OVERDOSE_AT = 10
 
 /** Faster feet, a heartbeat shake and trembling hands; a flush under reduced motion. */
 export const CAFFEINE_OVERDOSE: PlayerEffect = { speed: 1.5, shake: 0.002, jitter: 1, tint: 0xffb8a0, ms: 75_000 }
+
+/** Beers lately: tipsy at three, dizzy at five, and at seven you doze off on the sofa. */
+export const beer = new Tally(10 * 60_000)
+export const TIPSY_AT = 3
+export const DIZZY_AT = 5
+export const DOZE_AT = 7
+
+/** A gentle sway and faintly breathing edges. Each beer starts the clock again. */
+export const BEER_TIPSY: PlayerEffect = { sway: 3, vignette: 0.2, tint: 0xffe0d4, ms: 120_000 }
+/**
+ * A wider sway, steps that wander a little, darker breathing edges and a view
+ * that keeps slipping out of focus; under reduced motion the tint, still edges
+ * and a faint steady blur.
+ */
+export const BEER_DIZZY: PlayerEffect = {
+  speed: 0.85,
+  sway: 6,
+  drift: 0.15,
+  vignette: 0.5,
+  blur: 0.7,
+  tint: 0xffc4cc,
+  ms: 120_000,
+}
 
 export function ordinal(n: number): string {
   const tens = n % 100
