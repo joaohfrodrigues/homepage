@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { BookOpen, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId } from '@/game/layout'
@@ -10,12 +10,25 @@ import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 import { getServerSoundOn, isSoundOn, setSoundOn, subscribeSound } from './audio'
 import { BicaPanel } from './bica-panel'
+import { ComicStrip, type ComicId } from './comic-strip'
 import { DialogueBox } from './dialogue-box'
-import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
+import { buildDialogue, type Binge, type DialogueChoice, type DialogueKey } from './dialogues'
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import {
+  BEER_DIZZY,
+  BEER_TIPSY,
+  BUZZING_AT,
+  CAFFEINE_OVERDOSE,
+  DIZZY_AT,
+  DOZE_AT,
+  OVERDOSE_AT,
+  TIPSY_AT,
+  beer,
+  caffeine,
+} from './intoxication'
 import { stop as stopRecord } from './record-player'
 import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
 import * as sfx from './sfx'
@@ -84,6 +97,7 @@ export function HouseShell({ data, children }: Props) {
   const [hint, setHint] = useState<Hint | null>(null)
   const [room, setRoom] = useState<RoomId | null>(null)
   const [dialogue, setDialogue] = useState<DialogueKey | null>(null)
+  const [comic, setComic] = useState<ComicId | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
@@ -106,7 +120,7 @@ export function HouseShell({ data, children }: Props) {
   const soundOn = useSyncExternalStore(subscribeSound, isSoundOn, getServerSoundOn)
 
   const overlayOpen = pathname !== '/'
-  const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
+  const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome
 
   // A page opening (from the directory, say) takes the place of any panel, so
   // closing the page goes straight back to the house.
@@ -296,9 +310,89 @@ export function HouseShell({ data, children }: Props) {
       setNight(on)
       sfx.lightSwitch()
       if (on) updateStats((stats) => stats.naps++)
+      // A nap sleeps off the coffee and the beers.
+      caffeine.clear()
+      beer.clear()
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
       bridge.ui.emit('night', { on, animate: true })
     },
     [bridge],
+  )
+
+  // Ten bicas in five minutes: the guest starts vibrating, and João notices.
+  const pulledBica = useCallback(
+    (lately: number) => {
+      if (lately < OVERDOSE_AT) return
+      bridge.ui.emit('effect', { source: 'caffeine', effect: CAFFEINE_OVERDOSE })
+      if (lately > OVERDOSE_AT) return
+      updateStats((stats) => stats.overdoses++)
+      setPanel(null)
+      setDialogue('caffeine-overdose')
+    },
+    [bridge],
+  )
+
+  // The night that ended on the sofa, kept for João to recount when the guest wakes.
+  const [binge, setBinge] = useState<Binge | null>(null)
+
+  // Tipsy at three beers, dizzy at five; at seven the guest dozes off and wakes on the sofa.
+  const drinkBeer = useCallback(() => {
+    updateStats((stats) => stats.beers++)
+    const lately = beer.add()
+    if (lately >= DOZE_AT) {
+      setDialogue(null)
+      updateStats((stats) => stats.dozes++)
+      setBinge({
+        beers: lately,
+        minutes: Math.max(1, Math.round(beer.span() / 60_000)),
+        bicas: caffeine.count(),
+      })
+      // Sleeping it off clears everything, and it's morning when they wake.
+      beer.clear()
+      caffeine.clear()
+      setComic('doze')
+      return
+    }
+    if (lately >= TIPSY_AT) {
+      bridge.ui.emit('effect', { source: 'beer', effect: lately >= DIZZY_AT ? BEER_DIZZY : BEER_TIPSY })
+    }
+    // The first round that goes to your head gets a close-up of the toast.
+    setDialogue(lately === TIPSY_AT ? null : 'beer')
+    if (lately === TIPSY_AT) setComic('cheers')
+  }, [bridge])
+
+  // The scene brings the morning in behind the fade; the day/night toggle follows only then.
+  useEffect(
+    () =>
+      bridge.game.on('dozed', () => {
+        setNight(false)
+        setComic('wake')
+      }),
+    [bridge],
+  )
+
+  // What follows each close-up: the fade to the sofa after nodding off, João's chat after waking.
+  const finishComic = useCallback(() => {
+    setComic(null)
+    if (comic === 'doze') {
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('doze')
+    } else if (comic === 'wake') setDialogue('sofa-wake')
+  }, [bridge, comic])
+
+  // Built when it opens, so a count running out mid-chat doesn't change the lines.
+  const shownDialogue = useMemo(
+    () =>
+      dialogue &&
+      buildDialogue(dialogue, data, {
+        night,
+        buzzing: caffeine.count() >= BUZZING_AT,
+        beers: beer.count(),
+        binge,
+      }),
+    [dialogue, data, night, binge],
   )
 
   const dismissWelcome = useCallback(() => {
@@ -343,6 +437,9 @@ export function HouseShell({ data, children }: Props) {
       case 'night':
         setDialogue(null)
         changeNight(choice.on)
+        break
+      case 'beer':
+        drinkBeer()
         break
       case 'close':
         setDialogue(null)
@@ -442,10 +539,10 @@ export function HouseShell({ data, children }: Props) {
         </>
       )}
 
-      {dialogue && (
+      {dialogue && shownDialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night })}
+          dialogue={shownDialogue}
           onChoose={choose}
           onClose={() => setDialogue(null)}
           touch={coarsePointer}
@@ -469,12 +566,13 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'wardrobe' && (
         <WardrobePanel outfit={outfit} onChange={changeOutfit} onClose={() => setPanel(null)} />
       )}
-      {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
+      {panel === 'bica' && <BicaPanel onPull={pulledBica} onClose={() => setPanel(null)} />}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
+      {comic && <ComicStrip key={comic} id={comic} outfit={outfit} onDone={finishComic} />}
       <StickerToast onOpen={() => setPanel('guestbook')} />
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>

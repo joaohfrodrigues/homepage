@@ -57,7 +57,8 @@ site's sections:
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV), João himself, and a record player that puts on a short
     lo-fi loop.
-- **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken.
+- **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
+    grab a beer).
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
@@ -97,6 +98,20 @@ one audio context (`src/components/house/audio.ts`), which sleeps when nothing i
 
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
+
+There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
+faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
+or until a nap. Beers from the fridge make you tipsy at three (the view sways and the edges
+breathe) and dizzy at five (a wider sway, steps with the keys that wander, darker edges and a view
+that keeps slipping out of focus). The seventh fades to black and you wake on the living-room
+sofa in the morning, where João can tell you what happened and how many you had (and how fast)
+before you take the glass of water he left you. The third beer, nodding off and waking up each
+cut to a comic-book strip of close-ups drawn from the character sprites
+(`src/components/house/comic-strip.tsx`), which a click or key skips. A nap sleeps off the beers
+as well as the bicas. Those counts live in memory for the session only
+(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats. Under
+`prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
+and drift, hold the vignette and blur still, and the comic panels appear all at once.
 
 Where things live:
 

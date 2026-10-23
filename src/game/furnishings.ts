@@ -130,9 +130,9 @@ export function furnishHouse(): Furnishings {
   })
   interactables.push({
     id: 'fridge',
-    label: 'Fridge magnets — where was this taken?',
+    label: 'Fridge — magnets, and something cold',
     tiles: prop('fridge', 3, 12),
-    action: { type: 'panel', panel: 'geoguess' },
+    action: { type: 'dialogue', id: 'fridge' },
   })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
