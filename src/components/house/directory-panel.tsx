@@ -130,6 +130,14 @@ export function DirectoryPanel({ currentRoom, night, unlocks, onTeleport, onVisi
     open: () => onPanel('geoguess'),
   }
   const bica: Entry = { key: 'bica', title: 'Pull a bica', room: 'kitchen', item: 'Coffee machine', target: 'coffee', open: () => onPanel('bica') }
+  const leaderboards: Entry = {
+    key: 'leaderboards',
+    title: 'Leaderboards',
+    room: 'corridor',
+    item: 'Trophy poster',
+    target: 'leaderboards',
+    open: () => onPanel('leaderboards'),
+  }
   const guestbook: Entry = {
     key: 'guestbook',
     title: 'Guestbook',
@@ -161,6 +169,7 @@ export function DirectoryPanel({ currentRoom, night, unlocks, onTeleport, onVisi
     contact,
     geoguess,
     bica,
+    leaderboards,
     guestbook,
     wardrobe,
     bed,

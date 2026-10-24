@@ -180,6 +180,15 @@ export function furnishHouse(): Furnishings {
     action: { type: 'dialogue', id: 'front-door' },
   })
 
+  // --- Corridor (2 × 1m) ---------------------------------------------------------
+  // Its one free stretch of wall, left of the bedroom door, carries the leaderboards.
+  interactables.push({
+    id: 'leaderboards',
+    label: 'Trophy poster — leaderboards',
+    tiles: limezuArea('trophyPoster', 11, 9, 2, 2),
+    action: { type: 'panel', panel: 'leaderboards' },
+  })
+
   // --- Bedroom (3 × 3m) ---------------------------------------------------------
   // A double bed against the north wall between two bedside tables, the
   // wardrobe along the west wall under the window.

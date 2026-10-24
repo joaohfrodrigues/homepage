@@ -1,4 +1,4 @@
-import type { BoardId, ScoreEntry, ScoreMeta } from './boards'
+import { BOARDS, type BoardId, type ScoreEntry, type ScoreMeta } from './boards'
 
 /**
  * The browser's side of the scores API. Nothing is sent unless the visitor
@@ -39,7 +39,7 @@ export async function submitToBoard(board: BoardId, name: string, score: number,
     })
     const body = await response.json().catch(() => ({}))
     if (response.ok) {
-      rememberEntry(board, body.entry.id)
+      rememberEntry(board, body.entry)
       rememberName(body.entry.name)
       return { status: 'ok', ...body }
     }
@@ -86,7 +86,8 @@ function rememberName(name: string) {
   write(NAME_KEY, name)
 }
 
-function ownEntries(): Partial<Record<BoardId, string>> {
+/** What this browser last saw of its own entry on each board. */
+function ownEntries(): Partial<Record<BoardId, { id: string; score: number }>> {
   try {
     return JSON.parse(read(ENTRIES_KEY) ?? '{}')
   } catch {
@@ -96,9 +97,17 @@ function ownEntries(): Partial<Record<BoardId, string>> {
 
 /** This browser's entry on a board, if it has submitted to it, so the board can highlight it. */
 export function ownEntryId(board: BoardId): string | undefined {
-  return ownEntries()[board]
+  return ownEntries()[board]?.id
 }
 
-function rememberEntry(board: BoardId, id: string) {
-  write(ENTRIES_KEY, JSON.stringify({ ...ownEntries(), [board]: id }))
+/** The score this browser's entry on a board holds (0 if it has none), so a panel only offers a better one. */
+export function submittedScore(board: BoardId): number {
+  return ownEntries()[board]?.score ?? 0
 }
+
+function rememberEntry(board: BoardId, { id, score }: ScoreEntry) {
+  write(ENTRIES_KEY, JSON.stringify({ ...ownEntries(), [board]: { id, score } }))
+}
+
+/** Boards ranked by score: the games, as opposed to the Hall of Fame. */
+export const GAME_BOARDS = (Object.keys(BOARDS) as BoardId[]).filter((id) => BOARDS[id].order === 'score')

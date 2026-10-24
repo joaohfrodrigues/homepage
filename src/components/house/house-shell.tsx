@@ -18,6 +18,7 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { ScoresPanel } from './scores-panel'
 import {
   BEER_DIZZY,
   BEER_TIPSY,
@@ -242,7 +243,8 @@ export function HouseShell({ data, children }: Props) {
         else sfx.frontDoor()
       }),
       bridge.game.on('interact', (action) => {
-        if (action.type !== 'dialogue') sfx.pop()
+        if (action.type === 'panel' && action.panel === 'leaderboards') sfx.rustle()
+        else if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
         else if (action.id === 'bathroom') {
           sfx.knock()
@@ -649,6 +651,7 @@ export function HouseShell({ data, children }: Props) {
       )}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onClose={() => setPanel(null)} />}
+      {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}

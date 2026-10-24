@@ -48,6 +48,8 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
   const [scores, setScores] = useState<number[]>([])
   // Only ever rendered client-side (it opens from the game), so localStorage is safe here.
   const [best, setBest] = useState(() => readStats().geoBest)
+  // The best when the panel opened: beating it is what earns the offer to submit.
+  const [startBest] = useState(best)
   const { view, setView, fitted } = useMapView(photos)
 
   const finished = scores.length === ROUNDS && revealed && index === ROUNDS - 1
@@ -130,7 +132,12 @@ export function GeoGuessPanel({ photos, onClose }: Props) {
   }
 
   return (
-    <PanelWindow eyebrow="Kitchen · Fridge magnets" title="Where was this taken?" onClose={onClose}>
+    <PanelWindow
+      eyebrow="Kitchen · Fridge magnets"
+      title="Where was this taken?"
+      onClose={onClose}
+      board={{ id: 'geoguess', best, offer: finished && best > startBest }}
+    >
       <div className="font-pixel mb-3 flex justify-between text-sm text-[#6d6359]">
         <span>
           Photo {index + 1} of {ROUNDS}

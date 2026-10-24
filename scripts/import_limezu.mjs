@@ -377,6 +377,8 @@ const FURNITURE = {
     rugTaupeStudy: { ...borderedRug(48, 403, 432, 2, 2), tint: TAUPE },
     runnerTaupe: { ...borderedRug(48, 403, 432, 2, 0, { thin: true }), tint: TAUPE },
     doormatTaupe: { ...borderedRug(48, 403, 432, 0, 0, { thin: true }), tint: TAUPE },
+    // Corridor: the sports-hall trophy poster, where the leaderboards hang.
+    trophyPoster: ['6_Music_and_sport', 225, 266, 13, 15],
     // Bedroom: a teak headboard with white pillows on the modular bed's grey cover and footboard.
     bedTeakGrey: {
         parts: [
