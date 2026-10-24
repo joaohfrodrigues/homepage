@@ -11,7 +11,8 @@ export const METRES_PER_TILE = 0.5
  *   d  doorway through a side wall (walkable)
  *   X  a shut door (the bathroom: occupied until its mission opens it)
  *   F  front door
- *   W  window: tall and glazed in a wall face, a slit of glass in a wall top
+ *   W  window: tall and glazed in a wall face; in a back wall seen from above,
+ *      plain wall (it shows on the façade outside, and lets the sun in)
  *   =  the balcony's front railing; |  its side railing
  *      (space) outside the flat
  *

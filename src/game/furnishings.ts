@@ -105,6 +105,7 @@ export function furnishHouse(): Furnishings {
   // Dining behind the sofa, by the kitchen's pocket door: two steps from the hob.
   // Chairs can be walked over (pulled out of the way); tables and sofas can't.
   prop('diningtable', 2, 8)
+  prop('pendant', 3, 8, false)
   prop('chair', 2, 7, false)
   prop('chair', 4, 7, false)
   prop('chairup', 2, 10, false)

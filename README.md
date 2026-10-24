@@ -140,15 +140,19 @@ building's shared stairwell. The camera scrolls a few rows into the courtyard. B
 sky, a gull glides over every so often and calls; under `prefers-reduced-motion` the gulls stay
 away (one still rests on a chimney).
 
-The house starts at night between 8pm and 7am, visitor's local time. Lisbon's real weather shows
-through the windows, on the balcony and over the block: the glass goes grey under cloud, as do the
-roofs and courtyard, rain runs down the panes and streaks across the balcony and everything outside,
-a storm brings the odd lightning flash, and the balcony's view mentions it. The HUD shows a cloud
-icon when the sky isn't clear. The sky comes from `/api/weather` (Open-Meteo, no API key, cached for
-30 minutes) and falls back to clear if that fails. Under `prefers-reduced-motion` the drops hold
-still and there's no lightning. To preview a sky, add `?weather=clear`, `cloudy`, `rain` or `storm`
-to the URL. Every room's page also has a plain HTML version for screen readers, crawlers and
-visitors without JavaScript.
+The house starts at night between 8pm and 7am, visitor's local time. At night only lamps you can see
+are on, low and warm (the floor lamps, a pendant over the dining table, the bedside lamp, a lamp on
+the hall console and festoon bulbs along the balcony), each lighting a soft patch of the dark around
+it, while the TV and the study's monitor throw a cool fan of light forward. By day, under a sunny
+sky, the windows let soft neutral light onto the floor; the back windows show only on the façade
+outside. Lisbon's real weather shows through the windows, on the balcony and over the block: the
+glass goes grey under cloud, as do the roofs and courtyard, rain runs down the panes and streaks
+across the balcony and everything outside, a storm brings the odd lightning flash, and the balcony's
+view mentions it. The HUD shows a cloud icon when the sky isn't clear. The sky comes from
+`/api/weather` (Open-Meteo, no API key, cached for 30 minutes) and falls back to clear if that
+fails. Under `prefers-reduced-motion` the drops hold still and there's no lightning. To preview a
+sky, add `?weather=clear`, `cloudy`, `rain` or `storm` to the URL. Every room's page also has a
+plain HTML version for screen readers, crawlers and visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
@@ -168,9 +172,10 @@ Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/missions.ts` - missions and what they unlock;
-    `src/game/house-scene.ts` - the Phaser scene; `src/game/exterior.ts` - the roofs, back walls,
-    courtyard and gulls around it; `src/game/weather-layer.ts` - rain, cloud and lightning over
-    it; `src/game/bridge.ts` - events between Phaser and React.
+    `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
+    lamps; `src/game/exterior.ts` - the roofs, back walls, courtyard and gulls around it;
+    `src/game/weather-layer.ts` - rain, cloud and lightning over it; `src/game/bridge.ts` - events
+    between Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
     map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`);
     `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and `scores-panel.tsx` the

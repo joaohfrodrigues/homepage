@@ -22,9 +22,9 @@ import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import { WeatherLayer } from './weather-layer'
-import { COURTYARD_VIEW_ROWS, EXTERIOR_LAMPS, Exterior } from './exterior'
+import { COURTYARD_VIEW_ROWS, Exterior } from './exterior'
+import { Lighting } from './lighting'
 import {
-  LIGHT_SOURCES,
   MAP_WALL,
   FACINGS,
   PROP_SIZES,
@@ -37,7 +37,6 @@ import {
   drawFocusArrow,
   drawSparkle,
   traceSilhouette,
-  drawCapWindow,
   drawDoorway,
   drawFloor,
   drawRailingFront,
@@ -182,8 +181,7 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
-  private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
-  private nightOverlay!: Phaser.GameObjects.Rectangle
+  private lighting!: Lighting
   private weather!: WeatherLayer
   private exterior?: Exterior
   private inputEnabled = true
@@ -244,6 +242,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   create() {
+    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     this.bakeHouse()
     this.bakeCharacters()
     this.bakeZeno()
@@ -400,9 +399,8 @@ export class HouseScene extends Phaser.Scene {
         } else {
           const part = wallPartAt(x, y)
           const edges = { left: openCellAt(x - 1, y) !== cell, right: openCellAt(x + 1, y) !== cell }
-          if (cell === 'W' && (part === 'cap' || !below)) {
-            drawCapWindow(ctx, ox, oy, edges)
-          } else if (part === 'cap' || !below) {
+          // A back window shows on the façade outside, so from above it's plain wall.
+          if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
           } else if (cell === 'W') {
             drawWindow(ctx, ox, oy, below.wall, part, edges)
@@ -612,39 +610,9 @@ export class HouseScene extends Phaser.Scene {
     return this.furnishings.decor.find((item) => item.kind === 'prop' && item.prop === name)
   }
 
-  /** The cosy bits: warm light pools under lamps and screens, and the Pi's blinking LEDs. */
+  /** The house's light, day and night, and the Pi's blinking LEDs. */
   private addAmbience() {
-    const glow = this.textures.createCanvas('glow', 64, 64)!
-    const gctx = glow.getContext()
-    const gradient = gctx.createRadialGradient(32, 32, 0, 32, 32, 32)
-    gradient.addColorStop(0, 'rgba(255, 196, 120, 0.55)')
-    gradient.addColorStop(1, 'rgba(255, 196, 120, 0)')
-    gctx.fillStyle = gradient
-    gctx.fillRect(0, 0, 64, 64)
-    glow.refresh()
-
-    for (const item of this.furnishings.decor) {
-      if (item.kind !== 'prop') continue
-      const light = LIGHT_SOURCES[item.prop]
-      if (!light) continue
-      const image = this.add
-        .image(item.x * TILE + light.x, item.y * TILE + light.y, 'glow')
-        .setDisplaySize(light.radius * 2, light.radius * 2)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(30)
-      this.glows.push({ image, day: item.prop === 'tv' ? 0.35 : 0.6, night: item.prop === 'tv' ? 0.8 : 1 })
-    }
-    // The lanterns on the courtyard walls only come on after dark.
-    for (const lamp of EXTERIOR_LAMPS) {
-      const image = this.add.image(lamp.x, lamp.y, 'glow').setDisplaySize(44, 44).setBlendMode(Phaser.BlendModes.ADD).setDepth(30)
-      this.glows.push({ image, day: 0, night: 1 })
-    }
-
-    // Night: everything but the light pools and interaction cues sinks into blue.
-    this.nightOverlay = this.add
-      .rectangle(-20 * TILE, -20 * TILE, (MAP_WIDTH + 40) * TILE, (MAP_HEIGHT + 40) * TILE, 0x0b1030)
-      .setOrigin(0)
-      .setDepth(29)
+    this.lighting = new Lighting(this, this.furnishings.decor, this.reducedMotion)
     this.applyNight(this.cfg.night)
 
     // The Pi's disk enclosure on the study desk.
@@ -669,9 +637,8 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private applyNight(on: boolean) {
-    this.nightOverlay.setAlpha(on ? 0.55 : 0)
+    this.lighting.setNight(on)
     this.exterior?.setNight(on)
-    for (const glow of this.glows) glow.image.setAlpha(on ? glow.night : glow.day)
   }
 
   /** Fade out, flip day/night, fade back in — as if the visitor just woke up. */
@@ -840,7 +807,6 @@ export class HouseScene extends Phaser.Scene {
    * sparkle shown while the visitor is close by.
    */
   private bakeCues() {
-    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     const small = (name: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
       const texture = this.textures.createCanvas(name, w, h)!
       draw(texture.getContext())
@@ -1893,6 +1859,7 @@ export class HouseScene extends Phaser.Scene {
       ui.on('weather', (weather) => {
         this.weather.set(weather)
         this.exterior?.setWeather(weather)
+        this.lighting.setWeather(weather)
       }),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),

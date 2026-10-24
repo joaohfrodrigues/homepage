@@ -4,7 +4,7 @@ import { MAP_HEIGHT, MAP_WIDTH, TILE, cellAt, getRoom } from './layout'
 import { isOutdoors } from './exterior'
 import { hash } from './pixels'
 
-/** The glass colours drawWindow and drawCapWindow paint, as RGB. */
+/** The glass colours drawWindow paints, as RGB. */
 const GLASS = [
   [0x9c, 0xcb, 0xe0],
   [0xcb, 0xe7, 0xf2],

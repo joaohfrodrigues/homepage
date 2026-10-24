@@ -13,6 +13,13 @@ import { drawFloor, drawWallCap, hash, rect, type Ctx } from './pixels'
 
 /** How far the block reaches past the flat, in tiles. The camera shows a little of the courtyard. */
 const MARGIN = { left: 22, right: 22, top: 6, bottom: 12 }
+/** The block's extent in world px, which the night also covers. */
+export const EXTERIOR_BOUNDS = {
+  x: -MARGIN.left * TILE,
+  y: -MARGIN.top * TILE,
+  w: (MAP_WIDTH + MARGIN.left + MARGIN.right) * TILE,
+  h: (MAP_HEIGHT + MARGIN.top + MARGIN.bottom) * TILE,
+}
 /** Rows of courtyard below the flat that the camera may scroll down to. */
 export const COURTYARD_VIEW_ROWS = 4
 /** The last courtyard row; the next street's roofs start after it. */
