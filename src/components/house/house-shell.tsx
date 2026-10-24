@@ -456,6 +456,7 @@ export function HouseShell({ data, children }: Props) {
               buzzing: caffeine.count() >= BUZZING_AT,
               beers: beer.count(),
               binge,
+              stats: readStats(),
             }),
             dialogue,
             readStats(),
