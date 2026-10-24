@@ -66,18 +66,38 @@ you're already facing it) uses it, so nothing opens by surprise. Furniture and p
 site's sections:
 
 - **Entrance hall** - running and hiking kit.
-- **Living room** - the TV (film & TV) and João himself.
-- **Kitchen** - pull a bica, or guess where the fridge-magnet photos were taken. Each game has a
-    Top 10 tab, and after a new personal best offers to put it on the public leaderboard under a
-    name of the visitor's choosing (prefilled with the last one used). The chalkboard by the
-    counters chalks up each board's top three in turn and opens the full boards.
+- **Living room** - the TV (film & TV), João himself, and a record player that puts on a short
+    lo-fi loop.
+- **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
+    grab a beer). Each game has a Top 10 tab, and after a new personal best offers to put it on the
+    public leaderboard under a name of the visitor's choosing (prefilled with the last one used). The
+    chalkboard by the counters chalks up each board's top three in turn and opens the full boards.
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
+- **Bathroom** - shut and "occupied" until its mission opens it; until then Dona Rosa, a neighbour
+    from upstairs, is a shape behind the steamed-up shower glass.
+
+Missions are multi-step activities that open up parts of the house. The first, *Who's in there?*,
+starts once you've knocked on the bathroom door three times: ask João who is in there, pull a
+perfect bica and take it to the door. Dona Rosa turns off the water, comes to the door to thank
+you and lets herself out the front door, and the bathroom is open for good. Steps are checked against
+the guestbook's stats, things that happen (a perfect bica) or a choice in dialogue; João offers a
+hint for any mission under way, and the guestbook shows each one's progress. Missions are defined
+in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and
+tearing out the guestbook page shuts everything again.
 
 A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
 films & series and About, or a button to explore the house. Dismissing it is remembered in
 `localStorage`, and visitors arriving on a deep link never see it.
+
+The guestbook in the hall keeps the visitor's own tallies (rooms visited, distance walked, bicas,
+fridge-magnet scores) and a page of stickers to collect, all in this browser's `localStorage`
+(`src/components/house/visitor-stats.ts`; stickers are its `ACHIEVEMENTS`). Earning a sticker pops
+up a toast ("★ First sip unlocked") under the HUD for a few seconds, also announced to screen
+readers; clicking it opens the guestbook. Announced sticker ids are saved under
+`house:stickers-seen`, so a reload doesn't repeat a toast, and stickers earned before toasts existed
+are marked seen quietly. A new sticker needs only an entry in `ACHIEVEMENTS` to get its toast.
 
 Pages over the house have real URLs, so Back closes them. Panels, dialogue and the photo lightbox
 aren't pages, but each gets a history entry at the same URL while it is open
@@ -87,17 +107,51 @@ steps back over its entry, and a page opened from a panel takes over the panel's
 from that page returns to the house. The welcome card gets no entry: Back from it leaves, as from
 any first page.
 
+The record player's music is synthesised in the browser with the Web Audio API
+(`src/components/house/record-player.ts`), so there's no audio file. It is off by default and only
+starts when the visitor presses play (or Enter in its window); it keeps playing around the house
+(with a stop button in the HUD) and stops when the tab is hidden. Its volume slider, which the left
+and right arrows also move, is the volume of the whole house, music and sound effects alike.
+
+The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
+quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
+door, Zeno's meow, the coffee machine and a chime for each new sticker, plus the hidden behaviours'
+own: a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy),
+a clink for the toast, snoring as the guest nods off and birds when they wake. Zeno's meow, the
+Super Bock and the coffee machine are recordings in `public/house/sounds/` (credited in
+`CREDITS.txt` there), with a synthesised stand-in if a file fails to load. They are on by default
+but stay silent until the visitor first clicks or presses a key. The speaker button in the HUD (or
+the record player's mute) mutes every sound, the record included; it and the house's volume are
+remembered in `localStorage`. The music and the effects share one audio context
+(`src/components/house/audio.ts`), which sleeps when nothing is playing.
+
 The house starts at night between 8pm and 7am, visitor's local time. Every room's page also has a
 plain HTML version for screen readers, crawlers and visitors without JavaScript.
+
+There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
+faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
+or until a nap. Beers from the fridge make you tipsy at three (the view sways and the edges
+breathe) and dizzy at five (a wider sway, steps with the keys that wander, darker edges and a view
+that keeps slipping out of focus). The seventh fades to black and you wake on the living-room
+sofa in the morning, where João can tell you what happened and how many you had (and how fast)
+before you take the glass of water he left you. The third beer, nodding off and waking up each
+cut to a comic-book strip of close-ups drawn from the character sprites
+(`src/components/house/comic-strip.tsx`), which a click or key skips. A nap sleeps off the beers
+as well as the bicas. Those counts live in memory for the session only
+(`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats. Under
+`prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
+and drift, hold the vignette and blur still, and the comic panels appear all at once.
 
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
+    `src/game/missions.ts` - missions and what they unlock;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/bridge.ts` - events between Phaser and
     React.
-- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, travel map, ...)
-    and dialogue; `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and
-    `scores-panel.tsx` the chalkboard's boards.
+- `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
+    map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`);
+    `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and `scores-panel.tsx` the
+    chalkboard's boards.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
@@ -245,6 +299,8 @@ Vercel then picks up the change on the next deploy.
 
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
+- **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
+    player's lo-fi loop and the house's sound effects, synthesised in the browser
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
 - **[Bun](https://bun.sh/)** - JavaScript package manager and script runner
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
@@ -306,7 +362,7 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters
+│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured

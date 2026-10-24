@@ -1,5 +1,5 @@
 import type { InteractAction } from './bridge'
-import type { Point } from './layout'
+import type { Point, UnlockId } from './layout'
 import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import { getTopic, type TopicId } from './topics'
@@ -15,6 +15,8 @@ export interface Interactable {
   label: string
   tiles: Point[]
   action: InteractAction
+  /** Gone once this is unlocked, like the knock on a door that now stands open. */
+  until?: UnlockId
 }
 
 export interface Furnishings {
@@ -108,7 +110,12 @@ export function furnishHouse(): Furnishings {
   prop('chairup', 2, 10, false)
   prop('chairup', 4, 10, false)
   // The right-hand side stays clear: it's the way in from the hall.
-  prop('recordplayer', 9, 5)
+  interactables.push({
+    id: 'recordplayer',
+    label: 'Record player — put some music on',
+    tiles: prop('recordplayer', 9, 5),
+    action: { type: 'panel', panel: 'recordplayer' },
+  })
   limezu('leafyPlant', 2, 3)
   limezu('tallBush', 9, 3)
 
@@ -125,9 +132,9 @@ export function furnishHouse(): Furnishings {
   })
   interactables.push({
     id: 'fridge',
-    label: 'Fridge magnets — where was this taken?',
+    label: 'Fridge — magnets, and something cold',
     tiles: prop('fridge', 3, 12),
-    action: { type: 'panel', panel: 'geoguess' },
+    action: { type: 'dialogue', id: 'fridge' },
   })
   // The chalkboard stands in the corner by the counters, out of the way of both doors.
   interactables.push({
@@ -220,7 +227,7 @@ export function furnishHouse(): Furnishings {
     action: { type: 'dialogue', id: 'balcony' },
   })
 
-  // --- Bathroom (2 × 2.5m), behind a shut door ------------------------------
+  // --- Bathroom (2 × 2.5m), behind a shut door until its mission -------------
   interactables.push({
     id: 'bathroom-door',
     label: 'Bathroom door',
@@ -231,6 +238,7 @@ export function furnishHouse(): Furnishings {
       { x: 14, y: 14 },
     ],
     action: { type: 'dialogue', id: 'bathroom' },
+    until: 'bathroom',
   })
   prop('toilet', 11, 14)
   prop('basin', 12, 14)

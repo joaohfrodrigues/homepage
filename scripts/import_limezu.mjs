@@ -11,6 +11,8 @@
  * accessories) share one sprite-sheet layout and stack in that order. Only the
  * idle and walk rows of the pieces picked below are kept, packed into
  * public/house/characters.png, with a manifest in src/game/character-pieces.json.
+ * A few EXTRAS that only the house's own characters wear (Dona Rosa's bathrobe) are
+ * packed alongside, outside the wardrobe's parts.
  * Each piece's sheet has 16x32 frames. Row 1 is idle and row 2 is walk, each
  * 6 frames per direction in the order right, up, left, down.
  *
@@ -91,6 +93,10 @@ const PICKS = {
     })),
 };
 const EYES = 'Eyes/16x16/Eyes_01';
+/** Pieces only the house's own people wear, kept out of the wardrobe. */
+const EXTRAS = [
+    'Outfits/16x16/Outfit_33_01', // Dona Rosa's white bathrobe
+];
 
 /** Rows of the front-facing idle frame that show each part's colour best. */
 const SWATCH_ROWS = {
@@ -254,6 +260,7 @@ const manifest = {
     columns: ATLAS_COLS,
     eyes: 0,
     parts: {},
+    extras: [],
 };
 const sheets = new Map();
 for (const [part, styles] of Object.entries(PICKS)) {
@@ -270,6 +277,11 @@ for (const [part, styles] of Object.entries(PICKS)) {
             };
         }),
     }));
+}
+for (const file of EXTRAS) {
+    sheets.set(file, decode(join(GENERATOR, `${file}.png`)));
+    slots.push(file);
+    manifest.extras.push({ id: file.split('/').pop(), slot: slots.length - 1 });
 }
 sheets.set(EYES, decode(join(GENERATOR, `${EYES}.png`)));
 
