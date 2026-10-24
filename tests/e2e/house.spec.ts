@@ -6,6 +6,22 @@ import { TILE, type Point } from '../../src/game/layout'
 const subjects = (page: Page) =>
   page.getByRole('dialog', { name: 'What are you after?' }).getByRole('navigation', { name: 'Subjects' })
 
+/** Counts the audio contexts the page makes; read the count with the returned function. */
+async function countAudioContexts(page: Page) {
+  await page.addInitScript(() => {
+    const win = window as unknown as { __audioContexts: number }
+    win.__audioContexts = 0
+    const Original = window.AudioContext
+    window.AudioContext = class extends Original {
+      constructor(options?: AudioContextOptions) {
+        super(options)
+        win.__audioContexts++
+      }
+    }
+  })
+  return () => page.evaluate(() => (window as unknown as { __audioContexts: number }).__audioContexts)
+}
+
 test.describe('House', () => {
   // These tests are about the house itself, so skip the first-visit welcome card.
   test.beforeEach(async ({ page }) => {
@@ -183,6 +199,182 @@ test.describe('House', () => {
     await page.getByRole('button', { name: 'Guestbook' }).click()
     await expect(guestbook).toContainText('this is your first visit')
     await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
+  })
+
+  test('the record player only plays when asked, remembers its volume and stops in a hidden tab', async ({ page }) => {
+    // The footsteps on the way to the turntable may wake the house's one audio context; the record shares it.
+    const audioContexts = await countAudioContexts(page)
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const panel = await openRecordPlayer(page)
+    await expect(panel.getByText('Needle up')).toBeVisible()
+    expect(await audioContexts()).toBeLessThanOrEqual(1)
+
+    await panel.getByRole('button', { name: 'Play the record' }).click()
+    await expect(panel.getByText('Now playing')).toBeVisible()
+    expect(await audioContexts()).toBe(1)
+    await panel.getByRole('slider', { name: 'Volume' }).fill('20')
+    await panel.getByRole('button', { name: 'Mute' }).click()
+    await expect(panel.getByText('Playing (muted)')).toBeVisible()
+    // It's the whole house's mute, the same as the HUD's.
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeVisible()
+
+    // The music carries on in the house, with a way to stop it from the HUD.
+    await page.keyboard.press('Escape')
+    await expect(panel).not.toBeVisible()
+    const stopMusic = page.getByRole('button', { name: 'Stop the music' })
+    await expect(stopMusic).toBeVisible()
+
+    // Switching tabs lifts the needle.
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    await expect(stopMusic).not.toBeVisible()
+
+    // Volume and mute are remembered; playing isn't.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const again = await openRecordPlayer(page)
+    await expect(again.getByText('Needle up')).toBeVisible()
+    await again.getByRole('button', { name: 'Unmute' }).click()
+    await expect(again.getByRole('slider', { name: 'Volume' })).toHaveValue('20')
+  })
+
+  test('in the record player, Enter plays and stops and the side arrows set the house volume', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    const panel = await openRecordPlayer(page)
+    const volume = panel.getByRole('slider', { name: 'Volume' })
+    await expect(volume).toHaveValue('70')
+
+    await page.keyboard.press('Enter')
+    await expect(panel.getByText('Now playing')).toBeVisible()
+    await page.keyboard.press('ArrowRight')
+    await expect(volume).toHaveValue('80')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await expect(volume).toHaveValue('50')
+    await page.keyboard.press('Enter')
+    await expect(panel.getByText('Needle up')).toBeVisible()
+
+    // Turning it up from muted unmutes the whole house.
+    await panel.getByRole('button', { name: 'Mute', exact: true }).click()
+    await expect(volume).toHaveValue('0')
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeAttached()
+    await page.keyboard.press('ArrowRight')
+    await expect(volume).toHaveValue('60')
+    await expect(page.getByRole('button', { name: 'Mute sounds' })).toBeAttached()
+
+    // The volume is the house's: it's still there after a reload.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect((await openRecordPlayer(page)).getByRole('slider', { name: 'Volume' })).toHaveValue('60')
+  })
+
+  test('sounds are on by default, wait for the first key press and can be muted', async ({ page }) => {
+    const audioContexts = await countAudioContexts(page)
+    const walk = async () => {
+      await page.keyboard.down('ArrowDown')
+      await page.waitForTimeout(500)
+      await page.keyboard.up('ArrowDown')
+    }
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(300)
+    expect(await audioContexts()).toBe(0)
+    // Footsteps; the first sound also fetches the recordings.
+    const recordings = ['zeno-meow', 'beer', 'coffee'].map((name) =>
+      page.waitForResponse((response) => response.url().endsWith(`/house/sounds/${name}.mp3`) && response.ok()),
+    )
+    await walk()
+    await expect.poll(audioContexts).toBe(1)
+    await Promise.all(recordings)
+
+    await page.getByRole('button', { name: 'Mute sounds' }).click()
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toHaveAttribute('aria-pressed', 'true')
+
+    // Remembered: after a reload, walking stays silent.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeVisible()
+    await walk()
+    expect(await audioContexts()).toBe(0)
+  })
+
+  test('the coffee machine sound plays once, through, however many bicas are pulled', async ({ page }) => {
+    // Count starts of the long coffee recording (nothing else lasts over three seconds).
+    await page.addInitScript(() => {
+      const win = window as unknown as { __coffeeStarts: number }
+      win.__coffeeStarts = 0
+      const start = AudioBufferSourceNode.prototype.start
+      AudioBufferSourceNode.prototype.start = function (...args: Parameters<typeof start>) {
+        if ((this.buffer?.duration ?? 0) > 3) win.__coffeeStarts++
+        return start.apply(this, args)
+      }
+    })
+    const coffeeStarts = () => page.evaluate(() => (window as unknown as { __coffeeStarts: number }).__coffeeStarts)
+
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await expect.poll(coffeeStarts).toBe(1)
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await bica.getByRole('button', { name: 'Another one' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await page.waitForTimeout(500)
+    expect(await coffeeStarts()).toBe(1)
+  })
+
+  test('a new sticker gets a toast once, which opens the guestbook', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+
+    const toast = page.getByRole('status').getByRole('button', { name: 'First sip unlocked' })
+    await expect(toast).toBeVisible()
+    await toast.click()
+    await expect(page.getByRole('dialog', { name: 'Guestbook' })).toBeVisible()
+    await expect(toast).not.toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // Already announced: neither a reload nor more coffee shows it again.
+    await page.reload()
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await expect(bica.getByRole('button', { name: 'Another one' })).toBeVisible()
+    await expect(page.getByRole('status').getByRole('button')).toHaveCount(0)
+  })
+
+  test('stickers earned before toasts existed are not announced', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (window.localStorage.getItem('house:stats')) return
+      window.localStorage.setItem('house:stats', JSON.stringify({ visits: 1, chats: 5, pets: 5 }))
+    })
+    await page.goto('/')
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    // Counting the visit already checked for new stickers: Chatterbox and Cat person stay quiet.
+    await expect(page.getByText('João’s house')).toBeVisible()
+    await expect(page.getByRole('status')).toBeEmpty()
+    await page.keyboard.press('m')
+    await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
+    const bica = page.getByRole('dialog', { name: 'Pull a bica' })
+    await bica.getByRole('button', { name: 'Start the pull' }).click()
+    await bica.getByRole('button', { name: 'Stop!' }).click()
+    await expect(page.getByRole('status').getByRole('button', { name: 'First sip unlocked' })).toBeVisible()
   })
 })
 
@@ -423,6 +615,19 @@ test.describe('Welcome card', () => {
 })
 
 /** Where a map tile's centre sits on screen, read from the house camera (exposed in dev). */
+/** Walks to the living room's turntable and opens it. */
+async function openRecordPlayer(page: Page) {
+  await page.keyboard.press('m')
+  await page.getByRole('button', { name: 'Go to the living room' }).click()
+  await expect(page.getByText('Living room', { exact: true })).toBeVisible()
+  // A click walks up to the turntable and uses it.
+  const { x, y } = await screenPointOf(page, recordPlayer)
+  await page.mouse.click(x, y)
+  const panel = page.getByRole('dialog', { name: 'Record player' })
+  await expect(panel).toBeVisible()
+  return panel
+}
+
 async function screenPointOf(page: Page, tile: Point) {
   return page.evaluate(
     ({ tile, size }) => {
@@ -457,6 +662,7 @@ async function tapTile(page: Page, tile: Point) {
 // The guestbook stand, near the hall spawn: a tap has to walk there before it
 // can be used.
 const guestbookStand = furnishHouse().interactables.find((object) => object.id === 'guestbook')!.tiles[0]
+const recordPlayer = furnishHouse().interactables.find((object) => object.id === 'recordplayer')!.tiles[0]
 
 test.describe('House on a touch screen', () => {
   // Real touch events, so the game sees `pointer.wasTouch` the way a phone would.

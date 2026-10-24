@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, type RoomId } from '@/game/layout'
+import { FLOOR_PLAN, MAP_HEIGHT, MAP_WIDTH, ROOMS, getRoom, cellAt, isRoomOpen, type RoomId, type UnlockId } from '@/game/layout'
 import { TOPICS } from '@/game/topics'
 import type { PanelId, VisitTarget } from '@/game/bridge'
 import { openPage } from './house-navigation'
@@ -13,6 +13,8 @@ import { useEscapeKey } from './panel-window'
 interface Props {
   currentRoom: RoomId | null
   night: boolean
+  /** What missions have opened: shut rooms show on the plan but can't be jumped to. */
+  unlocks: UnlockId[]
   onTeleport: (room: RoomId) => void
   /** Stands the guest at `target`, then runs `then` (opening its page or panel). */
   onVisit: (target: VisitTarget, then: () => void) => void
@@ -105,7 +107,7 @@ const isLink = (cell: string) => cell === 'D' || cell === 'd'
  * house. Subjects come first, so nobody needs the floor plan to find photos;
  * picking one walks the guest to its item before the page opens.
  */
-export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onContact, onPanel, onToggleNight, onClose }: Props) {
+export function DirectoryPanel({ currentRoom, night, unlocks, onTeleport, onVisit, onContact, onPanel, onToggleNight, onClose }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -207,7 +209,7 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onCont
             Or jump to a room
           </h3>
           <div className="mx-auto mt-3 max-w-md">
-            <FloorPlan currentRoom={currentRoom} onTeleport={onTeleport} />
+            <FloorPlan currentRoom={currentRoom} unlocks={unlocks} onTeleport={onTeleport} />
           </div>
         </section>
         <p className="font-pixel mt-6 text-xs text-[#6d6359]">Tip: press M anywhere in the house to open this.</p>
@@ -224,7 +226,16 @@ export function DirectoryPanel({ currentRoom, night, onTeleport, onVisit, onCont
 }
 
 /** The house plan as room blocks and the doorways between them; open rooms are clickable. */
-function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; onTeleport: (room: RoomId) => void }) {
+function FloorPlan({
+  currentRoom,
+  unlocks,
+  onTeleport,
+}: {
+  currentRoom: RoomId | null
+  unlocks: UnlockId[]
+  onTeleport: (room: RoomId) => void
+}) {
+  const opened = new Set(unlocks)
   return (
     <svg
       viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
@@ -267,7 +278,7 @@ function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; on
             {label}
           </>
         )
-        if (room.locked) {
+        if (!isRoomOpen(room, opened)) {
           return (
             <g key={room.id} aria-label={`${room.name} (occupied)`} opacity={0.6}>
               {body}
@@ -294,8 +305,8 @@ function FloorPlan({ currentRoom, onTeleport }: { currentRoom: RoomId | null; on
         )
       })}
       {FLOOR_PLAN.flatMap((row, y) =>
-        [...row].map((cell, x) =>
-          isLink(cell) ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={LINK_COLOR} aria-hidden /> : null,
+        [...row].map((_, x) =>
+          isLink(cellAt(x, y, opened)) ? <rect key={`${x},${y}`} x={x} y={y} width={1} height={1} fill={LINK_COLOR} aria-hidden /> : null,
         ),
       )}
     </svg>
