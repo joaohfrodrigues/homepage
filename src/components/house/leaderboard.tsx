@@ -5,6 +5,7 @@ import { BOARDS, type BoardId, type ScoreEntry, type ScoreMeta } from '@/lib/sco
 import { fetchBoard, lastName, ownEntryId, submittedScore, submitToBoard } from '@/lib/scores/client'
 import { NAME_MAX, checkName } from '@/lib/scores/validate'
 import { cn } from '@/lib/utils'
+import { fanfare } from './sfx'
 
 export type BoardState = { status: 'loading' } | { status: 'offline' } | { status: 'ok'; entries: ScoreEntry[] }
 
@@ -90,6 +91,7 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
     if (result.status === 'offline') setProblem('The leaderboard is offline right now. Try again later.')
     else if (result.status === 'error') setProblem(result.message)
     else {
+      if (result.improved && result.rank) fanfare()
       const message = !result.improved
         ? `Your best of ${result.entry.score} is already on the board.`
         : result.rank
@@ -126,6 +128,88 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
   )
 }
 
+/**
+ * What goes under a board for the visitor's best: the opt-in form while it
+ * beats what this browser has on the board, the board's answer once it's sent,
+ * otherwise nothing. Also tracks which entry is the visitor's own.
+ */
+export function useSubmitSlot(board: BoardId, best: number, onEntries: (entries: ScoreEntry[]) => void, meta?: ScoreMeta) {
+  const [submitted, setSubmitted] = useState(() => submittedScore(board))
+  const [ownId, setOwnId] = useState(() => ownEntryId(board))
+  const [sent, setSent] = useState<{ score: number; message: string } | null>(null)
+
+  const eligible = best >= BOARDS[board].min && best > submitted
+  const slot = eligible ? (
+    <SubmitScore
+      key={best}
+      board={board}
+      score={best}
+      meta={meta}
+      onSubmitted={(entry, message, entries) => {
+        setSubmitted(entry.score)
+        setOwnId(entry.id)
+        setSent({ score: best, message })
+        onEntries(entries)
+      }}
+    />
+  ) : sent && sent.score === best ? (
+    <p className="font-pixel text-sm text-[#8e2a20]" role="status">
+      {sent.message}
+    </p>
+  ) : null
+  return { slot, ownId }
+}
+
+/**
+ * A row of pixel tabs; the arrow keys move between them. Each tab's panel
+ * needs the id `${id}-${key}` and aria-labelledby `${id}-${key}-tab`.
+ */
+export function TabBar<K extends string>({
+  id,
+  label,
+  tabs,
+  current,
+  onSelect,
+  className,
+}: {
+  id: string
+  label: string
+  tabs: readonly { key: K; label: string }[]
+  current: K
+  onSelect: (key: K) => void
+  className?: string
+}) {
+  return (
+    <div role="tablist" aria-label={label} className={cn('mb-4 flex flex-wrap gap-2', className)}>
+      {tabs.map(({ key, label }, i) => (
+        <button
+          key={key}
+          type="button"
+          role="tab"
+          id={`${id}-${key}-tab`}
+          aria-selected={current === key}
+          aria-controls={`${id}-${key}`}
+          tabIndex={current === key ? 0 : -1}
+          onClick={() => onSelect(key)}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+            e.preventDefault()
+            const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length].key
+            onSelect(next)
+            document.getElementById(`${id}-${next}-tab`)?.focus()
+          }}
+          className={cn(
+            'font-pixel border-2 border-[#2a2233] px-3 py-1 text-xs uppercase tracking-widest',
+            current === key ? 'bg-[#2a2233] text-[#f4ecd8]' : 'bg-[#fbf6ea] text-[#2a2233] hover:bg-[#ebe0c8]',
+          )}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 interface TabsProps {
   board: BoardId
   /** The visitor's best on this board, kept in their browser. */
@@ -145,35 +229,13 @@ export function BoardTabs({ board, best, offer, meta, children }: TabsProps) {
   const [tab, setTab] = useState<'play' | 'top'>('play')
   const [opened, setOpened] = useState(false)
   const [state, setEntries] = useBoard(board, opened)
-  const [submitted, setSubmitted] = useState(() => submittedScore(board))
-  const [ownId, setOwnId] = useState(() => ownEntryId(board))
-  const [sent, setSent] = useState<{ score: number; message: string } | null>(null)
+  const { slot, ownId } = useSubmitSlot(board, best, setEntries, meta)
   const id = useId()
 
   function show(next: 'play' | 'top') {
     setTab(next)
     if (next === 'top') setOpened(true)
   }
-
-  const eligible = best >= BOARDS[board].min && best > submitted
-  const slot = eligible ? (
-    <SubmitScore
-      key={best}
-      board={board}
-      score={best}
-      meta={meta}
-      onSubmitted={(entry, message, entries) => {
-        setSubmitted(entry.score)
-        setOwnId(entry.id)
-        setSent({ score: best, message })
-        setEntries(entries)
-      }}
-    />
-  ) : sent && sent.score === best ? (
-    <p className="font-pixel text-sm text-[#8e2a20]" role="status">
-      {sent.message}
-    </p>
-  ) : null
 
   const tabs = [
     { key: 'play', label: 'Play' },
@@ -182,33 +244,7 @@ export function BoardTabs({ board, best, offer, meta, children }: TabsProps) {
 
   return (
     <>
-      <div role="tablist" aria-label="Game or leaderboard" className="-mt-2 mb-4 flex gap-2">
-        {tabs.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            id={`${id}-${key}-tab`}
-            aria-selected={tab === key}
-            aria-controls={`${id}-${key}`}
-            tabIndex={tab === key ? 0 : -1}
-            onClick={() => show(key)}
-            onKeyDown={(e) => {
-              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-              e.preventDefault()
-              const next = key === 'play' ? 'top' : 'play'
-              show(next)
-              document.getElementById(`${id}-${next}-tab`)?.focus()
-            }}
-            className={cn(
-              'font-pixel border-2 border-[#2a2233] px-3 py-1 text-xs uppercase tracking-widest',
-              tab === key ? 'bg-[#2a2233] text-[#f4ecd8]' : 'bg-[#fbf6ea] text-[#2a2233] hover:bg-[#ebe0c8]',
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <TabBar id={id} label="Game or leaderboard" tabs={tabs} current={tab} onSelect={show} className="-mt-2" />
       <div role="tabpanel" id={`${id}-play`} aria-labelledby={`${id}-play-tab`} hidden={tab !== 'play'}>
         {children}
         {offer && slot && <div className="mt-4">{slot}</div>}

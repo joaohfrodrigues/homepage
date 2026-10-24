@@ -2,13 +2,7 @@ import type { Direction, RoomId, UnlockId } from './layout'
 import type { Outfit } from './characters'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
-export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook' | 'recordplayer' | 'chalkboard'
-
-/** One board as the kitchen chalkboard shows it: a short title and its top three. */
-export interface ChalkboardPage {
-  title: string
-  rows: { name: string; score: number }[]
-}
+export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook' | 'recordplayer' | 'leaderboards'
 
 /** What happens when the visitor interacts with something in the house. */
 export type InteractAction =
@@ -104,8 +98,6 @@ interface UiEvents {
   /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
   night: { on: boolean; animate: boolean }
   outfit: Outfit
-  /** The kitchen chalkboard's boards, shown in turn; null when they're offline. */
-  chalkboard: ChalkboardPage[] | null
   /** Everything missions have opened so far; anything left out is (or goes back to being) shut. */
   unlocks: UnlockId[]
   /** Start (or, with null, end) an effect on the guest. */

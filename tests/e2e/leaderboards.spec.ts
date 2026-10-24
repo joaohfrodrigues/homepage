@@ -165,17 +165,6 @@ test.describe('Leaderboards', () => {
   })
 })
 
-/** Reads the chalk on the kitchen chalkboard from the scene (exposed in dev). */
-async function chalk(page: Page) {
-  return page.evaluate(() => {
-    const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
-    const board = (game.scene.getScene('house') as {
-      chalk: { title: { text: string }; rows: { name: { text: string }; score: { text: string } }[] }
-    }).chalk
-    return [board.title.text, ...board.rows.map((row) => `${row.name.text} ${row.score.text}`.trim())]
-  })
-}
-
 /** Where a map tile's centre sits on screen, read from the house camera. */
 async function screenPointOf(page: Page, tile: Point) {
   return page.evaluate(
@@ -194,36 +183,72 @@ async function screenPointOf(page: Page, tile: Point) {
   )
 }
 
-const chalkboard = furnishHouse().interactables.find((object) => object.id === 'chalkboard')!
+const poster = furnishHouse().interactables.find((object) => object.id === 'leaderboards')!
 
-test.describe('Kitchen chalkboard', () => {
-  test('chalks up each board’s top three and opens the full boards', async ({ page }) => {
+test.describe('Trophy poster', () => {
+  test('opens both boards from the corridor wall, and remembers the tab', async ({ page }) => {
     await mockScores(page)
-    await seed(page, {})
+    await seed(page, { geoBest: 3100 })
     await page.goto('/')
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
-    await expect.poll(() => chalk(page)).toEqual(['Magnets', expect.stringMatching(/^1 Ana.* 4820$/), expect.stringMatching(/^2 Bru.* 4410$/), expect.stringMatching(/^3 Car.* 3900$/)])
-
     await page.keyboard.press('m')
-    await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the kitchen' }).click()
-    // Let the camera settle on the kitchen and the house take input again.
-    await expect(page.getByText('Kitchen', { exact: true })).toBeVisible()
+    await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the corridor' }).click()
+    // Let the camera settle on the corridor and the house take input again.
+    await expect(page.getByText('Corridor', { exact: true })).toBeVisible()
     await page.waitForTimeout(500)
-    const { x, y } = await screenPointOf(page, chalkboard.tiles[0])
+    const { x, y } = await screenPointOf(page, poster.tiles[0])
     await page.mouse.click(x, y)
-    const panel = page.getByRole('dialog', { name: 'Top scores' })
+    const panel = page.getByRole('dialog', { name: 'Leaderboards' })
     await expect(panel).toBeVisible()
-    await expect(panel.getByRole('region', { name: 'Fridge magnets' }).getByRole('listitem')).toHaveCount(3)
-    await expect(panel.getByRole('region', { name: 'Bica streak' }).getByRole('listitem').first()).toContainText('Zé')
+    await expect(panel.getByRole('list', { name: /Fridge magnets top/ }).getByRole('listitem')).toHaveCount(3)
+    await expect(panel.getByText('Your best: 3100 pts')).toBeVisible()
+    // Not good enough for the top three, but not on the board yet either, so it can still go up.
+    await expect(panel.getByRole('textbox', { name: /Put your best, 3100 pts/ })).toBeVisible()
+
+    await panel.getByRole('tab', { name: 'Bica streak' }).click()
+    await expect(panel.getByRole('list', { name: /Bica streak top/ }).getByRole('listitem').first()).toContainText('Zé')
+    await expect(panel.getByText('Not played yet: the game is at the coffee machine in the kitchen.')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(panel).toBeHidden()
+    await page.waitForTimeout(500)
+    // The guest is still facing the poster.
+    await page.keyboard.press('e')
+    await expect(panel.getByRole('tab', { name: 'Bica streak' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  test('a failed fetch leaves the house running and the chalkboard says so', async ({ page }) => {
-    await mockScores(page, 'unreachable')
-    await seed(page, {})
+  test('a skipped best can still be submitted from the poster', async ({ page }) => {
+    const posts = await mockScores(page)
+    await seed(page, { bicaBestStreak: 11 }, { 'house:score-name': 'Ana', 'house:leaderboard-tab': 'bica' })
     await page.goto('/')
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
-    await expect.poll(() => chalk(page)).toEqual(['Top scores', 'back soon', '', ''])
     await page.keyboard.press('m')
-    await expect(page.getByRole('dialog', { name: 'What are you after?' })).toBeVisible()
+    await page
+      .getByRole('dialog', { name: 'What are you after?' })
+      .getByRole('navigation', { name: 'Subjects' })
+      .getByRole('button', { name: /^Leaderboards/ })
+      .click()
+    const panel = page.getByRole('dialog', { name: 'Leaderboards' })
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('textbox', { name: /Put your best, 11 in a row/ })).toHaveValue('Ana')
+    await panel.getByRole('button', { name: 'Submit to the leaderboard' }).click()
+    await expect(panel.getByRole('status')).toHaveText('You’re number 2 on the Bica streak board!')
+    await expect(panel.locator('[aria-current="true"]')).toContainText('Ana')
+    expect(posts).toEqual([expect.objectContaining({ board: 'bica', name: 'Ana', score: 11 })])
+  })
+
+  test('offline boards say so, and still show the visitor’s own best', async ({ page }) => {
+    await mockScores(page, 'unreachable')
+    await seed(page, { geoBest: 4200 })
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await page
+      .getByRole('dialog', { name: 'What are you after?' })
+      .getByRole('navigation', { name: 'Subjects' })
+      .getByRole('button', { name: /^Leaderboards/ })
+      .click()
+    const panel = page.getByRole('dialog', { name: 'Leaderboards' })
+    await expect(panel.getByText('The Fridge magnets board is offline right now.', { exact: false })).toBeVisible()
+    await expect(panel.getByText('Your best: 4200 pts')).toBeVisible()
   })
 })

@@ -18,7 +18,7 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
-import { ScoresPanel, loadChalkboard } from './scores-panel'
+import { ScoresPanel } from './scores-panel'
 import {
   BEER_DIZZY,
   BEER_TIPSY,
@@ -243,7 +243,8 @@ export function HouseShell({ data, children }: Props) {
         else sfx.frontDoor()
       }),
       bridge.game.on('interact', (action) => {
-        if (action.type !== 'dialogue') sfx.pop()
+        if (action.type === 'panel' && action.panel === 'leaderboards') sfx.rustle()
+        else if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
         else if (action.id === 'bathroom') {
           sfx.knock()
@@ -282,19 +283,6 @@ export function HouseShell({ data, children }: Props) {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
 
-  // The kitchen chalkboard's top scores: fetched once the house is up, so a
-  // slow or failed fetch never holds it back, and checked again whenever a
-  // panel closes in case a score went in (otherwise it comes from a short cache).
-  useEffect(() => {
-    if (!ready || panel !== null) return
-    let cancelled = false
-    loadChalkboard().then((pages) => {
-      if (!cancelled) bridge.ui.emit('chalkboard', pages)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [bridge, ready, panel])
   // Missions open parts of the house (and a guestbook reset shuts them again).
   useEffect(() => {
     if (ready) bridge.ui.emit('unlocks', unlocks)
@@ -663,7 +651,7 @@ export function HouseShell({ data, children }: Props) {
       )}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
       {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onClose={() => setPanel(null)} />}
-      {panel === 'chalkboard' && <ScoresPanel onClose={() => setPanel(null)} />}
+      {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}

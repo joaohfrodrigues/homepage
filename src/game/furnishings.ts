@@ -136,13 +136,6 @@ export function furnishHouse(): Furnishings {
     tiles: prop('fridge', 3, 12),
     action: { type: 'dialogue', id: 'fridge' },
   })
-  // The chalkboard stands in the corner by the counters, out of the way of both doors.
-  interactables.push({
-    id: 'chalkboard',
-    label: 'Chalkboard — top scores',
-    tiles: prop('chalkboard', 2, 16),
-    action: { type: 'panel', panel: 'chalkboard' },
-  })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
   prop('kcounter', 1, 16)
@@ -185,6 +178,15 @@ export function furnishHouse(): Furnishings {
       { x: 9, y: 18 },
     ],
     action: { type: 'dialogue', id: 'front-door' },
+  })
+
+  // --- Corridor (2 × 1m) ---------------------------------------------------------
+  // Its one free stretch of wall, left of the bedroom door, carries the leaderboards.
+  interactables.push({
+    id: 'leaderboards',
+    label: 'Trophy poster — leaderboards',
+    tiles: limezuArea('trophyPoster', 11, 9, 2, 2),
+    action: { type: 'panel', panel: 'leaderboards' },
   })
 
   // --- Bedroom (3 × 3m) ---------------------------------------------------------

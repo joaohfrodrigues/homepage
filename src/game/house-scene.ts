@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser'
-import type { ChalkboardPage, EffectSource, HouseBridge, Hint, InteractAction, PlayerEffect, VisitTarget } from './bridge'
+import type { EffectSource, HouseBridge, Hint, InteractAction, PlayerEffect, VisitTarget } from './bridge'
 import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
   MAP_HEIGHT,
@@ -24,7 +24,6 @@ import { LAND_URL, renderMap, type LandData } from './world-map'
 import {
   LIGHT_SOURCES,
   MAP_WALL,
-  CHALK_SLATE,
   FACINGS,
   PROP_SIZES,
   DESK_LEDS,
@@ -205,10 +204,6 @@ export class HouseScene extends Phaser.Scene {
   private hasMoved = false
   private npcTalking = false
   private unsubscribers: (() => void)[] = []
-  /** The chalk on the kitchen chalkboard: a title over three rows of name and score. */
-  private chalk: { title: Phaser.GameObjects.Text; rows: { name: Phaser.GameObjects.Text; score: Phaser.GameObjects.Text }[] } | null =
-    null
-  private chalkTimer: Phaser.Time.TimerEvent | null = null
   /** Effects on the guest (too much coffee…), each with when it wears off. */
   private effects = new Map<EffectSource, { effect: PlayerEffect; until: number }>()
   /** All of them combined, refreshed every frame. */
@@ -250,7 +245,6 @@ export class HouseScene extends Phaser.Scene {
     this.bakeZeno()
     this.buildCollision()
     this.addAmbience()
-    this.addChalkboard()
 
     this.bakeCues()
 
@@ -606,63 +600,6 @@ export class HouseScene extends Phaser.Scene {
 
   private propAt(name: PropName): Point | undefined {
     return this.furnishings.decor.find((item) => item.kind === 'prop' && item.prop === name)
-  }
-
-  /** Blank chalk on the kitchen chalkboard, written once the boards arrive over the bridge. */
-  private addChalkboard() {
-    const board = this.propAt('chalkboard')
-    if (!board) return
-    const ox = board.x * TILE + CHALK_SLATE.x
-    const oy = board.y * TILE + CHALK_SLATE.y
-    const chalk = (x: number, y: number, color: string, originX: number) =>
-      this.add.text(x, y, '', this.textStyle(color, undefined, '4px')).setOrigin(originX, 0).setDepth(1)
-    this.chalk = {
-      title: chalk(ox + CHALK_SLATE.w / 2, oy + 0.5, '#f0dc96', 0.5),
-      rows: [0, 1, 2].map((i) => ({
-        name: chalk(ox + 1, oy + 6 + i * 5, '#eef2e6', 0),
-        score: chalk(ox + CHALK_SLATE.w - 1, oy + 6 + i * 5, '#eef2e6', 1),
-      })),
-    }
-  }
-
-  /** Chalks up each board's top three in turn, or a note that they're offline. */
-  private showChalkboard(pages: ChalkboardPage[] | null) {
-    const chalk = this.chalk
-    if (!chalk) return
-    this.chalkTimer?.remove()
-    this.chalkTimer = null
-    const write = (page: ChalkboardPage) => {
-      chalk.title.setText(page.title)
-      chalk.rows.forEach(({ name, score }, i) => {
-        const row = page.rows[i]
-        score.setText(row ? String(row.score) : '')
-        // Long names are cut to fit beside the score.
-        const room = CHALK_SLATE.w - 3 - score.width
-        let text = row ? `${i + 1} ${row.name}` : i === 0 ? 'be first!' : ''
-        name.setText(text)
-        while (name.width > room && text.length > 3) {
-          text = text.slice(0, -1)
-          name.setText(`${text.trimEnd()}.`)
-        }
-      })
-    }
-    if (!pages || pages.length === 0) {
-      write({ title: 'Top scores', rows: [] })
-      chalk.rows[0].name.setText('back soon')
-      return
-    }
-    let index = 0
-    write(pages[0])
-    if (pages.length > 1) {
-      this.chalkTimer = this.time.addEvent({
-        delay: 6000,
-        loop: true,
-        callback: () => {
-          index = (index + 1) % pages.length
-          write(pages[index])
-        },
-      })
-    }
   }
 
   /** The cosy bits: warm light pools under lamps and screens, and the Pi's blinking LEDs. */
@@ -1937,7 +1874,6 @@ export class HouseScene extends Phaser.Scene {
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
-      ui.on('chalkboard', (pages) => this.showChalkboard(pages)),
       ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
       ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),
       ui.on('doze', () => this.doze()),

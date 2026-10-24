@@ -1,6 +1,7 @@
 /**
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
- * meow, the coffee machine, a chime for new stickers, and the hidden
+ * meow, the coffee machine, a chime for new stickers, the trophy poster's
+ * rustle and a fanfare for making a top 10, and the hidden
  * behaviours' heartbeat, beers, snores and morning birds, and Dona Rosa's
  * shower and her exit through the front door. Most are
  * synthesised with the Web Audio API; Zeno, the Super Bock and the coffee
@@ -201,6 +202,24 @@ export function bicaResult(result: 'perfect' | 'good' | 'under' | 'over') {
 export function chime() {
   play((audio, t) => {
     ;[72, 76, 79, 84].forEach((n, i) => note(audio, t + i * 0.08, { from: hz(n), length: 0.4, level: 0.06, type: 'triangle' }))
+  })
+}
+
+/** The trophy poster's paper, looked at up close: barely there. */
+export function rustle() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.08, level: 0.03, filter: 'bandpass', cutoff: 3200, attack: 0.01 })
+    burst(audio, t + 0.07, { length: 0.12, level: 0.022, filter: 'bandpass', cutoff: 2400, attack: 0.02 })
+  })
+}
+
+/** Ta-da-daa: a submitted score made a top 10. */
+export function fanfare() {
+  play((audio, t) => {
+    note(audio, t, { from: hz(67), length: 0.12, level: 0.04, type: 'square' })
+    note(audio, t + 0.12, { from: hz(72), length: 0.12, level: 0.04, type: 'square' })
+    note(audio, t + 0.24, { from: hz(76), length: 0.5, level: 0.045, type: 'square' })
+    note(audio, t + 0.24, { from: hz(64), length: 0.5, level: 0.025, type: 'triangle' })
   })
 }
 
