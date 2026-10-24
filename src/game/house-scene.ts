@@ -22,7 +22,7 @@ import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import { WeatherLayer } from './weather-layer'
-import { COURTYARD_VIEW_ROWS, Exterior } from './exterior'
+import { Exterior } from './exterior'
 import { Lighting } from './lighting'
 import {
   MAP_WALL,
@@ -399,7 +399,7 @@ export class HouseScene extends Phaser.Scene {
         } else {
           const part = wallPartAt(x, y)
           const edges = { left: openCellAt(x - 1, y) !== cell, right: openCellAt(x + 1, y) !== cell }
-          // A back window shows on the façade outside, so from above it's plain wall.
+          // A back window seen from above is just wall: only the street windows show the sky.
           if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
           } else if (cell === 'W') {
@@ -1812,11 +1812,10 @@ export class HouseScene extends Phaser.Scene {
         Math.min(Math.round(Math.max(width, height) / (17 * TILE)), Math.floor(width / (11 * TILE))),
       )
       camera.setZoom(zoom)
-      // Up and down, though, the view stops at the top of the flat and a few
-      // rows into the courtyard behind it (or centres it all, when the whole
-      // height fits), so the front door, on the bottom row, doesn't leave half
-      // the screen empty.
-      const mapHeight = (MAP_HEIGHT + COURTYARD_VIEW_ROWS) * TILE
+      // Up and down, though, the view stops at the top and bottom of the flat
+      // (or centres it, when the whole height fits), so the front door, on the
+      // bottom row, doesn't leave half the screen empty.
+      const mapHeight = MAP_HEIGHT * TILE
       const viewHeight = height / zoom
       const top = viewHeight > mapHeight ? (mapHeight - viewHeight) / 2 : 0
       const far = 1_000 * TILE

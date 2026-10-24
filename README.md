@@ -18,7 +18,8 @@ the public scoreboards, which live in Upstash Redis.
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
       public scoreboards, below), `weather` (Lisbon's current sky from
-      [Open-Meteo](https://open-meteo.com/), cached for 30 minutes) and `keystatic` (the CMS backend).
+      [Open-Meteo](https://open-meteo.com/), cached for 30 minutes) and `keystatic` (the CMS
+      backend).
     - **Scoreboards** (`src/lib/scores/`, `src/app/api/scores/`) - shared names and scores for the
       house's games and Hall of Fame, the one thing on the site visitors write to. Kept in
       [Upstash Redis](https://upstash.com/) (a sorted set per board) behind a small store
@@ -131,24 +132,21 @@ key. The speaker button in the HUD (or the record player's mute) mutes every sou
 included; it and the house's volume are remembered in `localStorage`. The music and the effects
 share one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
 
-Around the flat is a Lisbon block (`src/game/exterior.ts`), drawn in code and baked once under
-the house: the neighbours' terracotta roofs, with chimneys and skylights, on either side, and
-behind it the back walls (green azulejos on the flat's own, painted plaster and other tiles next
-door) with shuttered windows, washing under the kitchen window and iron lanterns that light up at
-night. Below them is a calçada courtyard with an orange tree, and the front door opens onto the
-building's shared stairwell. The camera scrolls a few rows into the courtyard. By day, under a calm
-sky, a gull glides over every so often and calls; under `prefers-reduced-motion` the gulls stay
-away (one still rests on a chimney).
+Outside the balcony (`src/game/exterior.ts`, drawn in code and baked once under the house) is a
+strip of calçada street below the railing and the neighbour's terracotta roof beside it, fading into
+the dark further out; everywhere else the flat sits in the dark. A gull rests on the roof's chimney,
+and by day, under a calm sky, others glide past every so often and call, seen only over the street
+and the roof. Under `prefers-reduced-motion` only the resting gull stays.
 
 The house starts at night between 8pm and 7am, visitor's local time. At night only lamps you can see
 are on, low and warm (the floor lamps, a pendant over the dining table, the bedside lamp, a lamp on
 the hall console and festoon bulbs along the balcony), each lighting a soft patch of the dark around
-it, while the TV and the study's monitor throw a cool fan of light forward. By day, under a sunny
-sky, the windows let soft neutral light onto the floor; the back windows show only on the façade
-outside. Lisbon's real weather shows through the windows, on the balcony and over the block: the
-glass goes grey under cloud, as do the roofs and courtyard, rain runs down the panes and streaks
-across the balcony and everything outside, a storm brings the odd lightning flash, and the balcony's
-view mentions it. The HUD shows a cloud icon when the sky isn't clear. The sky comes from
+it, while the TV and the study's monitor throw a cool fan of light forward. Lisbon's real weather
+shows through the street windows in the top walls and on the balcony: by day, under a sunny sky, the
+windows let soft neutral light onto the floor (less under cloud, none in rain); the glass goes grey
+under cloud, as do the street and roof outside, rain runs down the panes and streaks across the
+balcony, a storm brings the odd lightning flash, and the balcony's view mentions it. The back walls
+show no windows from inside. The HUD shows a cloud icon when the sky isn't clear. The sky comes from
 `/api/weather` (Open-Meteo, no API key, cached for 30 minutes) and falls back to clear if that
 fails. Under `prefers-reduced-motion` the drops hold still and there's no lightning. To preview a
 sky, add `?weather=clear`, `cloudy`, `rain` or `storm` to the URL. Every room's page also has a
@@ -173,7 +171,7 @@ Where things live:
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/missions.ts` - missions and what they unlock;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
-    lamps; `src/game/exterior.ts` - the roofs, back walls, courtyard and gulls around it;
+    lamps; `src/game/exterior.ts` - the street, roof and gulls outside the balcony;
     `src/game/weather-layer.ts` - rain, cloud and lightning over it; `src/game/bridge.ts` - events
     between Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel

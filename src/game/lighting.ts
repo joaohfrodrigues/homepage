@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser'
 import type { Weather } from '@/lib/weather'
-import { EXTERIOR_BOUNDS, EXTERIOR_LAMPS } from './exterior'
+import { NIGHT_BOUNDS } from './exterior'
 import type { Decor } from './furnishings'
-import { FLOOR_PLAN, TILE, cellAt, roomAt, wallPartAt } from './layout'
+import { FLOOR_PLAN, TILE, cellAt, wallPartAt } from './layout'
 import { FESTOON_BULBS, type PropName } from './pixels'
 
 /**
@@ -33,8 +33,6 @@ interface Light {
   shape: Shape
   w: number
   h: number
-  /** A fan or beam opening upwards (from a window in the wall below) rather than down. */
-  up?: boolean
   colour: number
   /** How much of the night's dark it lifts at its brightest, 0–1. */
   reveal: number
@@ -68,9 +66,6 @@ export function houseLights(decor: Decor[]): Light[] {
     const { dx, dy, ...light } = spec
     lights.push({ ...light, x: item.x * TILE + dx, y: item.y * TILE + dy })
   }
-  for (const lamp of EXTERIOR_LAMPS) {
-    lights.push({ x: lamp.x, y: lamp.y, shape: 'pool', w: 48, h: 42, colour: WARM, reveal: 0.7, night: 0.3, day: 0 })
-  }
   // The festoon bulbs along the balcony railing.
   FLOOR_PLAN.forEach((row, ty) => {
     for (let tx = 0; tx < row.length; tx++) {
@@ -84,19 +79,17 @@ export function houseLights(decor: Decor[]): Light[] {
 }
 
 /**
- * Daylight through every window: a fan down the floor from the street windows
- * in the north walls, and a stronger one up from the sunny back windows.
+ * Daylight through the street windows in the north walls, a broad beam down
+ * the floor. The back walls show no windows from inside, so no sun comes that way.
  */
 function windowLights(): Light[] {
   const lights: Light[] = []
   FLOOR_PLAN.forEach((row, ty) => {
     for (let tx = 0; tx < row.length; tx++) {
       if (row[tx] !== 'W' || cellAt(tx - 1, ty) === 'W') continue
-      const x = (tx + 1) * TILE
-      const part = wallPartAt(tx, ty)
-      const base = { x, shape: 'beam' as const, colour: 0xfffaf0, reveal: 0, night: 0, window: true }
-      if (part === 'lower') lights.push({ ...base, y: (ty + 1) * TILE, w: 44, h: 72, day: 0.2 })
-      else if (part === 'cap' && roomAt(tx, ty - 1)) lights.push({ ...base, y: ty * TILE, w: 44, h: 64, up: true, day: 0.26 })
+      if (wallPartAt(tx, ty) !== 'lower') continue
+      const beam = { shape: 'beam' as const, w: 44, h: 76, colour: 0xfffaf0, reveal: 0, night: 0, day: 0.22, window: true }
+      lights.push({ ...beam, x: (tx + 1) * TILE, y: (ty + 1) * TILE })
     }
   })
   return lights
@@ -160,15 +153,14 @@ export class Lighting {
     this.shapes = { pool: poolShape(64), fan: spreadShape(64, 64, 0.2, 1.6), beam: spreadShape(64, 64, 0.7, 1.3) }
     for (const [name, canvas] of Object.entries(this.shapes)) scene.textures.addCanvas(`light-${name}`, canvas)
 
-    const { x, y, w, h } = EXTERIOR_BOUNDS
+    const { x, y, w, h } = NIGHT_BOUNDS
     this.dark = scene.textures.createCanvas('night-dark', w, h)!
     this.darkImage = scene.add.image(x, y, 'night-dark').setOrigin(0).setDepth(29).setVisible(false)
 
     for (const light of this.lights) {
       const image = scene.add
         .image(light.x, light.y, `light-${light.shape}`)
-        .setOrigin(0.5, light.shape === 'pool' ? 0.5 : light.up ? 1 : 0)
-        .setFlipY(Boolean(light.up))
+        .setOrigin(0.5, light.shape === 'pool' ? 0.5 : 0)
         .setDisplaySize(light.w, light.h)
         .setTint(light.colour)
         .setBlendMode(Phaser.BlendModes.ADD)
@@ -215,7 +207,7 @@ export class Lighting {
   /** The night: blue everywhere, with each light's shape cut out of it. */
   private paintDark() {
     const ctx = this.dark.getContext()
-    const { x, y } = EXTERIOR_BOUNDS
+    const { x, y } = NIGHT_BOUNDS
     ctx.clearRect(0, 0, this.dark.width, this.dark.height)
     ctx.fillStyle = NIGHT
     ctx.fillRect(0, 0, this.dark.width, this.dark.height)
@@ -225,11 +217,8 @@ export class Lighting {
       ctx.globalAlpha = light.reveal
       ctx.save()
       ctx.translate(light.x - x, light.y - y)
-      if (light.shape === 'pool') ctx.drawImage(this.shapes.pool, -light.w / 2, -light.h / 2, light.w, light.h)
-      else {
-        if (light.up) ctx.scale(1, -1)
-        ctx.drawImage(this.shapes[light.shape], -light.w / 2, 0, light.w, light.h)
-      }
+      const top = light.shape === 'pool' ? -light.h / 2 : 0
+      ctx.drawImage(this.shapes[light.shape], -light.w / 2, top, light.w, light.h)
       ctx.restore()
     }
     ctx.globalAlpha = 1

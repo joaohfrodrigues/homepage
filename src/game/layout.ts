@@ -12,7 +12,7 @@ export const METRES_PER_TILE = 0.5
  *   X  a shut door (the bathroom: occupied until its mission opens it)
  *   F  front door
  *   W  window: tall and glazed in a wall face; in a back wall seen from above,
- *      plain wall (it shows on the façade outside, and lets the sun in)
+ *      just wall (only the street windows show the sky)
  *   =  the balcony's front railing; |  its side railing
  *      (space) outside the flat
  *
