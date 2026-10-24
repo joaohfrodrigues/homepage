@@ -1,9 +1,27 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
+import { isMissionComplete, type MissionId } from '@/game/missions'
 import type { HouseData } from '@/lib/house'
 import type { Weather } from '@/lib/weather'
+import { DOZE_AT } from './intoxication'
+import type { VisitorStats } from './visitor-stats'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
-export type DialogueKey = DialogueId | 'joao-contact'
+export type DialogueKey =
+  | DialogueId
+  | 'joao-tip'
+  | 'caffeine-overdose'
+  | 'beer'
+  | 'sofa-wake'
+  | 'sofa-what'
+  | 'sofa-count'
+
+/** The night that ended on the sofa, for João to recount when the guest wakes. */
+export interface Binge {
+  beers: number
+  minutes: number
+  /** Bicas pulled lately on top of the beers. */
+  bicas: number
+}
 
 export type DialogueChoice =
   | { label: string; kind: 'link'; href: string }
@@ -11,7 +29,10 @@ export type DialogueChoice =
   | { label: string; kind: 'next'; id: DialogueKey }
   | { label: string; kind: 'panel'; panel: PanelId }
   | { label: string; kind: 'night'; on: boolean }
+  | { label: string; kind: 'beer' }
   | { label: string; kind: 'close' }
+  /** Does a mission's step (see `mission-dialogues.ts`), or with no step asks João for a hint. */
+  | { label: string; kind: 'mission'; mission: MissionId; step?: string }
 
 export interface Dialogue {
   speaker?: string
@@ -19,36 +40,162 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
-export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: boolean; weather: Weather }): Dialogue {
+/**
+ * João's pointers to whatever the visitor hasn't found yet, most worth seeing
+ * first. Each one drops out once its stat says it's been done.
+ */
+export function joaoTips(stats: VisitorStats, night: boolean): string[] {
+  const bicas = Object.values(stats.bicas).reduce((sum, n) => sum + n, 0)
+  return [
+    ...(bicas === 0 ? ['Fancy a coffee? The machine in the kitchen pulls a proper bica, if you get the pressure right.'] : []),
+    ...(stats.geoRounds === 0
+      ? ['Every magnet on the fridge is from one of my trips. Bet you can’t guess where they were taken.']
+      : []),
+    ...(!stats.rooms.study ? ['The study has a map with every trip I’ve photographed. My drums are in there too.'] : []),
+    ...(stats.pets === 0 ? ['Have you met Zeno? Tuxedo cat. He’ll act like he doesn’t want a scratch.'] : []),
+    ...(!stats.rooms.bedroom ? ['There’s a wardrobe in the bedroom if you fancy a change of clothes.'] : []),
+    ...(night && !stats.rooms.balcony ? ['Step out on the balcony while it’s dark. Someone downhill usually sings fado.'] : []),
+  ]
+}
+
+/** What João says once there's nothing left to point at. */
+function nothingLeft(stats: VisitorStats): string {
+  return isMissionComplete(stats, 'bathroom')
+    ? 'Dona Rosa says obrigada for the bica, by the way. Her boiler’s still broken, so you’ll see her again.'
+    : 'You’ve seen pretty much everything. Make yourself at home.'
+}
+
+export function buildDialogue(
+  id: DialogueKey,
+  data: HouseData,
+  house: { night: boolean; weather?: Weather; buzzing?: boolean; beers?: number; binge?: Binge | null; stats: VisitorStats },
+): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
     kind: 'external',
     href: link.href,
   }))
+  // Every turn of the wake-up conversation can end it with the glass of water.
+  const morningAfter: DialogueChoice[] = [{ label: 'Water, thanks', kind: 'close' }]
 
   switch (id) {
-    case 'joao':
+    case 'joao': {
+      // The chat is counted as it opens, so the first one already reads 1.
+      const firstMeeting = house.stats.chats <= 1
+      const buzzing = house.buzzing ? ['…you’re buzzing a bit. How many bicas was that?'] : []
+      if (firstMeeting) {
+        return {
+          speaker: 'João',
+          lines: [
+            "Hey, welcome in! I'm João.",
+            ...buzzing,
+            'By day I build data pipelines. The rest of the time it’s photography, films and the drums.',
+            'If you ever need me, my contacts are on the note on the console by the front door.',
+          ],
+          choices: [
+            { label: 'What should I check out?', kind: 'next', id: 'joao-tip' },
+            { label: 'More about me →', kind: 'link', href: '/about' },
+            { label: 'See you around', kind: 'close' },
+          ],
+        }
+      }
+      const tips = joaoTips(house.stats, house.night)
+      const greetings = ['Back again!', 'Oh, hey.', 'Hey, you.']
+      const greeting =
+        (house.beers ?? 0) >= 3
+          ? 'Easy on the Super Bock, yeah?'
+          : house.night
+            ? 'Still up? Me too.'
+            : greetings[house.stats.chats % greetings.length]
       return {
         speaker: 'João',
-        lines: [
-          "Hey, welcome in! I'm João.",
-          ...(data.aboutIntro ? [data.aboutIntro] : []),
-          'Make yourself at home. The map in the study has every trip I’ve photographed, and most things around the flat have a story.',
-        ],
+        lines: [greeting, ...buzzing, tips[0] ?? nothingLeft(house.stats)],
         choices: [
-          { label: 'Tell me more about you', kind: 'link', href: '/about' },
-          { label: 'How can I reach you?', kind: 'next', id: 'joao-contact' },
+          ...(tips.length > 1 ? [{ label: 'Any other tips?', kind: 'next', id: 'joao-tip' } as const] : []),
+          { label: 'More about me →', kind: 'link', href: '/about' },
           { label: 'See you around', kind: 'close' },
         ],
       }
-    case 'joao-contact':
+    }
+    case 'joao-tip': {
+      // Picks up after the tip the greeting already gave, if it gave one.
+      const given = house.stats.chats <= 1 ? 0 : 1
+      return {
+        speaker: 'João',
+        lines: [joaoTips(house.stats, house.night)[given] ?? nothingLeft(house.stats)],
+        choices: [
+          { label: 'More about me →', kind: 'link', href: '/about' },
+          { label: 'Thanks!', kind: 'close' },
+        ],
+      }
+    }
+    case 'caffeine-overdose':
+      return {
+        speaker: 'João',
+        lines: ['Whoa. You’re vibrating.', 'Sit down, have a glass of water. The machine’s closed for a bit.'],
+        choices: [{ label: 'I feel GREAT', kind: 'close' }],
+      }
+    case 'fridge':
+      return {
+        lines: ['Magnets from João’s trips all over the door. Inside: leftovers, oat milk and a row of Super Bock.'],
+        choices: [
+          { label: 'Look at the magnets', kind: 'panel', panel: 'geoguess' },
+          { label: 'Grab a Super Bock', kind: 'beer' },
+          { label: 'Close the door', kind: 'close' },
+        ],
+      }
+    case 'beer': {
+      const beers = house.beers ?? 1
+      if (beers >= 5) {
+        return {
+          lines: ['The floor tilts a little. Was it always like that?'],
+          choices: [{ label: 'Totally fine', kind: 'close' }],
+        }
+      }
+      if (beers >= 3) {
+        return { speaker: 'João', lines: ['Saúde!'], choices: [{ label: 'Saúde!', kind: 'close' }] }
+      }
+      return { lines: ['Ice cold. Very refreshing.'], choices: [{ label: 'Ahh', kind: 'close' }] }
+    }
+    case 'sofa-wake':
       return {
         speaker: 'João',
         lines: [
-          "LinkedIn is the quickest way to reach me. Code's on GitHub, and the photos also live on Unsplash. There's a note with all of it on the console by the front door.",
+          'Morning, sunshine. Easy, don’t sit up too fast.',
+          'There’s a glass of water by the sofa. Drink all of it.',
         ],
-        choices: [...contactChoices, { label: 'Thanks!', kind: 'close' }],
+        choices: [
+          { label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' },
+          { label: 'How many did I have?', kind: 'next', id: 'sofa-count' },
+          ...morningAfter,
+        ],
       }
+    case 'sofa-what': {
+      const bicas = house.binge?.bicas ?? 0
+      return {
+        speaker: 'João',
+        lines: [
+          'You found the Super Bock in the fridge. Then you found the rest of the Super Bock.',
+          'Somewhere around the fifth you started telling Zeno how much he means to you. He was not convinced.',
+          ...(bicas > 0
+            ? [`You’d had ${bicas === 1 ? 'a bica' : `${bicas} bicas`} too, which made for a very energetic speech.`]
+            : []),
+          'Then you sat down “just for a second”, and that was that. I put a blanket on you.',
+        ],
+        choices: [{ label: 'How many did I have?', kind: 'next', id: 'sofa-count' }, ...morningAfter],
+      }
+    }
+    case 'sofa-count': {
+      const binge = house.binge ?? { beers: DOZE_AT, minutes: 1, bicas: 0 }
+      return {
+        speaker: 'João',
+        lines: [
+          `${binge.beers}. In about ${binge.minutes <= 1 ? 'a minute' : `${binge.minutes} minutes`}.`,
+          binge.minutes <= 3 ? 'I’ve honestly never seen anything like it.' : 'Pace yourself next time, yeah?',
+        ],
+        choices: [{ label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' }, ...morningAfter],
+      }
+    }
     case 'letterbox':
       return {
         lines: [
@@ -116,7 +263,7 @@ export function buildDialogue(id: DialogueKey, data: HouseData, house: { night: 
       }
     case 'balcony':
       return {
-        lines: balconyView(house.night, house.weather),
+        lines: balconyView(house.night, house.weather ?? 'clear'),
         choices: [{ label: house.night ? 'Listen a while' : 'Back inside', kind: 'close' }],
       }
   }

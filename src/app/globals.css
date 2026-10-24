@@ -132,6 +132,22 @@
     }
 }
 
+/* A sticker toast drops in from under the HUD (only with motion allowed). */
+/* A comic panel slapped down onto the page. */
+@keyframes comic-panel-in {
+    from {
+        transform: scale(1.25) rotate(-4deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sticker-toast-in {
+    from {
+        transform: translateY(-1rem);
+        opacity: 0;
+    }
+}
+
 /* Keystatic's admin shell hardcodes height: 100vh (see MainPanelLayout in
    @keystatic/core). On mobile browsers with a collapsing address bar, 100vh
    is taller than the visible viewport, which pushes its header/toolbar off
