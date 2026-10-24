@@ -70,8 +70,9 @@ site's sections:
     lo-fi loop.
 - **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
     grab a beer). Each game has a Top 10 tab, and after a new personal best offers to put it on the
-    public leaderboard under a name of the visitor's choosing (prefilled with the last one used). The
-    chalkboard by the counters chalks up each board's top three in turn and opens the full boards.
+    public leaderboard under a name of the visitor's choosing (prefilled with the last one used).
+- **Corridor** - the trophy poster opens the leaderboards, a tab per game with the visitor's own
+    best, the top 10, and the same opt-in form while that best isn't on the board yet.
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
@@ -115,7 +116,8 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
-door, Zeno's meow, the coffee machine and a chime for each new sticker, plus the hidden behaviours'
+door, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
+poster and a fanfare when a submitted score makes a top 10, plus the hidden behaviours'
 own: a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy),
 a clink for the toast, snoring as the guest nods off and birds when they wake. Zeno's meow, the
 Super Bock and the coffee machine are recordings in `public/house/sounds/` (credited in
@@ -151,7 +153,7 @@ Where things live:
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
     map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`);
     `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and `scores-panel.tsx` the
-    chalkboard's boards.
+    trophy poster's tabbed boards.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
@@ -184,7 +186,7 @@ there, with its score bounds and whether it ranks by score or lists newest first
     their browser submits again. Entries can also be edited in the Upstash console.
 
 In the house, nothing is posted until the visitor presses *Submit to the leaderboard*; boards are
-only read (the chalkboard's copy is cached for five minutes per browser session). A board that
+only read, when a game's Top 10 tab or the trophy poster is opened. A board that
 can't be reached shows as offline, and the games play on regardless.
 
 Everything is checked on the server: scores must be whole numbers within the board's bounds, names
@@ -304,8 +306,8 @@ Vercel then picks up the change on the next deploy.
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
 - **[Bun](https://bun.sh/)** - JavaScript package manager and script runner
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
-- **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug and
-    bed art for the house (most furniture is hand-drawn in code)
+- **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug,
+    bed and trophy-poster art for the house (most furniture is hand-drawn in code)
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
 - **[Upstash Redis](https://upstash.com/)** - the public scoreboards (`@upstash/redis`), with
