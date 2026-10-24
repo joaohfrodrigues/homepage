@@ -121,24 +121,34 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
 door, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
-poster and a fanfare when a submitted score makes a top 10, plus the hidden behaviours'
-own: a heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy),
-a clink for the toast, snoring as the guest nods off and birds when they wake. Zeno's meow, the
-Super Bock and the coffee machine are recordings in `public/house/sounds/` (credited in
-`CREDITS.txt` there), with a synthesised stand-in if a file fails to load. They are on by default
-but stay silent until the visitor first clicks or presses a key. The speaker button in the HUD (or
-the record player's mute) mutes every sound, the record included; it and the house's volume are
-remembered in `localStorage`. The music and the effects share one audio context
-(`src/components/house/audio.ts`), which sleeps when nothing is playing.
+poster and a fanfare when a submitted score makes a top 10, plus the hidden behaviours' own: a
+heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
+clink for the toast, snoring as the guest nods off and birds when they wake, and the call of a gull
+gliding over the roofs. Zeno's meow, the Super Bock and the coffee machine are recordings in
+`public/house/sounds/` (credited in `CREDITS.txt` there), with a synthesised stand-in if a file
+fails to load. They are on by default but stay silent until the visitor first clicks or presses a
+key. The speaker button in the HUD (or the record player's mute) mutes every sound, the record
+included; it and the house's volume are remembered in `localStorage`. The music and the effects
+share one audio context (`src/components/house/audio.ts`), which sleeps when nothing is playing.
+
+Around the flat is a Lisbon block (`src/game/exterior.ts`), drawn in code and baked once under
+the house: the neighbours' terracotta roofs, with chimneys and skylights, on either side, and
+behind it the back walls (green azulejos on the flat's own, painted plaster and other tiles next
+door) with shuttered windows, washing under the kitchen window and iron lanterns that light up at
+night. Below them is a calçada courtyard with an orange tree, and the front door opens onto the
+building's shared stairwell. The camera scrolls a few rows into the courtyard. By day, under a calm
+sky, a gull glides over every so often and calls; under `prefers-reduced-motion` the gulls stay
+away (one still rests on a chimney).
 
 The house starts at night between 8pm and 7am, visitor's local time. Lisbon's real weather shows
-through the windows and on the balcony: the glass goes grey under cloud, rain runs down the panes
-and streaks across the balcony, a storm brings the odd lightning flash, and the balcony's view
-mentions it. The HUD shows a cloud icon when the sky isn't clear. The sky comes from `/api/weather`
-(Open-Meteo, no API key, cached for 30 minutes) and falls back to clear if that fails. Under
-`prefers-reduced-motion` the drops hold still and there's no lightning. To preview a sky, add
-`?weather=clear`, `cloudy`, `rain` or `storm` to the URL. Every room's page also has a plain HTML
-version for screen readers, crawlers and visitors without JavaScript.
+through the windows, on the balcony and over the block: the glass goes grey under cloud, as do the
+roofs and courtyard, rain runs down the panes and streaks across the balcony and everything outside,
+a storm brings the odd lightning flash, and the balcony's view mentions it. The HUD shows a cloud
+icon when the sky isn't clear. The sky comes from `/api/weather` (Open-Meteo, no API key, cached for
+30 minutes) and falls back to clear if that fails. Under `prefers-reduced-motion` the drops hold
+still and there's no lightning. To preview a sky, add `?weather=clear`, `cloudy`, `rain` or `storm`
+to the URL. Every room's page also has a plain HTML version for screen readers, crawlers and
+visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
@@ -158,8 +168,9 @@ Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
     `src/game/missions.ts` - missions and what they unlock;
-    `src/game/house-scene.ts` - the Phaser scene; `src/game/weather-layer.ts` - rain, cloud and
-    lightning over it; `src/game/bridge.ts` - events between Phaser and React.
+    `src/game/house-scene.ts` - the Phaser scene; `src/game/exterior.ts` - the roofs, back walls,
+    courtyard and gulls around it; `src/game/weather-layer.ts` - rain, cloud and lightning over
+    it; `src/game/bridge.ts` - events between Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
     map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`);
     `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and `scores-panel.tsx` the

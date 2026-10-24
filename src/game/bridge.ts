@@ -80,6 +80,8 @@ interface GameEvents {
   rosa: 'tap' | 'thanks' | 'gone'
   /** A beat of the pounding heart while an effect shakes (even when reduced motion keeps the camera still). */
   heartbeat: undefined
+  /** A gull gliding over the house calls out. */
+  gull: undefined
 }
 
 interface UiEvents {

@@ -22,6 +22,7 @@ import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
 import { WeatherLayer } from './weather-layer'
+import { COURTYARD_VIEW_ROWS, EXTERIOR_LAMPS, Exterior } from './exterior'
 import {
   LIGHT_SOURCES,
   MAP_WALL,
@@ -184,6 +185,7 @@ export class HouseScene extends Phaser.Scene {
   private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
   private nightOverlay!: Phaser.GameObjects.Rectangle
   private weather!: WeatherLayer
+  private exterior?: Exterior
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -250,6 +252,11 @@ export class HouseScene extends Phaser.Scene {
 
     this.bakeCues()
     this.weather = new WeatherLayer(this, this.reducedMotion)
+    this.exterior = new Exterior(this, {
+      reducedMotion: this.reducedMotion,
+      night: this.cfg.night,
+      onCry: () => this.cfg.bridge.game.emit('gull'),
+    })
 
     const start = getRoom(this.cfg.startRoom).spawn
     this.player = this.addWalker('guest', start, this.spawnFacing(this.cfg.startRoom))
@@ -627,6 +634,11 @@ export class HouseScene extends Phaser.Scene {
         .setDepth(30)
       this.glows.push({ image, day: item.prop === 'tv' ? 0.35 : 0.6, night: item.prop === 'tv' ? 0.8 : 1 })
     }
+    // The lanterns on the courtyard walls only come on after dark.
+    for (const lamp of EXTERIOR_LAMPS) {
+      const image = this.add.image(lamp.x, lamp.y, 'glow').setDisplaySize(44, 44).setBlendMode(Phaser.BlendModes.ADD).setDepth(30)
+      this.glows.push({ image, day: 0, night: 1 })
+    }
 
     // Night: everything but the light pools and interaction cues sinks into blue.
     this.nightOverlay = this.add
@@ -658,6 +670,7 @@ export class HouseScene extends Phaser.Scene {
 
   private applyNight(on: boolean) {
     this.nightOverlay.setAlpha(on ? 0.55 : 0)
+    this.exterior?.setNight(on)
     for (const glow of this.glows) glow.image.setAlpha(on ? glow.night : glow.day)
   }
 
@@ -1833,10 +1846,11 @@ export class HouseScene extends Phaser.Scene {
         Math.min(Math.round(Math.max(width, height) / (17 * TILE)), Math.floor(width / (11 * TILE))),
       )
       camera.setZoom(zoom)
-      // Up and down, though, the view stops at the top and bottom of the flat
-      // (or centres it, when the whole height fits), so the front door, on the
-      // bottom row, doesn't leave half the screen empty.
-      const mapHeight = MAP_HEIGHT * TILE
+      // Up and down, though, the view stops at the top of the flat and a few
+      // rows into the courtyard behind it (or centres it all, when the whole
+      // height fits), so the front door, on the bottom row, doesn't leave half
+      // the screen empty.
+      const mapHeight = (MAP_HEIGHT + COURTYARD_VIEW_ROWS) * TILE
       const viewHeight = height / zoom
       const top = viewHeight > mapHeight ? (mapHeight - viewHeight) / 2 : 0
       const far = 1_000 * TILE
@@ -1876,7 +1890,10 @@ export class HouseScene extends Phaser.Scene {
       ui.on('teleport', (room) => this.teleport(room)),
       ui.on('visit', (target) => this.visit(target)),
       ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
-      ui.on('weather', (weather) => this.weather.set(weather)),
+      ui.on('weather', (weather) => {
+        this.weather.set(weather)
+        this.exterior?.setWeather(weather)
+      }),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
       ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),

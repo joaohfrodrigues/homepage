@@ -252,6 +252,7 @@ export function HouseShell({ data, children }: Props) {
     const offs = [
       bridge.game.on('step', sfx.step),
       bridge.game.on('heartbeat', sfx.heartbeat),
+      bridge.game.on('gull', sfx.gull),
       bridge.game.on('rosa', (moment) => {
         if (moment === 'tap') sfx.showerOff()
         else if (moment === 'thanks') sfx.blip()

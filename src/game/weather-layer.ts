@@ -1,6 +1,8 @@
 import * as Phaser from 'phaser'
 import type { Weather } from '@/lib/weather'
 import { MAP_HEIGHT, MAP_WIDTH, TILE, cellAt, getRoom } from './layout'
+import { isOutdoors } from './exterior'
+import { hash } from './pixels'
 
 /** The glass colours drawWindow and drawCapWindow paint, as RGB. */
 const GLASS = [
@@ -20,6 +22,9 @@ const TINT: Record<Weather, { panes: number; balcony: number }> = {
 const PANE_DROP_SPEED: [number, number] = [6, 18]
 const BALCONY_DROP_SPEED: [number, number] = [150, 210]
 const BALCONY_DROPS = 28
+/** Outside the flat, as thick as on the balcony: this many streaks through each square of OUTDOOR_CELL px. */
+const OUTDOOR_CELL = 24
+const OUTDOOR_DROPS = 4
 /** Gaps between lightning flashes in a storm. */
 const LIGHTNING_GAP_MS: [number, number] = [7_000, 18_000]
 
@@ -39,8 +44,8 @@ interface PaneDrop extends Drop {
 
 /**
  * Lisbon's weather over the baked house: grey glass and drops running down
- * the `W` windows, rain across the balcony and, in a storm, the odd lightning
- * flash. Sits under the night overlay so the dark still covers it; under
+ * the `W` windows, rain across the balcony, the roofs and the courtyard and,
+ * in a storm, the odd lightning flash. Sits under the night overlay so the dark still covers it; under
  * reduced motion the drops hold still and the lightning stays away.
  */
 export class WeatherLayer {
@@ -54,6 +59,7 @@ export class WeatherLayer {
   private balconyTint: Phaser.GameObjects.Rectangle
   private paneRain: Phaser.GameObjects.Graphics
   private balconyRain: Phaser.GameObjects.Graphics
+  private outdoorRain: Phaser.GameObjects.Graphics
   private flash: Phaser.GameObjects.Rectangle
   private lightning: Phaser.Time.TimerEvent | null = null
 
@@ -86,6 +92,7 @@ export class WeatherLayer {
       .setDepth(28)
       .setAlpha(0)
     this.balconyRain = scene.add.graphics().setDepth(28)
+    this.outdoorRain = scene.add.graphics().setDepth(28)
     // Above the night overlay: lightning lights up the dark too.
     this.flash = scene.add
       .rectangle(-20 * TILE, -20 * TILE, (MAP_WIDTH + 40) * TILE, (MAP_HEIGHT + 40) * TILE, 0xeef2ff)
@@ -144,14 +151,16 @@ export class WeatherLayer {
   }
 
   private tick(time: number) {
-    // Under reduced motion the drops were drawn once, where they fell.
-    if (this.reducedMotion || (this.weather !== 'rain' && this.weather !== 'storm')) return
-    this.draw(time)
+    // Under reduced motion the drops hold still where they fell; the roofs
+    // and courtyard still follow the camera.
+    if (this.weather !== 'rain' && this.weather !== 'storm') return
+    this.draw(this.reducedMotion ? 0 : time)
   }
 
   private draw(time: number) {
     this.paneRain.clear()
     this.balconyRain.clear()
+    this.outdoorRain.clear()
     if (this.weather !== 'rain' && this.weather !== 'storm') return
     const seconds = time / 1000
 
@@ -171,6 +180,30 @@ export class WeatherLayer {
       const fall = (drop.y + seconds * drop.speed) % height
       const dx = x + ((drop.x - x - fall / 4 + width * 4) % width)
       for (let i = 0; i < 4; i++) this.balconyRain.fillRect(Math.floor(dx - i / 4), Math.floor(y + fall - i), 1, 1)
+    }
+
+    this.drawOutdoor(seconds)
+  }
+
+  /**
+   * Rain over the roofs and courtyard in view. Each square of the world has
+   * its own few streaks, so they stay put as the camera moves.
+   */
+  private drawOutdoor(seconds: number) {
+    const view = this.scene.cameras.main.worldView
+    const [slow, fast] = BALCONY_DROP_SPEED
+    this.outdoorRain.fillStyle(0xcfe3ef, 0.6)
+    for (let cy = Math.floor(view.y / OUTDOOR_CELL); cy * OUTDOOR_CELL < view.bottom; cy++) {
+      for (let cx = Math.floor(view.x / OUTDOOR_CELL); cx * OUTDOOR_CELL < view.right; cx++) {
+        for (let n = 0; n < OUTDOOR_DROPS; n++) {
+          const seed = hash(cx * OUTDOOR_DROPS + n, cy)
+          const fall = (seed * OUTDOOR_CELL * 7 + seconds * (slow + seed * (fast - slow))) % OUTDOOR_CELL
+          const x = cx * OUTDOOR_CELL + hash(cy, cx * OUTDOOR_DROPS + n) * OUTDOOR_CELL - fall / 4
+          const y = cy * OUTDOOR_CELL + fall
+          if (!isOutdoors(Math.floor(x / TILE), Math.floor(y / TILE))) continue
+          for (let i = 0; i < 4; i++) this.outdoorRain.fillRect(Math.floor(x - i / 4), Math.floor(y - i), 1, 1)
+        }
+      }
     }
   }
 

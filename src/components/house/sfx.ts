@@ -2,8 +2,8 @@
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
  * meow, the coffee machine, a chime for new stickers, the trophy poster's
  * rustle and a fanfare for making a top 10, and the hidden
- * behaviours' heartbeat, beers, snores and morning birds, and Dona Rosa's
- * shower and her exit through the front door. Most are
+ * behaviours' heartbeat, beers, snores and morning birds, Dona Rosa's
+ * shower and her exit through the front door, and the gulls over the roofs. Most are
  * synthesised with the Web Audio API; Zeno, the Super Bock and the coffee
  * machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
@@ -313,4 +313,33 @@ export function frontDoor() {
     burst(audio, t, { length: 0.12, level: 0.07, filter: 'lowpass', cutoff: 600 })
     burst(audio, t + 0.12, { length: 0.03, level: 0.06, filter: 'bandpass', cutoff: 2500 })
   })
+}
+
+/** A gull gliding over the rooftops: a few falling "kyow"s, far off. */
+export function gull() {
+  play((audio, t) => {
+    const calls = 2 + Math.floor(Math.random() * 3)
+    for (let i = 0; i < calls; i++) gullCall(audio, t + i * 0.28)
+  })
+}
+
+const gullCall: Sound = ({ ctx, out }, t) => {
+  const osc = ctx.createOscillator()
+  osc.type = 'sawtooth'
+  osc.frequency.setValueAtTime(1500, t)
+  osc.frequency.linearRampToValueAtTime(2100, t + 0.05)
+  osc.frequency.exponentialRampToValueAtTime(950, t + 0.24)
+  // A narrow, nasal band-pass turns the saw into a squawk.
+  const throat = ctx.createBiquadFilter()
+  throat.type = 'bandpass'
+  throat.Q.value = 6
+  throat.frequency.setValueAtTime(2600, t)
+  throat.frequency.exponentialRampToValueAtTime(1600, t + 0.24)
+  const gain = ctx.createGain()
+  gain.gain.setValueAtTime(0, t)
+  gain.gain.linearRampToValueAtTime(0.05, t + 0.02)
+  gain.gain.setTargetAtTime(0, t + 0.16, 0.04)
+  osc.connect(throat).connect(gain).connect(out)
+  osc.start(t)
+  osc.stop(t + 0.4)
 }
