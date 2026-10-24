@@ -67,7 +67,10 @@ site's sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV), João himself, and a record player that puts on a short
-    lo-fi loop.
+    lo-fi loop. On the first chat João introduces himself and points at the contact note on the
+    console by the front door; after that he skips the introduction and gives a tip about something
+    the visitor hasn't found yet (the bica, the fridge magnets, the study, Zeno...), worked out from
+    the guestbook's stats (`joaoTips` in `src/components/house/dialogues.ts`).
 - **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
     grab a beer). Each game has a Top 10 tab, and after a new personal best offers to put it on the
     public leaderboard under a name of the visitor's choosing (prefilled with the last one used).
@@ -372,7 +375,7 @@ homepage/
 │   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -384,7 +387,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API), on an in-memory store
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, and João's dialogue
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 
