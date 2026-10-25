@@ -81,13 +81,13 @@ site's sections:
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
-- **Bathroom** - shut and "occupied" until its mission opens it; until then Dona Rosa, a neighbour
-    from upstairs, is a shape behind the steamed-up shower glass.
+- **Bathroom** - its old panelled door is stuck shut until its mission swings it open. Inside, the mirror cabinet
+    over the sink has paracetamol for the morning after (see the beers below).
 
-Missions are multi-step activities that open up parts of the house. The first, *Who's in there?*,
-starts once you've knocked on the bathroom door three times: ask João who is in there, pull a
-perfect bica and take it to the door. Dona Rosa turns off the water, comes to the door to thank
-you and lets herself out the front door, and the bathroom is open for good. Steps are checked against
+Missions are multi-step activities that open up parts of the house. The first, *The stuck door*,
+starts once you've tried the bathroom door three times: ask João about it, pull him a perfect bica
+for the knack, take it to him, then lift the handle and shoulder the door open, and the bathroom
+is open for good. Steps are checked against
 the guestbook's stats, things that happen (a perfect bica) or a choice in dialogue; João offers a
 hint for any mission under way, and the guestbook shows each one's progress. Missions are defined
 in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and
@@ -120,8 +120,8 @@ starts when the visitor presses play (or Enter in its window); it keeps playing 
 and right arrows also move, is the volume of the whole house, music and sound effects alike.
 
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
-quiet footsteps, a pop when something is used, a blip when someone talks, a knock on the bathroom
-door, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
+quiet footsteps, a pop when something is used, a blip when someone talks, the stuck bathroom door
+rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
 poster and a fanfare when a submitted score makes a top 10, plus the hidden behaviours' own: a
 heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
 clink for the toast, snoring as the guest nods off and birds when they wake, and the call of a gull
@@ -166,10 +166,12 @@ or until a nap. Beers from the fridge make you tipsy at three (the view sways an
 breathe) and dizzy at five (a wider sway, steps with the keys that wander, darker edges and a view
 that keeps slipping out of focus). The seventh fades to black and you wake on the living-room
 sofa in the morning, where João can tell you what happened and how many you had (and how fast)
-before you take the glass of water he left you. The third beer, nodding off and waking up each
+before you take the glass of water he left you. You wake hungover (slower feet, heavy edges, a
+blurry head) for five minutes; a paracetamol from the bathroom cabinet clears it in thirty
+seconds, if you've got the door open. The third beer, nodding off and waking up each
 cut to a comic-book strip of close-ups drawn from the character sprites
 (`src/components/house/comic-strip.tsx`), which a click or key skips. A nap sleeps off the beers
-as well as the bicas. Those counts live in memory for the session only
+as well as the bicas and the hangover. Those counts live in memory for the session only
 (`src/components/house/intoxication.ts`), apart from the guestbook's lifetime stats. Under
 `prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
 and drift, hold the vignette and blur still, and the comic panels appear all at once.

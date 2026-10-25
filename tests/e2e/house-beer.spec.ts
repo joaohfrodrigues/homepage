@@ -31,6 +31,15 @@ async function goToFridge(page: Page) {
   await expect(page.getByRole('button', { name: /^E Fridge/ })).toBeVisible()
 }
 
+/** Opens the mirror cabinet over the bathroom sink, as the scene does when the guest uses it. */
+async function openCabinet(page: Page) {
+  await page.evaluate(() => {
+    const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
+    const scene = game.scene.getScene('house') as { cfg: { bridge: { game: { emit(event: string, payload: unknown): void } } } }
+    scene.cfg.bridge.game.emit('interact', { type: 'dialogue', id: 'cabinet' })
+  })
+}
+
 /** Opens the fridge and takes a beer; returns the dialogue that follows. */
 async function grabBeer(page: Page) {
   await page.keyboard.press('e')
@@ -149,7 +158,8 @@ test.describe('Beers from the fridge', () => {
     expect(await scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x + 1, y: sofa.y + 1 })
     expect(await scene(page, (s) => s.lighting.darkImage.alpha)).toBe(0)
     await expect(page.getByLabel('Day')).toBeVisible()
-    expect((await guestEffect(page)).sources).toEqual([])
+    // The night is over, but not the hangover.
+    expect((await guestEffect(page)).sources).toEqual(['hangover'])
 
     // Ask what happened, then how many; each answer still offers water or coffee.
     await choose(wake, 'Ughhh… what happened??')
@@ -165,6 +175,21 @@ test.describe('Beers from the fridge', () => {
     const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
     await expect(guestbook.getByRole('region', { name: 'Odds and ends' })).toContainText('7beers from the fridge')
     await expect(guestbook.getByText('Sofa surfer (earned)')).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    // The bathroom cabinet has paracetamol for it, and only offers it once.
+    await openCabinet(page)
+    const cabinet = page.getByRole('dialog', { name: 'Notice' })
+    await choose(cabinet, 'Take a paracetamol')
+    await expect(cabinet).toContainText('You wash one down')
+    await choose(cabinet, 'Never again')
+    await expect(cabinet).toHaveCount(0)
+    await openCabinet(page)
+    await expect(await reveal(cabinet, 'Close it')).toBeVisible()
+    await expect(cabinet.getByRole('button', { name: 'Take a paracetamol' })).toHaveCount(0)
+    await cabinet.getByRole('button', { name: 'Close it' }).click()
+    await page.keyboard.press('g')
+    await expect(guestbook.getByText('Never again (earned)')).toBeVisible()
     await page.keyboard.press('Escape')
 
     // The count starts again.

@@ -9,7 +9,7 @@ export const METRES_PER_TILE = 0.5
  *   .  floor
  *   D  doorway through a north wall (walkable)
  *   d  doorway through a side wall (walkable)
- *   X  a shut door (the bathroom: occupied until its mission opens it)
+ *   X  a shut door (the bathroom: stuck until its mission opens it)
  *   F  front door
  *   W  window: tall and glazed in a wall face; in a back wall seen from above,
  *      just wall (only the street windows show the sky)

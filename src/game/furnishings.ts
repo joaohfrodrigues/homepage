@@ -16,7 +16,7 @@ export interface Interactable {
   label: string
   tiles: Point[]
   action: InteractAction
-  /** Gone once this is unlocked, like the knock on a door that now stands open. */
+  /** Gone once this is unlocked, like the handle of a door that now stands open. */
   until?: UnlockId
 }
 
@@ -231,7 +231,7 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     action: { type: 'dialogue', id: 'balcony' },
   })
 
-  // --- Bathroom (2 × 2.5m), behind a shut door until its mission -------------
+  // --- Bathroom (2 × 2.5m), behind a stuck door until its mission -------------
   interactables.push({
     id: 'bathroom-door',
     label: 'Bathroom door',
@@ -245,7 +245,12 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     until: 'bathroom',
   })
   prop('toilet', 11, 14)
-  prop('basin', 12, 14)
+  interactables.push({
+    id: 'cabinet',
+    label: 'Mirror cabinet',
+    tiles: prop('basin', 12, 14),
+    action: { type: 'dialogue', id: 'cabinet' },
+  })
   prop('shower', 13, 18)
   prop('bathmat', 11, 18, false)
 

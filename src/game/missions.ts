@@ -43,56 +43,73 @@ export interface Mission {
 export const MISSIONS: Mission[] = [
   {
     id: 'bathroom',
-    title: 'Who’s in there?',
-    ask: 'Any idea who’s in the bathroom?',
+    title: 'The stuck door',
+    ask: 'Any tips for that bathroom door?',
     steps: [
       {
-        id: 'knock',
-        title: 'Knock on the bathroom door three times',
-        hint: 'Someone is always in the bathroom. Keep knocking.',
-        stat: (stats) => stats.knocks >= 3,
+        id: 'try',
+        title: 'Try the bathroom door three times',
+        hint: 'The bathroom door won’t open. Keep trying the handle.',
+        stat: (stats) => stats.doorTries >= 3,
       },
       {
         id: 'ask',
-        title: 'Ask João who’s in there',
-        hint: 'João must know who keeps the bathroom busy.',
+        title: 'Ask João about the door',
+        hint: 'João must know how to get that door open.',
         prompt: {
           at: 'joao',
-          choice: 'Who’s always in the bathroom?',
+          choice: 'The bathroom door won’t open',
           reply: {
             speaker: 'João',
             lines: [
-              'Ah. That’ll be Dona Rosa from the third floor. Her boiler’s been broken since March, so she borrows my bath.',
-              'She won’t come out for anything less than a perfect bica, though. Pull her one?',
+              'Ah, that door. It’s older than me, and the wood swells whenever it’s damp, so it jams in the frame.',
+              'There’s a knack to it. But a trade secret like that costs a bica. A perfect one.',
             ],
           },
         },
       },
       {
         id: 'bica',
-        title: 'Pull a perfect bica',
-        hint: 'Dona Rosa won’t come out for less than a perfect bica: nine bar, right in the gold.',
+        title: 'Pull João a perfect bica',
+        hint: 'João won’t give up the knack for less than a perfect bica: nine bar, right in the gold.',
         event: 'perfect-bica',
-        feedback: 'Dona Rosa will love this one. Take it to the bathroom door.',
+        feedback: 'João will want this one. Take it to him.',
       },
       {
         id: 'deliver',
-        title: 'Take it to the bathroom door',
-        hint: 'Knock on the bathroom door with the bica in hand.',
+        title: 'Take the bica to João',
+        hint: 'João is waiting for his bica.',
+        prompt: {
+          at: 'joao',
+          choice: 'Here’s your bica',
+          reply: {
+            speaker: 'João',
+            lines: [
+              'Perfeito. Okay, here’s the knack.',
+              'Lift the handle right up, then put your shoulder into the top corner of the door. That’s where it sticks.',
+            ],
+          },
+        },
+      },
+      {
+        id: 'shove',
+        title: 'Shoulder the bathroom door open',
+        hint: 'Lift the handle and shove the top corner of the bathroom door.',
         prompt: {
           at: 'bathroom',
-          lines: ['*knock knock*', '“Occupied! …is that coffee I smell?”'],
-          choice: 'Hold out the bica',
+          lines: ['The handle turns, but the door doesn’t budge.'],
+          choice: 'Lift the handle and shove',
           reply: {
             lines: [
-              'The door opens a crack, and a hand takes the bica.',
-              '“Ai, que maravilha! Um momentinho, I’ll be right out…”',
+              'You lift the handle and throw your shoulder into the top corner.',
+              '*CRACK*',
+              'The door bursts open, and you very nearly follow it in.',
             ],
           },
         },
       },
     ],
-    reward: { unlock: 'bathroom', sticker: 'bath-time', text: 'The bathroom is open.' },
+    reward: { unlock: 'bathroom', sticker: 'unstuck', text: 'The bathroom is open.' },
   },
 ]
 

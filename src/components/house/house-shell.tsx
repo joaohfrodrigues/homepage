@@ -29,10 +29,13 @@ import {
   CAFFEINE_OVERDOSE,
   DIZZY_AT,
   DOZE_AT,
+  HANGOVER,
+  HANGOVER_TREATED_MS,
   OVERDOSE_AT,
   TIPSY_AT,
   beer,
   caffeine,
+  hangover,
 } from './intoxication'
 import {
   buildMissionDialogue,
@@ -271,19 +274,12 @@ export function HouseShell({ data, children }: Props) {
       bridge.game.on('step', sfx.step),
       bridge.game.on('heartbeat', sfx.heartbeat),
       bridge.game.on('gull', sfx.gull),
-      bridge.game.on('rosa', (moment) => {
-        if (moment === 'tap') sfx.showerOff()
-        else if (moment === 'thanks') sfx.blip()
-        else sfx.frontDoor()
-      }),
       bridge.game.on('interact', (action) => {
         if (action.type === 'panel' && action.panel === 'leaderboards') sfx.rustle()
         else if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
-        else if (action.id === 'bathroom') {
-          sfx.knock()
-          sfx.showerRunning()
-        }
+        else if (action.id === 'bathroom') sfx.doorRattle()
+        else if (action.id === 'cabinet') sfx.cabinet()
         else sfx.blip()
       }),
       onStickerEarned(sfx.chime),
@@ -300,7 +296,7 @@ export function HouseShell({ data, children }: Props) {
       bridge.game.on('interact', (action) => {
         if (action.type !== 'dialogue') return
         if (action.id === 'joao') updateStats((stats) => stats.chats++)
-        else if (action.id === 'bathroom') updateStats((stats) => stats.knocks++)
+        else if (action.id === 'bathroom') updateStats((stats) => stats.doorTries++)
         else if (action.id === 'zeno') updateStats((stats) => stats.pets++)
         else if (action.id === 'litterbox-dirty') updateStats((stats) => stats.scoops++)
       }),
@@ -368,7 +364,7 @@ export function HouseShell({ data, children }: Props) {
     setUnlocks((current) => (current.join() === next.join() ? current : next))
   }, [])
 
-  /** Closing a dialogue opens whatever a mission choice in it unlocked, so it happens in view (Dona Rosa leaving). */
+  /** Closing a dialogue opens whatever a mission choice in it unlocked, so it happens in view (the door swinging open). */
   const closeDialogue = useCallback(() => {
     setDialogue(null)
     syncUnlocks()
@@ -445,11 +441,13 @@ export function HouseShell({ data, children }: Props) {
       )
       sfx.lightSwitch()
       if (on) updateStats((stats) => stats.naps++)
-      // A nap sleeps off the coffee and the beers.
+      // A nap sleeps off the coffee, the beers and the hangover.
       caffeine.clear()
       beer.clear()
+      hangover.clear()
       bridge.ui.emit('effect', { source: 'caffeine', effect: null })
       bridge.ui.emit('effect', { source: 'beer', effect: null })
+      bridge.ui.emit('effect', { source: 'hangover', effect: null })
     },
     [bridge, lisbonNow, skipTo],
   )
@@ -521,8 +519,21 @@ export function HouseShell({ data, children }: Props) {
       bridge.ui.emit('effect', { source: 'beer', effect: null })
       bridge.ui.emit('effect', { source: 'caffeine', effect: null })
       bridge.ui.emit('doze')
-    } else if (comic === 'wake') setDialogue('sofa-wake')
+    } else if (comic === 'wake') {
+      bridge.ui.emit('effect', { source: 'hangover', effect: HANGOVER })
+      hangover.start()
+      setDialogue('sofa-wake')
+    }
   }, [bridge, comic])
+
+  // The paracetamol from the bathroom cabinet: the hangover lifts after a little while.
+  const takeParacetamol = useCallback(() => {
+    updateStats((stats) => stats.paracetamols++)
+    sfx.paracetamol()
+    hangover.clear()
+    bridge.ui.emit('effect', { source: 'hangover', effect: { ...HANGOVER, ms: HANGOVER_TREATED_MS } })
+    setDialogue('paracetamol')
+  }, [bridge])
 
   // Built when it opens, so a count running out mid-chat doesn't change the lines.
   const shownDialogue = useMemo(
@@ -537,6 +548,7 @@ export function HouseShell({ data, children }: Props) {
               buzzing: caffeine.count() >= BUZZING_AT,
               beers: beer.count(),
               binge,
+              hungover: hangover.active(),
               stats: readStats(),
               season,
             }),
@@ -592,6 +604,9 @@ export function HouseShell({ data, children }: Props) {
       case 'beer':
         drinkBeer()
         break
+      case 'paracetamol':
+        takeParacetamol()
+        break
       case 'close':
         closeDialogue()
         break
@@ -602,7 +617,10 @@ export function HouseShell({ data, children }: Props) {
           break
         }
         // What the step opens waits for its reply to close (see closeDialogue).
-        updateStats((stats) => completeStep(stats, choice.mission, step))
+        let done = false
+        updateStats((stats) => (done = completeStep(stats, choice.mission, step)))
+        // The shoulder that frees the stuck bathroom door.
+        if (done && choice.mission === 'bathroom' && step === 'shove') sfx.doorBurst()
         setDialogue(missionReplyKey(choice.mission, step))
         break
       }

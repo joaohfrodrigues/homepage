@@ -21,7 +21,7 @@ function stats(change: Partial<VisitorStats> = {}): VisitorStats {
     geoClosestKm: null,
     geoWorstKm: null,
     chats: 1,
-    knocks: 0,
+    doorTries: 0,
     pets: 0,
     scoops: 0,
     naps: 0,
@@ -30,6 +30,7 @@ function stats(change: Partial<VisitorStats> = {}): VisitorStats {
     overdoses: 0,
     beers: 0,
     dozes: 0,
+    paracetamols: 0,
     ...change,
   }
 }
@@ -81,5 +82,31 @@ describe('João', () => {
     const dialogue = buildDialogue('joao', DATA, { night: false, stats: stats({ ...SEEN_IT_ALL, chats: 5 }) })
     expect(dialogue.lines.at(-1)).toContain('Make yourself at home')
     expect(dialogue.choices.some((choice) => choice.kind === 'next')).toBe(false)
+  })
+})
+
+describe('The bathroom cabinet', () => {
+  const kinds = (dialogue: { choices: { kind: string }[] }) => dialogue.choices.map((choice) => choice.kind)
+
+  test('offers paracetamol only for a hangover', () => {
+    const hungover = buildDialogue('cabinet', DATA, { night: false, hungover: true, stats: stats() })
+    expect(kinds(hungover)).toEqual(['paracetamol', 'close'])
+    const fine = buildDialogue('cabinet', DATA, { night: false, stats: stats() })
+    expect(kinds(fine)).toEqual(['close'])
+  })
+
+  test('says paracetamol is no cure for still drinking or too much coffee', () => {
+    const tipsy = buildDialogue('cabinet', DATA, { night: false, beers: 3, stats: stats() })
+    expect(tipsy.lines.join(' ')).toContain('won’t sober you up')
+    expect(kinds(tipsy)).toEqual(['close'])
+    const buzzing = buildDialogue('cabinet', DATA, { night: false, buzzing: true, stats: stats() })
+    expect(buzzing.lines.join(' ')).toContain('too much coffee')
+  })
+
+  test('João points at it on waking, door or no door', () => {
+    const shut = buildDialogue('sofa-wake', DATA, { night: false, stats: stats() })
+    expect(shut.lines.at(-1)).toContain('if you can get that door open')
+    const opened = stats({ doorTries: 3, missionSteps: ['ask', 'bica', 'deliver', 'shove'].map((step) => `bathroom/${step}`) })
+    expect(buildDialogue('sofa-wake', DATA, { night: false, stats: opened }).lines.at(-1)).toContain('over the bathroom sink')
   })
 })

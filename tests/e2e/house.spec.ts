@@ -81,7 +81,7 @@ test.describe('House', () => {
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
-    await expect(directory.getByLabel('Bathroom (occupied)')).toBeVisible()
+    await expect(directory.getByLabel('Bathroom (stuck shut)')).toBeVisible()
     await expect(directory.getByRole('button', { name: 'Go to the bathroom' })).toHaveCount(0)
     await directory.getByRole('button', { name: 'Go to the balcony' }).click()
     await expect(directory).not.toBeVisible()

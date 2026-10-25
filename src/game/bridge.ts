@@ -18,6 +18,7 @@ export type DialogueId =
   | 'bed'
   | 'alarm'
   | 'bathroom'
+  | 'cabinet'
   | 'balcony'
   | 'zeno'
   | 'litterbox-clean'
@@ -25,7 +26,7 @@ export type DialogueId =
   | 'fridge'
 
 /** What a temporary effect on the guest comes from; each source has at most one going. */
-export type EffectSource = 'caffeine' | 'beer'
+export type EffectSource = 'caffeine' | 'beer' | 'hangover'
 
 /**
  * A temporary change to how the guest walks and how the house looks, e.g. after
@@ -76,8 +77,6 @@ interface GameEvents {
   step: undefined
   /** The guest came to on the sofa after a `doze`. */
   dozed: undefined
-  /** Dona Rosa leaving the shower: the water goes off, she thanks the guest, the front door shuts behind her. */
-  rosa: 'tap' | 'thanks' | 'gone'
   /** A beat of the pounding heart while an effect shakes (even when reduced motion keeps the camera still). */
   heartbeat: undefined
   /** A gull gliding over the house calls out. */

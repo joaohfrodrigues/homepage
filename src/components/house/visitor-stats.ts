@@ -23,7 +23,8 @@ export interface VisitorStats {
   geoClosestKm: number | null
   geoWorstKm: number | null
   chats: number
-  knocks: number
+  /** Times the visitor tried the bathroom door while it was stuck (saved as `knocks` by older visits). */
+  doorTries: number
   pets: number
   scoops: number
   naps: number
@@ -35,6 +36,8 @@ export interface VisitorStats {
   /** Super Bocks from the fridge, and times they ended in a nap on the sofa. */
   beers: number
   dozes: number
+  /** Paracetamol from the bathroom cabinet, taken for a hangover. */
+  paracetamols: number
 }
 
 function emptyStats(): VisitorStats {
@@ -52,7 +55,7 @@ function emptyStats(): VisitorStats {
     geoClosestKm: null,
     geoWorstKm: null,
     chats: 0,
-    knocks: 0,
+    doorTries: 0,
     pets: 0,
     scoops: 0,
     naps: 0,
@@ -61,6 +64,7 @@ function emptyStats(): VisitorStats {
     overdoses: 0,
     beers: 0,
     dozes: 0,
+    paracetamols: 0,
   }
 }
 
@@ -74,8 +78,11 @@ function load(): VisitorStats {
   try {
     const saved = window.localStorage.getItem(STATS_KEY)
     if (saved) {
-      const parsed = JSON.parse(saved) as Partial<VisitorStats>
-      Object.assign(stats, parsed, {
+      const parsed = JSON.parse(saved) as Partial<VisitorStats> & { knocks?: number }
+      // Before the door was stuck, someone was in the bathroom and tries were knocks.
+      const { knocks, ...current } = parsed
+      Object.assign(stats, current, {
+        doorTries: parsed.doorTries ?? knocks ?? 0,
         bicas: { ...stats.bicas, ...parsed.bicas },
         rooms: { ...parsed.rooms },
         missionSteps: Array.isArray(parsed.missionSteps) ? parsed.missionSteps : [],
@@ -218,11 +225,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'couch-to-1k', title: 'Couch to 1K', hint: 'Walk a kilometre around the flat.', earned: (s) => metresWalked(s) >= 1000 },
   { id: 'chatterbox', title: 'Chatterbox', hint: 'Talk to João five times.', earned: (s) => s.chats >= 5 },
   { id: 'cat-person', title: 'Cat person', hint: 'Pet Zeno five times.', earned: (s) => s.pets >= 5 },
-  { id: 'still-occupied', title: 'Still occupied', hint: 'Knock on the bathroom door three times.', earned: (s) => s.knocks >= 3 },
+  { id: 'stuck-again', title: 'Stuck again', hint: 'Try the bathroom door three times.', earned: (s) => s.doorTries >= 3 },
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
-  { id: 'bath-time', title: 'Bath time', hint: 'Find out who’s always in the bathroom.', earned: (s) => isMissionComplete(s, 'bathroom') },
+  { id: 'unstuck', title: 'Shoulder to it', hint: 'Get the bathroom door open.', earned: (s) => isMissionComplete(s, 'bathroom') },
   { id: 'sofa-surfer', title: 'Sofa surfer', hint: 'Wake up somewhere you didn’t fall asleep.', earned: (s) => s.dozes >= 1 },
+  { id: 'never-again', title: 'Never again', hint: 'Find something for the morning after.', earned: (s) => s.paracetamols >= 1 },
   { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
 ]

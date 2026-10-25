@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures'
 import { decorTiles, furnishHouse } from '../../src/game/furnishings'
-import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point, type UnlockId } from '../../src/game/layout'
+import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, isRoomOpen, roomOf, type Point, type UnlockId } from '../../src/game/layout'
 import { limezuRect } from '../../src/game/limezu-furniture'
 import { MISSIONS } from '../../src/game/missions'
 import { SEASONS, type Season } from '../../src/game/seasons'
@@ -61,10 +61,15 @@ function reachable(start: Point, walkable: (p: Point) => boolean): Set<string> {
 // Every check holds with each season's decorations up, as well as on an ordinary day.
 for (const season of [null, ...SEASONS]) {
   test.describe(`House layout${season ? ` (${season})` : ''}`, () => {
-    test('every interactable can be reached and faced from the floor', () => {
+    test('every interactable outside a shut room can be reached and faced from the floor', () => {
       const reachable = reachableFromFrontDoor(season)
       const stranded = furnishHouse(season)
-        .interactables.filter((object) => !object.tiles.some((tile) => neighbours(tile).some((n) => reachable.has(key(n)))))
+        .interactables.filter((object) => {
+          const room = roomOf(object.tiles)
+          // The bathroom door hangs in the bathroom's wall, but it's the way in.
+          return object.until !== undefined || !room || isRoomOpen(room)
+        })
+        .filter((object) => !object.tiles.some((tile) => neighbours(tile).some((n) => reachable.has(key(n)))))
         .map((object) => object.id)
       expect(stranded).toEqual([])
     })
