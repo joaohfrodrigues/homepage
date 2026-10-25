@@ -98,8 +98,8 @@ interface UiEvents {
    * the thing there, which a second tap (once the guest is facing it) uses.
    */
   tapAt: { x: number; y: number }
-  /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
-  night: { on: boolean; animate: boolean }
+  /** Lisbon's light: how far into the night (0–1) and how golden; `animate` fades through black, as after a nap. */
+  sky: { night: number; warmth: number; moon: number; animate: boolean }
   /** Lisbon's sky through the windows and on the balcony. */
   weather: Weather
   outfit: Outfit

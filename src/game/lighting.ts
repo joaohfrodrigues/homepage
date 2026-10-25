@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser'
+import type { Sky } from '@/lib/sun'
 import type { Weather } from '@/lib/weather'
 import { NIGHT_BOUNDS } from './exterior'
 import type { Decor } from './furnishings'
@@ -6,10 +7,11 @@ import { FLOOR_PLAN, TILE, cellAt, wallPartAt } from './layout'
 import { FESTOON_BULBS, type PropName } from './pixels'
 
 /**
- * Light in the house. By day the windows let in soft, neutral light when the
- * sun is out. At night the house sinks into blue and only lamps you can see
- * are on, low and warm: the floor lamps, a pendant over the table, a bedside
- * lamp, a little lamp on the hall console and festoon bulbs on the balcony.
+ * Light in the house, following Lisbon's sun. By day the windows let in soft,
+ * neutral light when the sun is out, golden as it gets low; through dusk the
+ * house sinks gradually into blue as the lamps come up, and only lamps you can see
+ * are on, low and warm: the floor lamps, a bedside lamp, a little lamp on the
+ * hall console and festoon bulbs on the balcony.
  * The TV and the study's monitor throw a cool fan of light forward rather than
  * a ring. The dark is one canvas with soft holes cut where light falls, so
  * lamps light what's around them instead of glowing on top of it; a faint tint
@@ -18,10 +20,18 @@ import { FESTOON_BULBS, type PropName } from './pixels'
 
 /** The night's blue, and how much of the scene it covers away from any light. */
 const NIGHT = 'rgba(11, 16, 48, 0.64)'
+/** Sunlight through the windows, plain by day and golden with the sun low. */
+const DAYLIGHT_COLOUR = 0xfffaf0
+const GOLDEN = 0xffb46a
+/** The faint amber over everything at golden hour, at its strongest. */
+const GOLDEN_WASH = 0.08
+
 /** How much daylight each sky lets in, as a share of a sunny day's. */
 const DAYLIGHT: Record<Weather, number> = { clear: 1, cloudy: 0.3, rain: 0, storm: 0 }
 
 const WARM = 0xffc27a
+/** A screen's fan of light is this share of its full width where it leaves the screen. */
+const SCREEN_SPREAD = 0.45
 const SCREEN = 0x9db8ff
 
 type Shape = 'pool' | 'fan' | 'beam'
@@ -47,13 +57,13 @@ interface Light {
 /** Light given off by furniture, from the prop's top-left corner. */
 const PROP_LIGHTS: Partial<Record<PropName, Omit<Light, 'x' | 'y'> & { dx: number; dy: number }>> = {
   floorlamp: { dx: 8, dy: 6, shape: 'pool', w: 76, h: 64, colour: WARM, reveal: 0.78, night: 0.22, day: 0 },
-  pendant: { dx: 8, dy: 16, shape: 'pool', w: 76, h: 60, colour: WARM, reveal: 0.6, night: 0.16, day: 0 },
   console: { dx: 8, dy: 4, shape: 'pool', w: 56, h: 72, colour: WARM, reveal: 0.6, night: 0.18, day: 0 },
   nightstand: { dx: 8, dy: 3, shape: 'pool', w: 54, h: 46, colour: WARM, reveal: 0.72, night: 0.2, day: 0 },
   alarmclock: { dx: 8, dy: 6, shape: 'pool', w: 18, h: 14, colour: 0xff6050, reveal: 0.2, night: 0.25, day: 0 },
-  // Screens light the floor in front of them.
-  tv: { dx: 32, dy: 40, shape: 'fan', w: 104, h: 92, colour: SCREEN, reveal: 0.5, night: 0.2, day: 0.05, flicker: true },
-  desk: { dx: 24, dy: 14, shape: 'fan', w: 60, h: 50, colour: 0xa9c4ff, reveal: 0.42, night: 0.16, day: 0.04 },
+  // Screens: the light starts across the top of the screen, as wide as it is,
+  // and spreads down over the unit or desk below onto the floor.
+  tv: { dx: 32, dy: 7, shape: 'fan', w: 80, h: 100, colour: SCREEN, reveal: 0.55, night: 0.2, day: 0.05, flicker: true },
+  desk: { dx: 23, dy: 2, shape: 'fan', w: 44, h: 52, colour: 0xa9c4ff, reveal: 0.45, night: 0.16, day: 0.04 },
 }
 
 /** Builds every light in the house from the furniture and the floor plan. */
@@ -118,6 +128,15 @@ function spreadShape(w: number, h: number, start: number, falloff: number): HTML
   })
 }
 
+/** Blends two RGB colours, `t` of the way from `a` to `b`. */
+function mix(a: number, b: number, t: number): number {
+  const channel = (shift: number) => {
+    const from = (a >> shift) & 0xff
+    return Math.round(from + (((b >> shift) & 0xff) - from) * t) << shift
+  }
+  return channel(16) | channel(8) | channel(0)
+}
+
 function shape(w: number, h: number, alpha: (x: number, y: number) => number): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = w
@@ -140,7 +159,8 @@ export class Lighting {
   private dark: Phaser.Textures.CanvasTexture
   private darkImage: Phaser.GameObjects.Image
   private tints: { light: Light; image: Phaser.GameObjects.Image }[] = []
-  private night = false
+  private sky: Sky = { night: 0, warmth: 0, moon: 0 }
+  private wash: Phaser.GameObjects.Rectangle
   private weather: Weather = 'clear'
   private flicker = 1
 
@@ -150,12 +170,13 @@ export class Lighting {
     reducedMotion: boolean,
   ) {
     this.lights = houseLights(decor)
-    this.shapes = { pool: poolShape(64), fan: spreadShape(64, 64, 0.2, 1.6), beam: spreadShape(64, 64, 0.7, 1.3) }
+    this.shapes = { pool: poolShape(64), fan: spreadShape(64, 64, SCREEN_SPREAD, 1.4), beam: spreadShape(64, 64, 0.7, 1.3) }
     for (const [name, canvas] of Object.entries(this.shapes)) scene.textures.addCanvas(`light-${name}`, canvas)
 
     const { x, y, w, h } = NIGHT_BOUNDS
     this.dark = scene.textures.createCanvas('night-dark', w, h)!
     this.darkImage = scene.add.image(x, y, 'night-dark').setOrigin(0).setDepth(29).setVisible(false)
+    this.wash = scene.add.rectangle(x, y, w, h, GOLDEN).setOrigin(0).setDepth(28.9).setAlpha(0)
 
     for (const light of this.lights) {
       const image = scene.add
@@ -181,8 +202,9 @@ export class Lighting {
     this.apply()
   }
 
-  setNight(on: boolean) {
-    this.night = on
+  /** Lisbon's light now: the dark deepens with `night`, and the sun turns golden with `warmth`. */
+  setSky(sky: Sky) {
+    this.sky = sky
     this.apply()
   }
 
@@ -192,15 +214,24 @@ export class Lighting {
   }
 
   private apply() {
-    this.darkImage.setVisible(this.night)
+    const { night, warmth } = this.sky
+    this.darkImage.setVisible(night > 0).setAlpha(night)
+    // Golden hour needs the sun to get through: less under cloud, none in rain.
+    const golden = warmth * DAYLIGHT[this.weather]
+    this.wash.setAlpha(GOLDEN_WASH * golden * (1 - night))
+    const colour = mix(DAYLIGHT_COLOUR, GOLDEN, golden)
+    for (const { light, image } of this.tints) if (light.window) image.setTint(colour)
     this.applyTints()
   }
 
+  /** Lamps come up as the dark comes down; the windows fade with the daylight. */
   private applyTints() {
+    const { night, warmth } = this.sky
     for (const { light, image } of this.tints) {
-      let alpha = this.night ? light.night : light.window ? light.day * DAYLIGHT[this.weather] : light.day
+      const day = light.window ? light.day * DAYLIGHT[this.weather] * (1 + 0.5 * warmth) : light.day
+      let alpha = day + (light.night - day) * night
       if (light.flicker) alpha *= this.flicker
-      image.setAlpha(alpha).setVisible(alpha > 0)
+      image.setAlpha(alpha).setVisible(alpha > 0.002)
     }
   }
 

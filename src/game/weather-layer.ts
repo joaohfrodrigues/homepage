@@ -28,6 +28,9 @@ const OUTDOOR_DROPS = 4
 /** Gaps between lightning flashes in a storm. */
 const LIGHTNING_GAP_MS: [number, number] = [7_000, 18_000]
 
+/** Blends two RGB triples, `t` of the way from `a` to `b`. */
+const mixRgb = (a: number[], b: number[], t: number) => a.map((from, i) => Math.round(from + (b[i] - from) * t))
+
 const between = ([min, max]: [number, number]) => min + Math.random() * (max - min)
 
 interface Drop {
@@ -42,11 +45,22 @@ interface PaneDrop extends Drop {
   top: number
 }
 
+/** The night sky through the glass: clear, and under cloud. */
+const NIGHT_GLASS = { top: [0x12, 0x19, 0x38], bottom: [0x1f, 0x2b, 0x55], overcast: [0x2a, 0x2e, 0x3c] }
+/** Roughly one star for every this many pixels of glass. */
+const STAR_EVERY = 45
+const MOON = { radius: 3, lit: [0xf4, 0xf1, 0xdc], dark: [0x2b, 0x35, 0x5e], halo: [0x2c, 0x3a, 0x6c] }
+/** The moon sits in this window (its left column), low in the right-hand pane. */
+const MOON_WINDOW = { tx: 8, ty: 1 }
+
 /**
- * Lisbon's weather over the baked house: grey glass and drops running down
- * the `W` windows, rain across the balcony, the roofs and the courtyard and,
- * in a storm, the odd lightning flash. Sits under the night overlay so the dark still covers it; under
- * reduced motion the drops hold still and the lightning stays away.
+ * Lisbon's sky through the windows and over the balcony: grey glass and drops
+ * running down the `W` windows, rain across the balcony and the street and
+ * roof beside it and, in a storm, the odd lightning flash. At night the glass
+ * goes dark, with stars and the moon in its current phase on a clear night.
+ * Sits under the night overlay so the dark still covers it (the moon and stars
+ * shine through it); under reduced motion the drops hold still and the
+ * lightning stays away.
  */
 export class WeatherLayer {
   private weather: Weather = 'clear'
@@ -56,6 +70,12 @@ export class WeatherLayer {
   private balconyDrops: Drop[] = []
   private balcony: Phaser.Geom.Rectangle
   private paneTint: Phaser.GameObjects.Image
+  private nightClear: Phaser.GameObjects.Image
+  private nightOvercast: Phaser.GameObjects.Image
+  private skyLights: Phaser.Textures.CanvasTexture
+  private skyLightsImage: Phaser.GameObjects.Image
+  private night = 0
+  private moon = -1
   private balconyTint: Phaser.GameObjects.Rectangle
   private paneRain: Phaser.GameObjects.Graphics
   private balconyRain: Phaser.GameObjects.Graphics
@@ -85,6 +105,13 @@ export class WeatherLayer {
     }
 
     this.paneTint = scene.add.image(0, 0, 'weather-panes').setOrigin(0).setDepth(1).setAlpha(0)
+    // The night's glass under the dark, then the moon and stars above it, so they still shine.
+    this.paintNightGlass('night-clear', (y) => mixRgb(NIGHT_GLASS.top, NIGHT_GLASS.bottom, (y % TILE) / TILE))
+    this.paintNightGlass('night-overcast', () => NIGHT_GLASS.overcast)
+    this.nightClear = scene.add.image(0, 0, 'night-clear').setOrigin(0).setDepth(1).setAlpha(0)
+    this.nightOvercast = scene.add.image(0, 0, 'night-overcast').setOrigin(0).setDepth(1).setAlpha(0)
+    this.skyLights = scene.textures.createCanvas('night-sky-lights', width, height)!
+    this.skyLightsImage = scene.add.image(0, 0, 'night-sky-lights').setOrigin(0).setDepth(29.4).setAlpha(0)
     this.paneRain = scene.add.graphics().setDepth(1)
     this.balconyTint = scene.add
       .rectangle(this.balcony.x, this.balcony.y, this.balcony.width, this.balcony.height, 0x6f7480)
@@ -111,7 +138,76 @@ export class WeatherLayer {
     this.lightning?.remove()
     this.lightning = null
     if (weather === 'storm' && !this.reducedMotion) this.queueLightning()
+    this.applyNight()
     this.draw(0)
+  }
+
+  /** How far into the night it is (0–1), and the moon's age (0 new, 0.5 full). */
+  setNight(night: number, moon: number) {
+    this.night = night
+    // The moon changes too slowly to repaint for less than a few hours of its cycle.
+    if (Math.abs(moon - this.moon) > 0.005) {
+      this.moon = moon
+      this.paintSkyLights()
+    }
+    this.applyNight()
+  }
+
+  private applyNight() {
+    const clear = this.weather === 'clear'
+    this.nightClear.setAlpha(clear ? this.night : 0)
+    this.nightOvercast.setAlpha(clear ? 0 : this.night)
+    this.skyLightsImage.setAlpha(clear ? this.night : 0)
+  }
+
+  /** Paints every pixel of glass in `colour(y)`, into a texture of its own. */
+  private paintNightGlass(key: string, colour: (y: number) => number[]) {
+    const width = MAP_WIDTH * TILE
+    const texture = this.scene.textures.createCanvas(key, width, MAP_HEIGHT * TILE)!
+    const ctx = texture.getContext()
+    const image = ctx.createImageData(width, MAP_HEIGHT * TILE)
+    this.glass.forEach((isGlass, i) => {
+      if (isGlass) image.data.set([...colour(Math.floor(i / width)), 255], i * 4)
+    })
+    ctx.putImageData(image, 0, 0)
+    texture.refresh()
+  }
+
+  /** The stars, and the moon lit from the side its phase says, wherever there's glass. */
+  private paintSkyLights() {
+    const width = MAP_WIDTH * TILE
+    const ctx = this.skyLights.getContext()
+    const image = ctx.createImageData(width, MAP_HEIGHT * TILE)
+    const put = (x: number, y: number, rgb: number[], alpha = 255) => {
+      if (this.isGlass(x, y)) image.data.set([...rgb, alpha], (y * width + x) * 4)
+    }
+    this.glass.forEach((isGlass, i) => {
+      if (isGlass && hash(i % width, Math.floor(i / width)) < 1 / STAR_EVERY) {
+        put(i % width, Math.floor(i / width), [0xd8, 0xe0, 0xff], 120 + Math.floor(hash(i, 7) * 120))
+      }
+    })
+    const cx = (MOON_WINDOW.tx + 1) * TILE + 8
+    const cy = (MOON_WINDOW.ty + 1) * TILE - 2
+    const r = MOON.radius
+    // A faint halo, then the disc: lit where the terminator says, earthshine elsewhere.
+    for (let dy = -r - 2; dy <= r + 2; dy++) {
+      for (let dx = -r - 2; dx <= r + 2; dx++) {
+        if (Math.hypot(dx, dy) <= r + 2 && Math.hypot(dx, dy) > r + 0.5) put(cx + dx, cy + dy, MOON.halo, 140)
+      }
+    }
+    const terminator = Math.cos(2 * Math.PI * this.moon)
+    const waxing = this.moon < 0.5
+    for (let dy = -r; dy <= r; dy++) {
+      const half = Math.sqrt(r * r - dy * dy)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.abs(dx) > half + 0.3) continue
+        const edge = terminator * half
+        const lit = waxing ? dx + 0.5 > edge : dx - 0.5 < -edge
+        put(cx + dx, cy + dy, lit ? MOON.lit : MOON.dark)
+      }
+    }
+    ctx.putImageData(image, 0, 0)
+    this.skyLights.refresh()
   }
 
   /**

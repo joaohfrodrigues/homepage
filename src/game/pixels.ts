@@ -383,7 +383,6 @@ export type PropName =
   | 'desk'
   | 'officechair'
   | 'floorlamp'
-  | 'pendant'
   | 'camerastand'
   | 'drums'
   | 'chimney'
@@ -424,7 +423,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   desk: { w: 48, h: 32 }, // 1.4m desk
   officechair: { w: 16, h: 16 },
   floorlamp: { w: 16, h: 32 },
-  pendant: { w: 16, h: 24 }, // hangs over the middle of the dining table
   camerastand: { w: 16, h: 32 },
   drums: { w: 32, h: 32 }, // an electronic kit is about 1m × 1m
   chimney: { w: 64, h: 32 }, // a 2m terracotta chimney breast
@@ -719,15 +717,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(4, 9, 8, 3, '#4a4f5c')
       r(7, 13, 2, 2, PALETTE.ink)
       r(3, 15, 10, 1, PALETTE.shadow)
-      break
-    }
-    case 'pendant': {
-      // A green enamel shade seen from above, on its cord up to the ceiling.
-      r(8, 0, 1, 11, PALETTE.ink)
-      disc(ctx, ox + 8, oy + 16, 6, '#2a4a3e')
-      disc(ctx, ox + 8, oy + 16, 5, '#3a6b58')
-      r(5, 13, 3, 1, '#5b8f78')
-      disc(ctx, ox + 8, oy + 16, 1, PALETTE.brass)
       break
     }
     case 'floorlamp': {

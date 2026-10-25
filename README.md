@@ -138,19 +138,27 @@ the dark further out; everywhere else the flat sits in the dark. A gull rests on
 and by day, under a calm sky, others glide past every so often and call, seen only over the street
 and the roof. Under `prefers-reduced-motion` only the resting gull stays.
 
-The house starts at night between 8pm and 7am, visitor's local time. At night only lamps you can see
-are on, low and warm (the floor lamps, a pendant over the dining table, the bedside lamp, a lamp on
-the hall console and festoon bulbs along the balcony), each lighting a soft patch of the dark around
-it, while the TV and the study's monitor throw a cool fan of light forward. Lisbon's real weather
-shows through the street windows in the top walls and on the balcony: by day, under a sunny sky, the
-windows let soft neutral light onto the floor (less under cloud, none in rain); the glass goes grey
-under cloud, as do the street and roof outside, rain runs down the panes and streaks across the
-balcony, a storm brings the odd lightning flash, and the balcony's view mentions it. The back walls
-show no windows from inside. The HUD shows a cloud icon when the sky isn't clear. The sky comes from
-`/api/weather` (Open-Meteo, no API key, cached for 30 minutes) and falls back to clear if that
-fails. Under `prefers-reduced-motion` the drops hold still and there's no lightning. To preview a
-sky, add `?weather=clear`, `cloudy`, `rain` or `storm` to the URL. Every room's page also has a
-plain HTML version for screen readers, crawlers and visitors without JavaScript.
+The house keeps Lisbon's time and follows Lisbon's sun (`src/lib/sun.ts`, worked out from the date
+with no API), wherever the visitor is. By day, under a sunny sky, the street windows let soft
+neutral light onto the floor, golden while the sun is low. From just before sunset to the end of
+dusk the house sinks gradually into blue as the lamps come up, and dawn lifts it the same way; the
+light catches up with the sun every minute. At night only lamps you can see are on, low and warm
+(the floor lamps, the bedside lamp, a lamp on the hall console and festoon bulbs along the balcony),
+each lighting a soft patch of the dark around it, while the TV and the study's monitor glow and
+throw a cool fan of light down from the screen. The window glass goes dark, with stars and the moon
+in its current phase on a clear night. A nap until evening moves the clock on to after the next
+dusk, and sleeping, or waking on the sofa, to the next morning; a reload goes back to Lisbon's real
+time. To preview a time of day, add `?time=21:15` (Lisbon time) to the URL.
+
+Lisbon's real weather shows through the street windows in the top walls and on the balcony: the
+glass goes grey under cloud, as do the street and roof outside, rain runs down the panes and streaks
+across the balcony, a storm brings the odd lightning flash, and the balcony's view mentions it.
+Cloud dims the sunlight and rain shuts it out. The back walls show no windows from inside. The HUD
+shows a cloud icon when the sky isn't clear. The sky comes from `/api/weather` (Open-Meteo, no API
+key, cached for 30 minutes) and falls back to clear if that fails. Under `prefers-reduced-motion`
+the drops hold still and there's no lightning. To preview a sky, add `?weather=clear`, `cloudy`,
+`rain` or `storm` to the URL. Every room's page also has a plain HTML version for screen readers,
+crawlers and visitors without JavaScript.
 
 There are hidden behaviours too. Ten bicas within five minutes is an overdose: the guest walks
 faster, the camera thumps like a heartbeat and João tells you to sit down, for about 75 seconds
@@ -409,7 +417,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, and João's dialogue
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, and Lisbon's sun and moon
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 

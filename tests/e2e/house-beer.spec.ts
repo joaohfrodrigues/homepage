@@ -9,7 +9,7 @@ interface SceneHandle {
   vignette?: { style: { opacity: string; transform: string } }
   blur?: { strength: number } | null
   player: { tile: Point; sprite: { isTinted: boolean } }
-  nightOverlay: { alpha: number }
+  lighting: { darkImage: { alpha: number } }
   cameras: { main: { worldView: { x: number; y: number }; zoom: number } }
 }
 
@@ -147,7 +147,7 @@ test.describe('Beers from the fridge', () => {
     const wake = page.getByRole('dialog', { name: 'Talking to João' })
     await expect(wake).toContainText('Morning, sunshine', { timeout: 10_000 })
     expect(await scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x + 1, y: sofa.y + 1 })
-    expect(await scene(page, (s) => s.nightOverlay.alpha)).toBe(0)
+    expect(await scene(page, (s) => s.lighting.darkImage.alpha)).toBe(0)
     await expect(page.getByLabel('Day')).toBeVisible()
     expect((await guestEffect(page)).sources).toEqual([])
 

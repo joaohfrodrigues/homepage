@@ -24,6 +24,7 @@ import { LAND_URL, renderMap, type LandData } from './world-map'
 import { WeatherLayer } from './weather-layer'
 import { Exterior } from './exterior'
 import { Lighting } from './lighting'
+import { isNight, type Sky } from '@/lib/sun'
 import {
   MAP_WALL,
   FACINGS,
@@ -71,11 +72,17 @@ export interface HouseSceneConfig {
   trips: Trip[]
   startRoom: RoomId
   fontFamily: string
-  night: boolean
+  /** Lisbon's light when the house opens. */
+  sky: Sky
   outfit: Outfit
   /** What missions have opened up already. */
   unlocks: UnlockId[]
 }
+
+/** How long the light takes to catch up with Lisbon's sun after each tick of the clock. */
+const SKY_EASE_MS = 2500
+/** Waking on the sofa after a heavy night: full daylight, still a little golden. */
+const MORNING: Omit<Sky, 'moon'> = { night: 0, warmth: 0.35 }
 
 const DELTAS: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -182,6 +189,8 @@ export class HouseScene extends Phaser.Scene {
   private focused: Target | null = null
   private reducedMotion = false
   private lighting!: Lighting
+  private sky: Sky = { night: 0, warmth: 0, moon: 0 }
+  private skyTween: Phaser.Tweens.Tween | null = null
   private weather!: WeatherLayer
   private exterior?: Exterior
   private inputEnabled = true
@@ -251,9 +260,10 @@ export class HouseScene extends Phaser.Scene {
 
     this.bakeCues()
     this.weather = new WeatherLayer(this, this.reducedMotion)
+    this.weather.setNight(this.sky.night, this.sky.moon)
     this.exterior = new Exterior(this, {
       reducedMotion: this.reducedMotion,
-      night: this.cfg.night,
+      night: isNight(this.cfg.sky),
       onCry: () => this.cfg.bridge.game.emit('gull'),
     })
 
@@ -613,7 +623,7 @@ export class HouseScene extends Phaser.Scene {
   /** The house's light, day and night, and the Pi's blinking LEDs. */
   private addAmbience() {
     this.lighting = new Lighting(this, this.furnishings.decor, this.reducedMotion)
-    this.applyNight(this.cfg.night)
+    this.applySky(this.cfg.sky)
 
     // The Pi's disk enclosure on the study desk.
     const rack = this.propAt('desk')
@@ -636,22 +646,42 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
-  private applyNight(on: boolean) {
-    this.lighting.setNight(on)
-    this.exterior?.setNight(on)
+  private applySky(sky: Sky) {
+    this.sky = sky
+    this.lighting.setSky(sky)
+    this.exterior?.setNight(isNight(sky))
+    this.weather?.setNight(sky.night, sky.moon)
   }
 
-  /** Fade out, flip day/night, fade back in — as if the visitor just woke up. */
-  private setNight(on: boolean, animate: boolean) {
-    if (!animate || this.reducedMotion) {
-      this.applyNight(on)
+  /**
+   * Lisbon's light moves on: eased in over a few seconds as the sun goes, or,
+   * after a nap, faded through black as if the visitor just woke up.
+   */
+  private setSky(sky: Sky, animate: boolean) {
+    this.skyTween?.stop()
+    if (animate && !this.reducedMotion) {
+      const camera = this.cameras.main
+      camera.fadeOut(450, 8, 10, 24)
+      camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.applySky(sky)
+        camera.fadeIn(700, 8, 10, 24)
+      })
       return
     }
-    const camera = this.cameras.main
-    camera.fadeOut(450, 8, 10, 24)
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.applyNight(on)
-      camera.fadeIn(700, 8, 10, 24)
+    if (animate || this.reducedMotion) return this.applySky(sky)
+    const from = this.sky
+    this.skyTween = this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: SKY_EASE_MS,
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 1
+        this.applySky({
+          night: from.night + (sky.night - from.night) * t,
+          warmth: from.warmth + (sky.warmth - from.warmth) * t,
+          moon: sky.moon,
+        })
+      },
     })
   }
 
@@ -756,7 +786,7 @@ export class HouseScene extends Phaser.Scene {
       seat,
       'down',
       () => {
-        this.applyNight(false)
+        this.applySky({ ...MORNING, moon: this.sky.moon })
         // At the corner of the sofa rather than straight in front, so he doesn't hide the guest.
         const beside = [1, -1, 0]
           .map((dx) => ({ x: seat.x + dx, y: seat.y + 1 }))
@@ -1854,7 +1884,7 @@ export class HouseScene extends Phaser.Scene {
     this.unsubscribers.push(
       ui.on('teleport', (room) => this.teleport(room)),
       ui.on('visit', (target) => this.visit(target)),
-      ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
+      ui.on('sky', ({ animate, ...sky }) => this.setSky(sky, animate)),
       ui.on('weather', (weather) => {
         this.weather.set(weather)
         this.exterior?.setWeather(weather)
