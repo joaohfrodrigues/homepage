@@ -302,36 +302,84 @@ export function drawDoorway(
   if (edges.right) rect(ctx, ox + 14, oy, 2, 16, PALETTE.woodDark)
 }
 
+/** How the bathroom door stands: `open` is how far through its quarter turn, and a rattle pushes the handle down and shifts it in the frame. */
+export interface DoorPose {
+  open: number
+  handleDown?: boolean
+  nudge?: number
+}
+
 /**
- * A shut interior door seen from the corridor, two tiles wide. The left half
- * carries a little red "occupied" indicator over the handle.
+ * One frame of the bathroom door: as wide as the doorway's two tiles and a
+ * little taller than its wall face, so the leaf can swing out past it.
  */
-export function drawClosedDoor(
-  ctx: Ctx,
-  ox: number,
-  oy: number,
-  kind: WallKind,
-  part: 'upper' | 'lower',
-  half: 'left' | 'right',
-) {
-  drawWallFace(ctx, ox, oy, kind, part)
-  const left = half === 'left'
-  const top = part === 'upper' ? 4 : 0
-  rect(ctx, ox + (left ? 1 : 0), oy + top, left ? 15 : 15, 16 - top, PALETTE.woodDark)
-  rect(ctx, ox + (left ? 2 : 0), oy + top + (part === 'upper' ? 1 : 0), 14, 16 - top - (part === 'upper' ? 1 : 0), '#efe3c8')
-  if (!left) rect(ctx, ox + 14, oy + top, 1, 16 - top, PALETTE.woodDark)
-  if (part === 'upper') {
-    rect(ctx, ox + (left ? 4 : 2), oy + 7, 10, 6, '#e3d4b2')
-    if (left) {
-      // The occupied indicator.
-      rect(ctx, ox + 11, oy + 13, 5, 3, PALETTE.ink)
-      rect(ctx, ox + 12, oy + 14, 3, 1, PALETTE.red)
-    }
-  } else {
-    rect(ctx, ox + (left ? 4 : 2), oy + 1, 10, 8, '#e3d4b2')
-    if (left) rect(ctx, ox + 12, oy + 1, 3, 2, PALETTE.brass)
-    rect(ctx, ox, oy + 13, 16, 3, '#2f2a3a')
+export const DOOR_FRAME = { w: 32, h: 36 }
+/** The leaf fills the doorway inside its posts and under its lintel. */
+const LEAF = { x: 2, y: 4, w: 28, h: 28 }
+
+const DOOR_PAINT = { face: '#efe7d6', panel: '#e6dcc7', shade: '#cdc2ab', light: '#fbf7ee', gap: '#2f2a3a' }
+
+/** A four-panel interior door, painted off-white, hinged on the left with a lever handle on the right. */
+function drawDoorLeaf(ctx: Ctx, ox: number, oy: number, handleDown: boolean) {
+  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
+  r(0, 0, LEAF.w, LEAF.h, PALETTE.ink)
+  r(1, 1, LEAF.w - 2, LEAF.h - 2, DOOR_PAINT.face)
+  // The lintel's shadow across the top, and the gap over the floor.
+  r(1, 1, LEAF.w - 2, 1, DOOR_PAINT.shade)
+  r(1, LEAF.h - 1, LEAF.w - 2, 1, DOOR_PAINT.gap)
+  // Recessed panels: shadowed along the top and left, catching the light along the bottom and right.
+  for (const [x, y] of [
+    [4, 4],
+    [15, 4],
+    [4, 16],
+    [15, 16],
+  ]) {
+    r(x, y, 9, 9, DOOR_PAINT.panel)
+    r(x, y, 9, 1, DOOR_PAINT.shade)
+    r(x, y, 1, 9, DOOR_PAINT.shade)
+    r(x, y + 8, 9, 1, DOOR_PAINT.light)
+    r(x + 8, y + 1, 1, 8, DOOR_PAINT.light)
   }
+  // Two hinges on the left stile.
+  r(1, 4, 1, 3, WHITE_GOODS.steelDark)
+  r(1, 20, 1, 3, WHITE_GOODS.steelDark)
+  // A round rose and a lever reaching towards the hinges, pressed down in a rattle, over a keyhole.
+  r(23, 13, 2, 2, WHITE_GOODS.steelDark)
+  if (handleDown) {
+    r(21, 14, 2, 1, WHITE_GOODS.steel)
+    r(19, 15, 2, 1, WHITE_GOODS.steel)
+  } else {
+    r(19, 13, 4, 1, WHITE_GOODS.steel)
+    r(19, 14, 4, 1, WHITE_GOODS.steelDark)
+  }
+  r(23, 17, 1, 2, PALETTE.ink)
+}
+
+/**
+ * The bathroom door in `pose`, drawn into a DOOR_FRAME at (ox, oy) over its
+ * doorway. Opening, it swings into the bathroom on its left hinges: the leaf
+ * narrows as it turns, its free edge grows as it comes towards the viewer and
+ * it darkens out of the light, until only its edge shows against the post.
+ */
+export function drawBathroomDoor(ctx: Ctx, ox: number, oy: number, { open, handleDown = false, nudge = 0 }: DoorPose) {
+  if (open <= 0) return drawDoorLeaf(ctx, ox + LEAF.x + nudge, oy + LEAF.y, handleDown)
+  const leaf = document.createElement('canvas')
+  leaf.width = LEAF.w
+  leaf.height = LEAF.h
+  drawDoorLeaf(leaf.getContext('2d')!, 0, 0, false)
+  const turn = (Math.min(open, 1) * Math.PI) / 2
+  const width = Math.max(3, Math.round(LEAF.w * Math.cos(turn)))
+  const reach = Math.sin(turn) * (DOOR_FRAME.h - LEAF.y - LEAF.h)
+  ctx.imageSmoothingEnabled = false
+  for (let c = 0; c < width; c++) {
+    const along = (c + 0.5) / width
+    const height = Math.round(LEAF.h + along * reach)
+    // Edge-on, all that's left is the door's thickness.
+    const source = width <= 3 ? LEAF.w - 2 : Math.floor(along * LEAF.w)
+    ctx.drawImage(leaf, source, 0, 1, LEAF.h, ox + LEAF.x + c, oy + LEAF.y, 1, height)
+    rect(ctx, ox + LEAF.x + c, oy + LEAF.y, 1, height, `rgba(20,14,30,${(0.3 * Math.sin(turn)).toFixed(2)})`)
+  }
+  rect(ctx, ox + LEAF.x + width - 1, oy + LEAF.y, 1, Math.round(LEAF.h + reach), PALETTE.ink)
 }
 
 /** One half of the 90cm front door (two tiles wide), seen from above. */
@@ -1059,15 +1107,16 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'basin': {
-      // The mirror hangs high on the wall, over a glass shelf.
+      // The mirror cabinet hangs high on the wall, over a glass shelf: two mirrored doors.
       r(2, -5, 12, 10, PALETTE.ink)
       r(3, -4, 10, 8, WHITE_GOODS.steel)
       r(4, -3, 8, 6, '#a9d4e6')
       r(4, 2, 8, 1, '#93c2d6')
-      r(5, -2, 3, 1, '#e8f6fc')
+      r(5, -2, 2, 1, '#e8f6fc')
       r(5, -1, 1, 1, '#e8f6fc')
-      r(9, 0, 1, 1, '#e8f6fc')
-      r(10, -1, 1, 1, '#e8f6fc')
+      r(10, 0, 1, 1, '#e8f6fc')
+      r(11, -1, 1, 1, '#e8f6fc')
+      r(8, -3, 1, 6, WHITE_GOODS.steelDark)
       r(3, 7, 10, 1, '#dfe6ec')
       r(3, 8, 10, 1, WHITE_GOODS.steelDark)
       // The basin set in its counter, a small mixer tap over the bowl.

@@ -239,7 +239,7 @@ export function GuestbookPanel({ onReset, onClose }: Props) {
         <Section title="Odds and ends">
           <div className="grid grid-cols-2 gap-3">
             <Stat value={stats.chats} label="chats with João" />
-            <Stat value={stats.knocks} label="knocks on the bathroom door" />
+            <Stat value={stats.doorTries} label="tries of the stuck bathroom door" />
             <Stat value={stats.pets} label="pets for Zeno" />
             <Stat value={stats.scoops} label="litter boxes scooped" />
             <Stat value={stats.naps} label="naps until evening" />

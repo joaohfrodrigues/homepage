@@ -38,12 +38,14 @@ import {
   drawFocusArrow,
   drawSparkle,
   traceSilhouette,
+  DOOR_FRAME,
+  drawBathroomDoor,
   drawDoorway,
+  type DoorPose,
   drawFloor,
   drawRailingFront,
   drawRailingSide,
   drawWindow,
-  drawClosedDoor,
   drawFrontDoor,
   drawSideDoorway,
   drawProp,
@@ -107,11 +109,20 @@ const KEY_STEPS: Record<string, Direction> = {
 
 const PLAYER_STEP_MS = 150
 const NPC_STEP_MS = 260
-/** Dona Rosa takes her time, slippers and all. */
-const ROSA_STEP_MS = 340
-/** How long her thank-you stays over her head at the bathroom door. */
-const ROSA_THANKS_MS = 2200
-const STEAM_PUFF_MS = 380
+/** The bathroom door's frames: shut, the two halves of a rattle, then swinging open to fully open. */
+const DOOR_POSES: DoorPose[] = [
+  { open: 0 },
+  { open: 0, handleDown: true, nudge: 1 },
+  { open: 0, handleDown: true, nudge: -1 },
+  { open: 0.25 },
+  { open: 0.5 },
+  { open: 0.75 },
+  { open: 1 },
+]
+const DOOR_SHUT = 0
+const DOOR_OPEN_FRAME = DOOR_POSES.length - 1
+const DOOR_OPEN = 'bathroom-door-open'
+const DOOR_RATTLE = 'bathroom-door-rattle'
 const ZENO_STEP_MS = 300
 const ZENO_TICK_MS = 380
 /** Zeno gives up on a favourite spot that's further than this many steps away. */
@@ -191,6 +202,8 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
+  /** The bathroom's door over its doorway: shut, rattling while it's stuck, or swung open. */
+  private bathroomDoor?: Phaser.GameObjects.Sprite
   private lighting!: Lighting
   private sky: Sky = { night: 0, warmth: 0, moon: 0 }
   private skyTween: Phaser.Tweens.Tween | null = null
@@ -229,13 +242,6 @@ export class HouseScene extends Phaser.Scene {
   private blur?: Phaser.Filters.Blur | null
   /** Passed out: the keys wait until the guest comes to. */
   private dozing = false
-  /** Dona Rosa, in the shower until the bathroom mission sees her out; null once she's gone. */
-  private rosa: Walker | null = null
-  private rosaLabel?: Phaser.GameObjects.Text
-  private rosaLeaving = false
-  /** The shower's steamed-up glass while she's in there, and the timer that puffs steam off it. */
-  private showerGlass?: Phaser.GameObjects.Graphics
-  private steamTimer?: Phaser.Time.TimerEvent
 
   constructor() {
     super('house')
@@ -256,6 +262,7 @@ export class HouseScene extends Phaser.Scene {
   create() {
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     this.bakeHouse()
+    this.addBathroomDoor()
     this.bakeCharacters()
     this.bakeZeno()
     this.buildCollision()
@@ -319,8 +326,6 @@ export class HouseScene extends Phaser.Scene {
       .image(this.toyTile.x * TILE, this.toyTile.y * TILE, 'zeno-toy')
       .setOrigin(0, 0)
       .setDepth(2)
-
-    if (!this.unlocks.has('bathroom')) this.addRosa()
 
     this.time.addEvent({ delay: 1800, loop: true, callback: () => this.wanderNpc() })
     this.time.addEvent({ delay: ZENO_TICK_MS, loop: true, callback: () => this.tickZeno() })
@@ -417,9 +422,8 @@ export class HouseScene extends Phaser.Scene {
             drawWallCap(ctx, ox, oy)
           } else if (cell === 'W') {
             drawWindow(ctx, ox, oy, below.wall, part, edges)
-          } else if (cell === 'X') {
-            drawClosedDoor(ctx, ox, oy, below.wall, part, openCellAt(x - 1, y) === 'X' ? 'right' : 'left')
-          } else if (cell === 'D') {
+          } else if (cell === 'D' || cell === 'X') {
+            // A shut door is a doorway too, with the door itself a sprite over it (see addBathroomDoor).
             drawDoorway(ctx, ox, oy, below.floor, part, x, y, edges)
           } else {
             drawWallFace(ctx, ox, oy, below.wall, part)
@@ -466,7 +470,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private bakeCharacters() {
-    const who: CharacterName[] = ['guest', 'joao', 'rosa']
+    const who: CharacterName[] = ['guest', 'joao']
     const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
     const frames = this.characterFrames()
     const texture = this.textures.createCanvas('house-chars', frames.length * CHAR_W, who.length * CHAR_H)!
@@ -503,7 +507,7 @@ export class HouseScene extends Phaser.Scene {
           this.anims.create({
             key: `${name}-${anim}-${direction}`,
             frames: Array.from({ length: CHAR_FRAMES }, (_, i) => ({ key: 'house-chars', frame: `${name}-${direction}-${anim}-${i}` })),
-            frameRate: anim === 'idle' ? 6 : name === 'guest' ? 18 : name === 'rosa' ? 8 : 11,
+            frameRate: anim === 'idle' ? 6 : name === 'guest' ? 18 : 11,
             repeat: -1,
           })
         }
@@ -590,6 +594,7 @@ export class HouseScene extends Phaser.Scene {
     if (next.size === this.unlocks.size && unlocks.every((id) => this.unlocks.has(id))) return
     this.unlocks = next
     this.paintHouse(this.textures.get('house-base') as Phaser.Textures.CanvasTexture)
+    this.syncBathroomDoor(true)
     this.buildCollision()
     const shut = (tile: Point) => {
       const room = roomAt(tile.x, tile.y)
@@ -605,9 +610,40 @@ export class HouseScene extends Phaser.Scene {
       this.zeno.tile = { ...start }
       this.zeno.sprite.setPosition(start.x * TILE + TILE / 2, (start.y + 1) * TILE).setDepth(10 + start.y / 100)
     }
-    if (this.unlocks.has('bathroom')) this.rosaLeaves()
-    else this.addRosa()
     this.updateHint()
+  }
+
+  /** Draws the bathroom door's frames and hangs it over its doorway, shut or open as the missions say. */
+  private addBathroomDoor() {
+    const { w, h } = DOOR_FRAME
+    const sheet = this.textures.createCanvas('bathroom-door', w * DOOR_POSES.length, h)!
+    DOOR_POSES.forEach((pose, i) => {
+      drawBathroomDoor(sheet.getContext(), i * w, 0, pose)
+      sheet.add(i, 0, i * w, 0, w, h)
+    })
+    sheet.refresh()
+    const frames = (indexes: number[]) => indexes.map((frame) => ({ key: 'bathroom-door', frame }))
+    this.anims.create({ key: DOOR_OPEN, frames: frames([3, 4, 5, 6]), frameRate: 12 })
+    // The handle goes down and the door knocks against its frame, twice, then settles shut.
+    this.anims.create({ key: DOOR_RATTLE, frames: frames([1, 2, 1, 2, DOOR_SHUT]), frameRate: 14 })
+
+    let doorway: Point | undefined
+    for (let y = 0; y < MAP_HEIGHT && !doorway; y++) {
+      for (let x = 0; x < MAP_WIDTH && !doorway; x++) if (cellAt(x, y) === 'X') doorway = { x, y }
+    }
+    if (!doorway) return
+    this.bathroomDoor = this.add.sprite(doorway.x * TILE, doorway.y * TILE, 'bathroom-door', DOOR_SHUT).setOrigin(0, 0).setDepth(1)
+    this.syncBathroomDoor(false)
+  }
+
+  /** Shut while the bathroom is locked; open once it isn't, swinging open if `animate` and motion is fine. */
+  private syncBathroomDoor(animate: boolean) {
+    const door = this.bathroomDoor
+    if (!door) return
+    const open = this.unlocks.has('bathroom')
+    door.stop()
+    if (open && animate && !this.reducedMotion) door.play(DOOR_OPEN)
+    else door.setFrame(open ? DOOR_OPEN_FRAME : DOOR_SHUT)
   }
 
   private textStyle(color: string, background?: string, fontSize = '6px'): Phaser.Types.GameObjects.Text.TextStyle {
@@ -1029,7 +1065,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   private occupied(x: number, y: number, self?: Walker): boolean {
-    return [this.player, this.npc, this.zeno, this.rosa].some(
+    return [this.player, this.npc, this.zeno].some(
       (walker) => walker && walker !== self && walker.tile.x === x && walker.tile.y === y,
     )
   }
@@ -1080,7 +1116,6 @@ export class HouseScene extends Phaser.Scene {
       duration,
       onUpdate: () => {
         if (walker === this.npc) this.syncNpcLabel()
-        else if (walker === this.rosa) this.syncRosaLabel()
       },
       onComplete: () => {
         walker.moving = false
@@ -1153,177 +1188,6 @@ export class HouseScene extends Phaser.Scene {
     return tiles
       .flatMap((tile) => Object.values(DELTAS).map((d) => ({ x: tile.x + d.x, y: tile.y + d.y })))
       .filter((tile) => !own.has(key(tile)))
-  }
-
-  // -------------------------------------------------------------------------
-  // Dona Rosa, in the shower until the bathroom mission
-
-  /** Stands her behind the shower's glass, steamed up so she's only a shape, with steam rising off it. */
-  private addRosa() {
-    const shower = this.propAt('shower')
-    if (!shower || this.rosa) return
-    const { w, h } = PROP_SIZES.shower
-    const x = shower.x * TILE
-    const y = shower.y * TILE
-    // Feet on the tray's bottom row, so all of her fits inside it.
-    this.rosa = this.addWalker('rosa', { x: shower.x, y: shower.y + h / TILE - 1 }, 'down')
-    this.rosa.sprite.setX(x + w / 2)
-    this.rosaLabel = this.add
-      .text(0, 0, 'Dona Rosa', this.textStyle('#f4ecd8', '#2a2233'))
-      .setOrigin(0.5, 1)
-      .setDepth(34)
-      .setVisible(false)
-    this.syncRosaLabel()
-
-    // Fogged glass over the tray, with a few drips running down it.
-    const glass = this.add.graphics().setDepth(12)
-    glass.fillStyle(0xeef3f6, 0.86).fillRect(x + 1, y + 1, w - 2, h - 2)
-    glass.fillStyle(0xd3e1ea, 0.9)
-    for (const [dx, top, length] of [
-      [5, 3, 9],
-      [12, 8, 14],
-      [20, 2, 7],
-      [26, 12, 12],
-    ]) {
-      glass.fillRect(x + dx, y + top, 1, length)
-    }
-    this.showerGlass = glass
-    if (this.reducedMotion) return
-    this.tweens.add({ targets: glass, alpha: 0.9, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-    if (!this.textures.exists('steam-puff')) {
-      const puff = this.textures.createCanvas('steam-puff', 12, 12)!
-      const pctx = puff.getContext()
-      const gradient = pctx.createRadialGradient(6, 6, 0, 6, 6, 6)
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)')
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)')
-      pctx.fillStyle = gradient
-      pctx.fillRect(0, 0, 12, 12)
-      puff.refresh()
-    }
-    this.steamTimer = this.time.addEvent({
-      delay: STEAM_PUFF_MS,
-      loop: true,
-      callback: () => {
-        const puff = this.add
-          .image(x + 4 + Math.random() * (w - 8), y + 6 + Math.random() * (h - 10), 'steam-puff')
-          .setDepth(13)
-          .setAlpha(0)
-          .setScale(0.6)
-        this.tweens.add({
-          targets: puff,
-          y: puff.y - 16,
-          scale: 1.6,
-          alpha: { from: 0.6, to: 0 },
-          duration: 1800,
-          ease: 'Sine.easeOut',
-          onComplete: () => puff.destroy(),
-        })
-      },
-    })
-  }
-
-  /**
-   * The bica got her out: the water goes off and the glass clears, she pads
-   * to the bathroom door, thanks the guest and lets herself out the front door.
-   */
-  private rosaLeaves() {
-    const rosa = this.rosa
-    if (!rosa || this.rosaLeaving) return
-    this.rosaLeaving = true
-    this.cfg.bridge.game.emit('rosa', 'tap')
-    this.steamTimer?.remove()
-    this.steamTimer = undefined
-    const glass = this.showerGlass
-    this.showerGlass = undefined
-    const cleared = () => {
-      this.rosaLabel?.setVisible(true)
-      const door = this.furnishings.interactables.find((object) => object.id === 'bathroom-door')?.tiles ?? []
-      const top = Math.min(...door.map((tile) => tile.y))
-      // The half of the doorway in front of the guest, if they're standing at it.
-      const doorway = door.filter((tile) => tile.y === top)
-      const facingGuest = doorway.filter((tile) => tile.x === this.player.tile.x)
-      this.walkRosa(facingGuest.length > 0 ? facingGuest : doorway, () => {
-        this.face(rosa, this.directionToward(rosa.tile, [this.player.tile]))
-        this.rosaLabel?.setText('Obrigada, meu anjo!')
-        this.cfg.bridge.game.emit('rosa', 'thanks')
-        this.time.delayedCall(ROSA_THANKS_MS, () => {
-          this.rosaLabel?.setText('Dona Rosa')
-          this.walkRosa(this.frontDoorstep(), () => this.rosaGone())
-        })
-      })
-    }
-    if (!glass) return cleared()
-    this.tweens.killTweensOf(glass)
-    this.tweens.add({
-      targets: glass,
-      alpha: 0,
-      duration: 900,
-      onComplete: () => {
-        glass.destroy()
-        cleared()
-      },
-    })
-  }
-
-  /** Walks her to the nearest of `goals`, around people if she can, through them if she must. */
-  private walkRosa(goals: Point[], then: () => void) {
-    const rosa = this.rosa
-    if (!rosa) return
-    const shower = this.propAt('shower')
-    const tray = new Set(shower ? propTiles({ kind: 'prop', prop: 'shower', ...shower, solid: true }).map(key) : [])
-    const open = (x: number, y: number) => tray.has(key({ x, y })) || !this.solid.has(key({ x, y }))
-    const path =
-      this.findPath(goals, rosa.tile, (x, y) => open(x, y) && !this.occupied(x, y, rosa)) ??
-      this.findPath(goals, rosa.tile, open) ??
-      []
-    const next = () => {
-      const tile = path.shift()
-      if (!tile) {
-        this.setIdle(rosa)
-        return then()
-      }
-      rosa.facing = this.directionTo(rosa.tile, tile) ?? rosa.facing
-      this.moveWalker(rosa, tile, ROSA_STEP_MS, next)
-    }
-    next()
-  }
-
-  /** The floor just inside the front door. */
-  private frontDoorstep(): Point[] {
-    const steps: Point[] = []
-    for (let y = 0; y < MAP_HEIGHT; y++) {
-      for (let x = 0; x < MAP_WIDTH; x++) if (cellAt(x, y) === 'F') steps.push({ x, y: y - 1 })
-    }
-    return steps
-  }
-
-  /** Out the front door and gone; back in the shower should a guestbook reset shut the bathroom again. */
-  private rosaGone() {
-    const rosa = this.rosa
-    if (!rosa) return
-    rosa.facing = 'down'
-    rosa.sprite.play('rosa-walk-down')
-    this.rosaLabel?.setVisible(false)
-    this.tweens.add({
-      targets: rosa.sprite,
-      y: rosa.sprite.y + TILE / 2,
-      alpha: 0,
-      duration: ROSA_STEP_MS * 2,
-      onComplete: () => {
-        rosa.sprite.destroy()
-        this.rosaLabel?.destroy()
-        this.rosaLabel = undefined
-        this.rosa = null
-        this.rosaLeaving = false
-        this.cfg.bridge.game.emit('rosa', 'gone')
-        if (!this.unlocks.has('bathroom')) this.addRosa()
-      },
-    })
-  }
-
-  private syncRosaLabel() {
-    if (!this.rosa || !this.rosaLabel) return
-    this.rosaLabel.setPosition(Math.round(this.rosa.sprite.x), Math.round(this.rosa.sprite.y - CHAR_H + CHAR_HEADROOM - 1))
   }
 
   // -------------------------------------------------------------------------
@@ -1653,8 +1517,7 @@ export class HouseScene extends Phaser.Scene {
       action = target.object.action
     }
     if (action.type === 'dialogue' && action.id === 'bathroom' && !this.reducedMotion) {
-      // Knock knock.
-      this.cameras.main.shake(160, 0.003)
+      this.bathroomDoor?.play(DOOR_RATTLE)
     }
     this.cfg.bridge.game.emit('interact', action)
   }

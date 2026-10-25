@@ -62,6 +62,29 @@ export const BEER_DIZZY: PlayerEffect = {
   ms: 120_000,
 }
 
+/**
+ * The morning after dozing off: slow feet, heavy edges and a head that won't
+ * quite focus, for five minutes, or half a minute more once the paracetamol
+ * from the bathroom cabinet is down.
+ */
+export const HANGOVER: PlayerEffect = { speed: 0.8, vignette: 0.3, blur: 0.35, ms: 5 * 60_000 }
+export const HANGOVER_TREATED_MS = 30_000
+
+/** Whether the guest is hungover and untreated, kept in memory like the tallies above. */
+export const hangover = {
+  until: 0,
+  start(now = Date.now()) {
+    this.until = now + HANGOVER.ms
+  },
+  /** Slept off, or the paracetamol is down. */
+  clear() {
+    this.until = 0
+  },
+  active(now = Date.now()) {
+    return now < this.until
+  },
+}
+
 export function ordinal(n: number): string {
   const tens = n % 100
   if (tens >= 11 && tens <= 13) return `${n}th`

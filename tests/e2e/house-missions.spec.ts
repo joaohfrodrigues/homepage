@@ -24,9 +24,9 @@ async function pick(page: Page, label: string | RegExp) {
   await choice.click()
 }
 
-async function knock(page: Page) {
+async function tryDoor(page: Page) {
   await interact(page, 'bathroom')
-  await pick(page, 'Better leave it')
+  await pick(page, 'Leave it')
   await expect(dialogue(page)).not.toBeVisible()
 }
 
@@ -54,7 +54,7 @@ test.describe('Missions', () => {
     await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
   })
 
-  test('“Who’s in there?” opens the bathroom, for good until the guestbook is torn out', async ({ page }) => {
+  test('“The stuck door” opens the bathroom, for good until the guestbook is torn out', async ({ page }) => {
     // A controllable clock, so the bica can be stopped right on 9 bar.
     await page.clock.install()
     await page.goto('/')
@@ -67,18 +67,18 @@ test.describe('Missions', () => {
     await expect(missions).toContainText('???')
     await page.keyboard.press('Escape')
 
-    // 1. Three knocks start the mission (and earn the old running joke's sticker).
-    for (let i = 0; i < 3; i++) await knock(page)
+    // 1. Three tries of the handle start the mission (and earn the running joke's sticker).
+    for (let i = 0; i < 3; i++) await tryDoor(page)
     await page.keyboard.press('g')
-    await expect(missions).toContainText('Who’s in there?')
-    await expect(missions).toContainText('1 of 4')
-    await expect(guestbook.getByText('Still occupied (earned)')).toBeVisible()
+    await expect(missions).toContainText('The stuck door')
+    await expect(missions).toContainText('1 of 5')
+    await expect(guestbook.getByText('Stuck again (earned)')).toBeVisible()
     await page.keyboard.press('Escape')
 
-    // 2. João knows who it is.
+    // 2. João knows the knack, for a price.
     await interact(page, 'joao')
-    await pick(page, 'Who’s always in the bathroom?')
-    await expect(dialogue(page)).toContainText('Dona Rosa')
+    await pick(page, 'The bathroom door won’t open')
+    await expect(dialogue(page)).toContainText('the wood swells')
     await pick(page, 'Will do')
 
     // 3. A perfect bica: step the clock until the needle sits on 9 bar.
@@ -97,17 +97,23 @@ test.describe('Missions', () => {
     }
     await bica.getByRole('button', { name: 'Stop!' }).click()
     await expect(bica).toContainText('Perfect bica!')
-    await expect(bica).toContainText('Take it to the bathroom door')
+    await expect(bica).toContainText('Take it to him')
     await page.clock.resume()
     await page.keyboard.press('Escape')
 
-    // Still shut until the bica is handed over.
+    // 4. The bica buys the knack.
+    await interact(page, 'joao')
+    await pick(page, 'Here’s your bica')
+    await expect(dialogue(page)).toContainText('here’s the knack')
+    await pick(page, 'Will do')
+
+    // Still shut until the guest puts their shoulder into it.
     expect(await solidDoorTiles(page)).toEqual(doorTiles)
 
-    // 4. Knock with it in hand.
+    // 5. Lift and shove.
     await interact(page, 'bathroom')
-    await pick(page, 'Hold out the bica')
-    await expect(dialogue(page)).toContainText('The door opens a crack')
+    await pick(page, 'Lift the handle and shove')
+    await expect(dialogue(page)).toContainText('You lift the handle')
     await pick(page, 'Mission complete!')
 
     // The door is a doorway now, and the directory can take you through it.
@@ -117,7 +123,7 @@ test.describe('Missions', () => {
     await expect(page.getByText('Bathroom', { exact: true })).toBeVisible()
     await page.keyboard.press('g')
     await expect(missions).toContainText('★ Done')
-    await expect(guestbook.getByText('Bath time (earned)')).toBeVisible()
+    await expect(guestbook.getByText('Shoulder to it (earned)')).toBeVisible()
     await page.keyboard.press('Escape')
 
     // It stays open after a reload.
@@ -137,7 +143,7 @@ test.describe('Missions', () => {
     await expect(page.getByText('Corridor', { exact: true })).toBeVisible()
     await expect.poll(() => solidDoorTiles(page)).toEqual(doorTiles)
     await page.keyboard.press('m')
-    await expect(directory.getByLabel('Bathroom (occupied)')).toBeVisible()
+    await expect(directory.getByLabel('Bathroom (stuck shut)')).toBeVisible()
     await expect(directory.getByRole('button', { name: 'Go to the bathroom' })).toHaveCount(0)
   })
 })

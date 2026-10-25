@@ -3,7 +3,7 @@ import { isMissionComplete, type MissionId } from '@/game/missions'
 import type { Season } from '@/game/seasons'
 import type { HouseData } from '@/lib/house'
 import type { Weather } from '@/lib/weather'
-import { DOZE_AT } from './intoxication'
+import { DOZE_AT, TIPSY_AT } from './intoxication'
 import type { VisitorStats } from './visitor-stats'
 
 /** Dialogue ids the game can open, plus follow-ups only reachable from a choice. */
@@ -15,6 +15,7 @@ export type DialogueKey =
   | 'sofa-wake'
   | 'sofa-what'
   | 'sofa-count'
+  | 'paracetamol'
 
 /** The night that ended on the sofa, for João to recount when the guest wakes. */
 export interface Binge {
@@ -31,6 +32,7 @@ export type DialogueChoice =
   | { label: string; kind: 'panel'; panel: PanelId }
   | { label: string; kind: 'night'; on: boolean }
   | { label: string; kind: 'beer' }
+  | { label: string; kind: 'paracetamol' }
   | { label: string; kind: 'close' }
   /** Does a mission's step (see `mission-dialogues.ts`), or with no step asks João for a hint. */
   | { label: string; kind: 'mission'; mission: MissionId; step?: string }
@@ -71,14 +73,24 @@ export function joaoTips(stats: VisitorStats, night: boolean): string[] {
 /** What João says once there's nothing left to point at. */
 function nothingLeft(stats: VisitorStats): string {
   return isMissionComplete(stats, 'bathroom')
-    ? 'Dona Rosa says obrigada for the bica, by the way. Her boiler’s still broken, so you’ll see her again.'
+    ? 'Thanks for sorting the bathroom door, by the way. It’ll stick again next time it rains, but now you know the knack.'
     : 'You’ve seen pretty much everything. Make yourself at home.'
 }
 
 export function buildDialogue(
   id: DialogueKey,
   data: HouseData,
-  house: { night: boolean; weather?: Weather; buzzing?: boolean; beers?: number; binge?: Binge | null; stats: VisitorStats; season?: Season | null },
+  house: {
+    night: boolean
+    weather?: Weather
+    buzzing?: boolean
+    beers?: number
+    binge?: Binge | null
+    /** Woke on the sofa after a binge, and it hasn't worn off (or been treated) yet. */
+    hungover?: boolean
+    stats: VisitorStats
+    season?: Season | null
+  },
 ): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
@@ -175,6 +187,9 @@ export function buildDialogue(
         lines: [
           'Morning, sunshine. Easy, don’t sit up too fast.',
           'There’s a glass of water by the sofa. Drink all of it.',
+          isMissionComplete(house.stats, 'bathroom')
+            ? 'Paracetamol’s in the cabinet over the bathroom sink.'
+            : 'There’s paracetamol in the bathroom cabinet, if you can get that door open.',
         ],
         choices: [
           { label: 'Ughhh… what happened??', kind: 'next', id: 'sofa-what' },
@@ -248,10 +263,25 @@ export function buildDialogue(
           { label: 'Snooze', kind: 'close' },
         ],
       }
-    case 'bathroom':
+    case 'bathroom': {
+      const damp = house.weather === 'rain' || house.weather === 'storm'
       return {
-        lines: ['*knock knock*', '“Occupied!”', '…wasn’t João in the living room?'],
-        choices: [{ label: 'Better leave it', kind: 'close' }],
+        lines: [
+          'The handle turns, but the door doesn’t budge. It’s stuck fast in its frame.',
+          damp ? 'All this rain can’t be helping.' : 'Maybe João knows a trick.',
+        ],
+        choices: [{ label: 'Leave it', kind: 'close' }],
+      }
+    }
+    case 'cabinet':
+      return cabinet(house)
+    case 'paracetamol':
+      return {
+        lines: [
+          'You wash one down with a glass of water from the tap.',
+          'Give it twenty minutes, and maybe skip the Super Bock for a while.',
+        ],
+        choices: [{ label: 'Never again', kind: 'close' }],
       }
     case 'zeno':
       return house.night
@@ -284,6 +314,34 @@ export function buildDialogue(
         choices: [{ label: house.night ? 'Listen a while' : 'Back inside', kind: 'close' }],
       }
   }
+}
+
+/** The mirror cabinet over the bathroom sink, and what it has for how the guest is feeling. */
+function cabinet(house: { buzzing?: boolean; beers?: number; hungover?: boolean }): Dialogue {
+  const opened = 'You open the mirror cabinet over the sink.'
+  const shelves = 'Toothpaste, João’s razor, plasters, factor 50 for the long runs and a box of paracetamol.'
+  if (house.hungover) {
+    return {
+      lines: [opened, 'Your reflection looks rough. Very rough.', shelves],
+      choices: [
+        { label: 'Take a paracetamol', kind: 'paracetamol' },
+        { label: 'Close it', kind: 'close' },
+      ],
+    }
+  }
+  if ((house.beers ?? 0) >= TIPSY_AT) {
+    return {
+      lines: [opened, shelves, 'Paracetamol won’t sober you up, though. Water and a lie-down will.'],
+      choices: [{ label: 'Close it', kind: 'close' }],
+    }
+  }
+  if (house.buzzing) {
+    return {
+      lines: [opened, shelves, 'Nothing in here for too much coffee. You’ll just have to wait it out.'],
+      choices: [{ label: 'Close it', kind: 'close' }],
+    }
+  }
+  return { lines: [opened, shelves, 'Nothing you need right now.'], choices: [{ label: 'Close it', kind: 'close' }] }
 }
 
 /** The view from the balcony, by time of day and Lisbon's actual sky. */

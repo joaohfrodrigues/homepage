@@ -1,9 +1,9 @@
 /**
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
  * meow, the coffee machine, a chime for new stickers, the trophy poster's
- * rustle and a fanfare for making a top 10, and the hidden
- * behaviours' heartbeat, beers, snores and morning birds, Dona Rosa's
- * shower and her exit through the front door, and the gulls over the roofs. Most are
+ * rustle and a fanfare for making a top 10, the stuck bathroom door and the
+ * cabinet over its sink, the hidden behaviours' heartbeat, beers, snores and
+ * morning birds, and the gulls over the roofs. Most are
  * synthesised with the Web Audio API; Zeno, the Super Bock and the coffee
  * machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
@@ -131,13 +131,63 @@ export function blip() {
   })
 }
 
-/** Knock knock, on the bathroom door. */
-export function knock() {
+/** The stuck bathroom door: the handle clicks down and up, and the door thumps against its frame. */
+export function doorRattle() {
   play((audio, t) => {
-    for (const at of [0, 0.16]) {
-      note(audio, t + at, { from: 190, to: 90, length: 0.08, level: 0.16 })
-      burst(audio, t + at, { length: 0.04, level: 0.08, filter: 'bandpass', cutoff: 900 })
+    for (const at of [0, 0.22]) {
+      burst(audio, t + at, { length: 0.025, level: 0.07, filter: 'bandpass', cutoff: 3000 })
+      note(audio, t + at, { from: 2100, length: 0.02, level: 0.02, type: 'square' })
+      note(audio, t + at + 0.05, { from: 140, to: 80, length: 0.09, level: 0.14 })
+      burst(audio, t + at + 0.05, { length: 0.06, level: 0.06, filter: 'lowpass', cutoff: 700 })
     }
+  })
+}
+
+/** The shoulder that frees it: a thump, the wood cracking out of the frame, and the hinges' creak. */
+export function doorBurst() {
+  play((audio, t) => {
+    note(audio, t, { from: 110, to: 55, length: 0.22, level: 0.2 })
+    burst(audio, t, { length: 0.1, level: 0.08, filter: 'lowpass', cutoff: 500 })
+    for (const at of [0.08, 0.11, 0.15]) burst(audio, t + at, { length: 0.04, level: 0.09, filter: 'bandpass', cutoff: 1800 })
+    // A slow sawtooth through a narrow band-pass groans like an old hinge.
+    const { ctx, out } = audio
+    const start = t + 0.25
+    const osc = ctx.createOscillator()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(38, start)
+    osc.frequency.linearRampToValueAtTime(62, start + 0.6)
+    const hinge = ctx.createBiquadFilter()
+    hinge.type = 'bandpass'
+    hinge.Q.value = 8
+    hinge.frequency.setValueAtTime(1100, start)
+    hinge.frequency.linearRampToValueAtTime(1500, start + 0.6)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0, start)
+    gain.gain.linearRampToValueAtTime(0.08, start + 0.08)
+    gain.gain.setTargetAtTime(0, start + 0.5, 0.08)
+    osc.connect(hinge).connect(gain).connect(out)
+    osc.start(start)
+    osc.stop(start + 0.9)
+  })
+}
+
+/** The mirror cabinet: its magnetic catch letting go, and a few things clinking on the glass shelf. */
+export function cabinet() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.03, level: 0.06, filter: 'bandpass', cutoff: 2200 })
+    note(audio, t + 0.09, { from: 2900, length: 0.12, level: 0.015 })
+    note(audio, t + 0.14, { from: 3500, length: 0.1, level: 0.01 })
+  })
+}
+
+/** A pill popped out of its blister pack, then water from the tap into a glass. */
+export function paracetamol() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.04, level: 0.07, filter: 'highpass', cutoff: 3000 })
+    note(audio, t, { from: 900, to: 500, length: 0.03, level: 0.03, type: 'square' })
+    burst(audio, t + 0.4, { length: 1.1, level: 0.04, filter: 'bandpass', cutoff: 2600, attack: 0.08 })
+    // The glass filling: its ring rises as the water climbs.
+    note(audio, t + 0.4, { from: 700, to: 1300, length: 1, level: 0.012 })
   })
 }
 
@@ -289,29 +339,6 @@ export function birdsong() {
       [1.2, 3400, 2600],
     ])
       note(audio, t + at, { from, to, length: 0.09, level: 0.03 })
-  })
-}
-
-/** A shower running behind the bathroom door, muffled by it. */
-export function showerRunning() {
-  play((audio, t) => burst(audio, t + 0.3, { length: 1.6, level: 0.04, filter: 'lowpass', cutoff: 1200, attack: 0.3 }))
-}
-
-/** Dona Rosa shuts off the shower: a squeak of the tap, then the last of the water. */
-export function showerOff() {
-  play((audio, t) => {
-    note(audio, t, { from: 1250, to: 1650, length: 0.14, level: 0.035, type: 'square' })
-    burst(audio, t, { length: 0.9, level: 0.05, filter: 'highpass', cutoff: 2600, attack: 0.01 })
-    for (const at of [0.7, 1.05, 1.5]) note(audio, t + at, { from: 1500, to: 900, length: 0.05, level: 0.03 })
-  })
-}
-
-/** The front door shutting behind someone: a thud, then the latch. */
-export function frontDoor() {
-  play((audio, t) => {
-    note(audio, t, { from: 85, to: 50, length: 0.25, level: 0.18 })
-    burst(audio, t, { length: 0.12, level: 0.07, filter: 'lowpass', cutoff: 600 })
-    burst(audio, t + 0.12, { length: 0.03, level: 0.06, filter: 'bandpass', cutoff: 2500 })
   })
 }
 

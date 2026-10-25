@@ -3,8 +3,8 @@
  * generator pieces (limezu.itch.io). scripts/import_limezu.mjs packs the
  * picked pieces' idle and walk rows into one atlas plus character-pieces.json.
  * Pieces stack body, eyes, outfit, hair, face, hat, all on the same 16x32 grid.
- * A few extra pieces (Dona Rosa's bathrobe) are packed for the house's own
- * people only and never offered in the wardrobe.
+ * Extra pieces can be packed for the house's own people only, never offered in
+ * the wardrobe; none are at the moment.
  */
 import PIECES from './character-pieces.json'
 import type { Direction } from './layout'
@@ -19,7 +19,7 @@ export const CHAR_HEADROOM = 6
 /** Frames per direction in each animation. */
 export const CHAR_FRAMES = 6
 
-export type CharacterName = 'joao' | 'guest' | 'rosa'
+export type CharacterName = 'joao' | 'guest'
 export type CharacterAnim = 'idle' | 'walk'
 export const CHARACTER_ANIMS: CharacterAnim[] = ['idle', 'walk']
 /** Directions in the order the pack's sheets lay them out. */
@@ -46,14 +46,12 @@ export const LOOKS: Record<CharacterName, Outfit> = {
   // Grey cap, dark beard and a teal shirt, as in the About photo.
   joao: { skin: 'Body_02', hair: 'Hairstyle_01_04', outfit: 'Outfit_17_01', face: 'Accessory_13_Beard_01', hat: 'Accessory_04_Snapback_04' },
   guest: { skin: 'Body_03', hair: 'Hairstyle_08_02', outfit: 'Outfit_04_01', face: null, hat: 'Accessory_04_Snapback_01' },
-  // Dona Rosa from the third floor: grey buns, reading glasses and a white bathrobe, fresh out of the shower.
-  rosa: { skin: 'Body_07', hair: 'Hairstyle_11_05', outfit: 'Outfit_33_01', face: 'Accessory_15_Glasses_01', hat: null },
 }
 export const DEFAULT_OUTFIT: Outfit = LOOKS.guest
 
 const SLOTS = new Map([
   ...Object.values(PARTS).flatMap((styles) => styles.flatMap((s) => s.variants.map((v) => [v.id, v.slot] as const))),
-  ...PIECES.extras.map((piece) => [piece.id, piece.slot] as const),
+  ...(PIECES.extras as { id: string; slot: number }[]).map((piece) => [piece.id, piece.slot] as const),
 ])
 
 /** Where a piece id sits in its part: which style, which colour variant. */

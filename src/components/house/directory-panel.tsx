@@ -289,7 +289,7 @@ function FloorPlan({
         )
         if (!isRoomOpen(room, opened)) {
           return (
-            <g key={room.id} aria-label={`${room.name} (occupied)`} opacity={0.6}>
+            <g key={room.id} aria-label={`${room.name} (stuck shut)`} opacity={0.6}>
               {body}
             </g>
           )
