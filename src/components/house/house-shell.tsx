@@ -21,7 +21,8 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
-import { ScoresPanel } from './scores-panel'
+import { HALL } from './leaderboard'
+import { saveTab, ScoresPanel } from './scores-panel'
 import {
   BEER_DIZZY,
   BEER_TIPSY,
@@ -362,6 +363,13 @@ export function HouseShell({ data, children }: Props) {
   const syncUnlocks = useCallback(() => {
     const next = readUnlocks()
     setUnlocks((current) => (current.join() === next.join() ? current : next))
+  }, [])
+
+  /** The guestbook's way to the Hall of Fame: the trophy poster's panel, open on that tab, without walking there. */
+  const openHallOfFame = useCallback(() => {
+    saveTab(HALL)
+    sfx.rustle()
+    setPanel('leaderboards')
   }, [])
 
   /** Closing a dialogue opens whatever a mission choice in it unlocked, so it happens in view (the door swinging open). */
@@ -752,7 +760,7 @@ export function HouseShell({ data, children }: Props) {
         <BicaPanel onResult={bicaResult} onPull={pulledBica} onClose={() => setPanel(null)} />
       )}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
-      {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onClose={() => setPanel(null)} />}
+      {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onHallOfFame={openHallOfFame} onClose={() => setPanel(null)} />}
       {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
