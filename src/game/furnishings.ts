@@ -1,5 +1,5 @@
 import type { InteractAction } from './bridge'
-import type { Point } from './layout'
+import type { Point, UnlockId } from './layout'
 import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
 import type { Season } from './seasons'
@@ -16,6 +16,8 @@ export interface Interactable {
   label: string
   tiles: Point[]
   action: InteractAction
+  /** Gone once this is unlocked, like the knock on a door that now stands open. */
+  until?: UnlockId
 }
 
 export interface Furnishings {
@@ -110,7 +112,12 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   prop('chairup', 2, 10, false)
   prop('chairup', 4, 10, false)
   // The right-hand side stays clear: it's the way in from the hall.
-  prop('recordplayer', 9, 5)
+  interactables.push({
+    id: 'recordplayer',
+    label: 'Record player — put some music on',
+    tiles: prop('recordplayer', 9, 5),
+    action: { type: 'panel', panel: 'recordplayer' },
+  })
   limezu('leafyPlant', 2, 3)
   limezu('tallBush', 9, 3)
 
@@ -127,9 +134,9 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   })
   interactables.push({
     id: 'fridge',
-    label: 'Fridge magnets — where was this taken?',
+    label: 'Fridge — magnets, and something cold',
     tiles: prop('fridge', 3, 12),
-    action: { type: 'panel', panel: 'geoguess' },
+    action: { type: 'dialogue', id: 'fridge' },
   })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
@@ -175,6 +182,15 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     action: { type: 'dialogue', id: 'front-door' },
   })
 
+  // --- Corridor (2 × 1m) ---------------------------------------------------------
+  // Its one free stretch of wall, left of the bedroom door, carries the leaderboards.
+  interactables.push({
+    id: 'leaderboards',
+    label: 'Trophy poster — leaderboards',
+    tiles: limezuArea('trophyPoster', 11, 9, 2, 2),
+    action: { type: 'panel', panel: 'leaderboards' },
+  })
+
   // --- Bedroom (3 × 3m) ---------------------------------------------------------
   // A double bed against the north wall between two bedside tables, the
   // wardrobe along the west wall under the window.
@@ -215,7 +231,7 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     action: { type: 'dialogue', id: 'balcony' },
   })
 
-  // --- Bathroom (2 × 2.5m), behind a shut door ------------------------------
+  // --- Bathroom (2 × 2.5m), behind a shut door until its mission -------------
   interactables.push({
     id: 'bathroom-door',
     label: 'Bathroom door',
@@ -226,6 +242,7 @@ export function furnishHouse(season: Season | null = null): Furnishings {
       { x: 14, y: 14 },
     ],
     action: { type: 'dialogue', id: 'bathroom' },
+    until: 'bathroom',
   })
   prop('toilet', 11, 14)
   prop('basin', 12, 14)

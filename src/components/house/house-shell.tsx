@@ -1,23 +1,52 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Sun } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BookOpen, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
-import { getRoom, type RoomId } from '@/game/layout'
+import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
+import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { currentSeason } from '@/game/seasons'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
+import { isNight, nextSun, offsetToLisbonTime, skyAt, type Sky } from '@/lib/sun'
+import { isWeather, type Weather } from '@/lib/weather'
+import { setSoundOn, useSound } from './audio'
 import { BicaPanel } from './bica-panel'
+import { ComicStrip, type ComicId } from './comic-strip'
 import { DialogueBox } from './dialogue-box'
-import { buildDialogue, type DialogueChoice, type DialogueKey } from './dialogues'
+import { buildDialogue, type Binge, type DialogueChoice, type DialogueKey } from './dialogues'
 import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { ScoresPanel } from './scores-panel'
+import {
+  BEER_DIZZY,
+  BEER_TIPSY,
+  BUZZING_AT,
+  CAFFEINE_OVERDOSE,
+  DIZZY_AT,
+  DOZE_AT,
+  OVERDOSE_AT,
+  TIPSY_AT,
+  beer,
+  caffeine,
+} from './intoxication'
+import {
+  buildMissionDialogue,
+  isMissionDialogue,
+  missionReplyKey,
+  withMissionChoices,
+  type MissionDialogueKey,
+} from './mission-dialogues'
+import { stop as stopRecord } from './record-player'
+import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
+import * as sfx from './sfx'
+import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
-import { countVisit, flushStats, updateStats } from './visitor-stats'
+import { countVisit, flushStats, onStickerEarned, readStats, updateStats, type BicaResult } from './visitor-stats'
 import { WardrobePanel } from './wardrobe-panel'
 import { WelcomeCard } from './welcome-card'
 
@@ -25,11 +54,29 @@ const OUTFIT_KEY = 'house:outfit'
 /** Set once a visitor has dismissed the first-visit welcome card. */
 const WELCOMED_KEY = 'house:welcomed'
 
-/** The house starts at night between 8pm and 7am, visitor's local time. */
-function isNightNow(): boolean {
-  const hour = new Date().getHours()
-  return hour >= 20 || hour < 7
+/** How often the house checks where Lisbon's sun has got to. */
+const SKY_TICK_MS = 60_000
+/** A nap until evening wakes you once dusk is over; a night's sleep, in daylight. */
+const AFTER_SUNSET_MS = 45 * 60_000
+const AFTER_SUNRISE_MS = 60 * 60_000
+
+/** `?time=21:15` previews that time of day in Lisbon; the clock runs on from there. */
+function readTimePreview(): number {
+  const preview = new URLSearchParams(window.location.search).get('time')
+  return (preview && offsetToLisbonTime(preview, new Date())) || 0
 }
+
+/** `?weather=rain` (or clear, cloudy, storm) previews a sky without waiting for one. */
+function readWeatherPreview(): Weather | null {
+  const preview = new URLSearchParams(window.location.search).get('weather')
+  return isWeather(preview) ? preview : null
+}
+
+const WEATHER_ICONS = {
+  cloudy: { Icon: Cloud, label: 'Cloudy in Lisbon' },
+  rain: { Icon: CloudRain, label: 'Raining in Lisbon' },
+  storm: { Icon: CloudLightning, label: 'Storm over Lisbon' },
+} as const
 
 function readWelcomed(): boolean {
   try {
@@ -65,6 +112,11 @@ function startRoomFor(pathname: string): RoomId {
   return 'hall'
 }
 
+/** What missions have opened, in a stable order so unchanged sets compare equal. */
+function readUnlocks(): UnlockId[] {
+  return [...unlocksOf(readStats())].sort()
+}
+
 /**
  * Hosts the Phaser house and everything React draws over it: HUD, dialogue,
  * directory and the overlay pages passed in as children. Lives in the (house)
@@ -79,19 +131,31 @@ export function HouseShell({ data, children }: Props) {
   const [ready, setReady] = useState(false)
   const [hint, setHint] = useState<Hint | null>(null)
   const [room, setRoom] = useState<RoomId | null>(null)
-  const [dialogue, setDialogue] = useState<DialogueKey | null>(null)
+  const [dialogue, setDialogue] = useState<DialogueKey | MissionDialogueKey | null>(null)
+  const [comic, setComic] = useState<ComicId | null>(null)
   const [panel, setPanel] = useState<PanelId | null>(null)
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
   const [showControls, setShowControls] = useState(true)
-  // Night and outfit only matter once the game has booted client-side, so
+  // The sky and outfit only matter once the game has booted client-side, so
   // reading the clock and localStorage in the initializers can't cause a
-  // hydration mismatch.
-  const [night, setNight] = useState(() => typeof window !== 'undefined' && isNightNow())
+  // hydration mismatch. The house keeps Lisbon's time, moved on by any naps.
+  const [startOffset] = useState(() => (typeof window !== 'undefined' ? readTimePreview() : 0))
+  const clockOffset = useRef(startOffset)
+  const lisbonNow = useCallback(() => new Date(Date.now() + clockOffset.current), [])
+  const [sky, setSky] = useState<Sky>(() =>
+    typeof window !== 'undefined' ? skyAt(new Date(Date.now() + startOffset)) : { night: 0, warmth: 0, moon: 0 },
+  )
+  const night = isNight(sky)
+  // A nap fades to black on its way to the new light; the clock's own ticks ease in.
+  const fadeToSky = useRef(false)
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
-  // The holidays go by the visitor's calendar too; `?season=` previews one.
+  const [unlocks, setUnlocks] = useState<UnlockId[]>(() => (typeof window !== 'undefined' ? readUnlocks() : []))
+  // The holidays go by the visitor's calendar, not Lisbon's; `?season=` previews one.
   const [season] = useState(() => (typeof window !== 'undefined' ? currentSeason(window.location.search) : null))
-  const initialLook = useRef({ night, outfit, season })
+  const initialLook = useRef({ sky, outfit, unlocks, season })
+  const [weatherPreview] = useState(() => (typeof window !== 'undefined' ? readWeatherPreview() : null))
+  const [weather, setWeather] = useState<Weather>(weatherPreview ?? 'clear')
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
@@ -100,9 +164,11 @@ export function HouseShell({ data, children }: Props) {
   const [welcome, setWelcome] = useState(
     () => typeof window !== 'undefined' && pathname === '/' && !readWelcomed(),
   )
+  const record = useRecordPlayer()
+  const { on: soundOn } = useSound()
 
   const overlayOpen = pathname !== '/'
-  const inputEnabled = !overlayOpen && dialogue === null && panel === null && !welcome
+  const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome
 
   // A page opening (from the directory, say) takes the place of any panel, so
   // closing the page goes straight back to the house.
@@ -175,6 +241,7 @@ export function HouseShell({ data, children }: Props) {
     return () => {
       cancelled = true
       game?.destroy(true)
+      stopRecord()
     }
   }, [bridge, data.trips])
 
@@ -197,6 +264,32 @@ export function HouseShell({ data, children }: Props) {
     ]
     return () => offs.forEach((off) => off())
   }, [bridge, handleInteract])
+
+  // Sound effects; each is silent until the visitor has clicked or pressed a key.
+  useEffect(() => {
+    const offs = [
+      bridge.game.on('step', sfx.step),
+      bridge.game.on('heartbeat', sfx.heartbeat),
+      bridge.game.on('gull', sfx.gull),
+      bridge.game.on('rosa', (moment) => {
+        if (moment === 'tap') sfx.showerOff()
+        else if (moment === 'thanks') sfx.blip()
+        else sfx.frontDoor()
+      }),
+      bridge.game.on('interact', (action) => {
+        if (action.type === 'panel' && action.panel === 'leaderboards') sfx.rustle()
+        else if (action.type !== 'dialogue') sfx.pop()
+        else if (action.id === 'zeno') sfx.meow()
+        else if (action.id === 'bathroom') {
+          sfx.knock()
+          sfx.showerRunning()
+        }
+        else sfx.blip()
+      }),
+      onStickerEarned(sfx.chime),
+    ]
+    return () => offs.forEach((off) => off())
+  }, [bridge])
 
   // The guestbook's tallies, kept in this browser only.
   useEffect(() => {
@@ -223,6 +316,75 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
+
+  // Lisbon's real sky, unless a preview asked for another; clear if it can't be had.
+  useEffect(() => {
+    if (weatherPreview) return
+    let cancelled = false
+    fetch('/api/weather')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { weather?: unknown } | null) => {
+        if (!cancelled && isWeather(body?.weather)) setWeather(body.weather)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [weatherPreview])
+
+  useEffect(() => {
+    if (ready) bridge.ui.emit('weather', weather)
+  }, [bridge, ready, weather])
+
+  // Follow Lisbon's sun as the visit goes on.
+  useEffect(() => {
+    const tick = window.setInterval(() => setSky(skyAt(lisbonNow())), SKY_TICK_MS)
+    return () => window.clearInterval(tick)
+  }, [lisbonNow])
+
+  useEffect(() => {
+    if (!ready) return
+    bridge.ui.emit('sky', { ...sky, animate: fadeToSky.current })
+    fadeToSky.current = false
+  }, [bridge, ready, sky])
+
+  /** Moves the house's clock on to `then`, as a nap does. */
+  const skipTo = useCallback(
+    (then: Date) => {
+      clockOffset.current += then.getTime() - lisbonNow().getTime()
+      setSky(skyAt(then))
+    },
+    [lisbonNow],
+  )
+
+  // Missions open parts of the house (and a guestbook reset shuts them again).
+  useEffect(() => {
+    if (ready) bridge.ui.emit('unlocks', unlocks)
+  }, [bridge, ready, unlocks])
+
+  /** Picks up anything a mission step just opened, or a reset just shut. */
+  const syncUnlocks = useCallback(() => {
+    const next = readUnlocks()
+    setUnlocks((current) => (current.join() === next.join() ? current : next))
+  }, [])
+
+  /** Closing a dialogue opens whatever a mission choice in it unlocked, so it happens in view (Dona Rosa leaving). */
+  const closeDialogue = useCallback(() => {
+    setDialogue(null)
+    syncUnlocks()
+  }, [syncUnlocks])
+
+  /** A perfect bica can be a mission step; what that step says shows under the cup. */
+  const bicaResult = useCallback(
+    (result: BicaResult) => {
+      if (result !== 'perfect') return undefined
+      let note: string | undefined
+      updateStats((stats) => (note = missionEvent(stats, 'perfect-bica').find((step) => step.feedback)?.feedback))
+      syncUnlocks()
+      return note
+    },
+    [syncUnlocks],
+  )
 
   // M toggles the directory and G the guestbook from anywhere in the house (but not over a page or game).
   useEffect(() => {
@@ -273,11 +435,115 @@ export function HouseShell({ data, children }: Props) {
 
   const changeNight = useCallback(
     (on: boolean) => {
-      setNight(on)
+      // Sleep through to after dusk, or to the next morning.
+      const now = lisbonNow()
+      fadeToSky.current = true
+      skipTo(
+        on
+          ? new Date(nextSun('sunset', now).getTime() + AFTER_SUNSET_MS)
+          : new Date(nextSun('sunrise', now).getTime() + AFTER_SUNRISE_MS),
+      )
+      sfx.lightSwitch()
       if (on) updateStats((stats) => stats.naps++)
-      bridge.ui.emit('night', { on, animate: true })
+      // A nap sleeps off the coffee and the beers.
+      caffeine.clear()
+      beer.clear()
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
+    },
+    [bridge, lisbonNow, skipTo],
+  )
+
+  // Ten bicas in five minutes: the guest starts vibrating, and João notices.
+  const pulledBica = useCallback(
+    (lately: number) => {
+      if (lately < OVERDOSE_AT) return
+      bridge.ui.emit('effect', { source: 'caffeine', effect: CAFFEINE_OVERDOSE })
+      if (lately > OVERDOSE_AT) return
+      updateStats((stats) => stats.overdoses++)
+      setPanel(null)
+      setDialogue('caffeine-overdose')
     },
     [bridge],
+  )
+
+  // The night that ended on the sofa, kept for João to recount when the guest wakes.
+  const [binge, setBinge] = useState<Binge | null>(null)
+
+  // Tipsy at three beers, dizzy at five; at seven the guest dozes off and wakes on the sofa.
+  const drinkBeer = useCallback(() => {
+    updateStats((stats) => stats.beers++)
+    const lately = beer.add()
+    sfx.beer(lately >= DIZZY_AT)
+    if (lately >= DOZE_AT) {
+      setDialogue(null)
+      updateStats((stats) => stats.dozes++)
+      setBinge({
+        beers: lately,
+        minutes: Math.max(1, Math.round(beer.span() / 60_000)),
+        bicas: caffeine.count(),
+      })
+      // Sleeping it off clears everything, and it's morning when they wake.
+      beer.clear()
+      caffeine.clear()
+      setComic('doze')
+      return
+    }
+    if (lately >= TIPSY_AT) {
+      bridge.ui.emit('effect', { source: 'beer', effect: lately >= DIZZY_AT ? BEER_DIZZY : BEER_TIPSY })
+    }
+    // The first round that goes to your head gets a close-up of the toast.
+    setDialogue(lately === TIPSY_AT ? null : 'beer')
+    if (lately === TIPSY_AT) setComic('cheers')
+  }, [bridge])
+
+  // Each close-up has its sound: the toast, the snoring, the birds next morning.
+  useEffect(() => {
+    if (comic === 'cheers') sfx.clink()
+    else if (comic === 'doze') sfx.snore()
+    else if (comic === 'wake') sfx.birdsong()
+  }, [comic])
+
+  // The scene brings the morning in behind the fade; the day/night toggle follows only then.
+  useEffect(
+    () =>
+      bridge.game.on('dozed', () => {
+        skipTo(new Date(nextSun('sunrise', lisbonNow()).getTime() + AFTER_SUNRISE_MS))
+        setComic('wake')
+      }),
+    [bridge, lisbonNow, skipTo],
+  )
+
+  // What follows each close-up: the fade to the sofa after nodding off, João's chat after waking.
+  const finishComic = useCallback(() => {
+    setComic(null)
+    if (comic === 'doze') {
+      bridge.ui.emit('effect', { source: 'beer', effect: null })
+      bridge.ui.emit('effect', { source: 'caffeine', effect: null })
+      bridge.ui.emit('doze')
+    } else if (comic === 'wake') setDialogue('sofa-wake')
+  }, [bridge, comic])
+
+  // Built when it opens, so a count running out mid-chat doesn't change the lines.
+  const shownDialogue = useMemo(
+    () =>
+      dialogue &&
+      (isMissionDialogue(dialogue)
+        ? buildMissionDialogue(dialogue, readStats())
+        : withMissionChoices(
+            buildDialogue(dialogue, data, {
+              night,
+              weather,
+              buzzing: caffeine.count() >= BUZZING_AT,
+              beers: beer.count(),
+              binge,
+              stats: readStats(),
+              season,
+            }),
+            dialogue,
+            readStats(),
+          )),
+    [dialogue, data, night, weather, binge, season],
   )
 
   const dismissWelcome = useCallback(() => {
@@ -323,9 +589,23 @@ export function HouseShell({ data, children }: Props) {
         setDialogue(null)
         changeNight(choice.on)
         break
-      case 'close':
-        setDialogue(null)
+      case 'beer':
+        drinkBeer()
         break
+      case 'close':
+        closeDialogue()
+        break
+      case 'mission': {
+        const step = choice.step
+        if (step === undefined) {
+          setDialogue(`mission-hint:${choice.mission}` as const)
+          break
+        }
+        // What the step opens waits for its reply to close (see closeDialogue).
+        updateStats((stats) => completeStep(stats, choice.mission, step))
+        setDialogue(missionReplyKey(choice.mission, step))
+        break
+      }
     }
   }
 
@@ -346,10 +626,27 @@ export function HouseShell({ data, children }: Props) {
               <span className="flex items-center gap-1.5 text-sm leading-tight sm:text-base">
                 João&rsquo;s house
                 {night ? <Moon size={12} aria-label="Night" /> : <Sun size={12} aria-label="Day" />}
+                {weather !== 'clear' && <WeatherIcon weather={weather} />}
               </span>
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
             <div className="flex gap-2">
+              {record.playing && (
+                <button type="button" className="pixel-button pointer-events-auto" onClick={stopRecord} aria-label="Stop the music">
+                  <Music size={14} />
+                  <span className="hidden sm:inline">Stop music</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="pixel-button pointer-events-auto"
+                onClick={() => setSoundOn(!soundOn)}
+                aria-pressed={!soundOn}
+                aria-label={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+                title={soundOn ? 'Mute sounds' : 'Unmute sounds'}
+              >
+                {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              </button>
               <button
                 type="button"
                 className="pixel-button pointer-events-auto"
@@ -405,12 +702,12 @@ export function HouseShell({ data, children }: Props) {
         </>
       )}
 
-      {dialogue && (
+      {dialogue && shownDialogue && (
         <DialogueBox
           key={dialogue}
-          dialogue={buildDialogue(dialogue, data, { night, season })}
+          dialogue={shownDialogue}
           onChoose={choose}
-          onClose={() => setDialogue(null)}
+          onClose={closeDialogue}
           touch={coarsePointer}
         />
       )}
@@ -421,6 +718,7 @@ export function HouseShell({ data, children }: Props) {
         <DirectoryPanel
           currentRoom={room}
           night={night}
+          unlocks={unlocks}
           onTeleport={teleport}
           onVisit={visit}
           onContact={() => setDialogue('letterbox')}
@@ -432,11 +730,24 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'wardrobe' && (
         <WardrobePanel outfit={outfit} onChange={changeOutfit} onClose={() => setPanel(null)} />
       )}
-      {panel === 'bica' && <BicaPanel onClose={() => setPanel(null)} />}
+      {panel === 'bica' && (
+        <BicaPanel onResult={bicaResult} onPull={pulledBica} onClose={() => setPanel(null)} />
+      )}
       {panel === 'geoguess' && <GeoGuessPanel photos={data.geoPhotos} onClose={() => setPanel(null)} />}
-      {panel === 'guestbook' && <GuestbookPanel onClose={() => setPanel(null)} />}
+      {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onClose={() => setPanel(null)} />}
+      {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
+      {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
+
+      {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
+      {comic && <ComicStrip key={comic} id={comic} outfit={outfit} onDone={finishComic} />}
+      <StickerToast onOpen={() => setPanel('guestbook')} />
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>
   )
+}
+
+function WeatherIcon({ weather }: { weather: Exclude<Weather, 'clear'> }) {
+  const { Icon, label } = WEATHER_ICONS[weather]
+  return <Icon size={12} aria-label={label} />
 }

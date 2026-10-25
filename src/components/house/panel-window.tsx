@@ -2,13 +2,17 @@
 
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import type { BoardId } from '@/lib/scores/boards'
 import { cn } from '@/lib/utils'
+import { BoardTabs } from './leaderboard'
 
 interface Props {
   title: string
   eyebrow: string
   onClose: () => void
   width?: 'narrow' | 'wide'
+  /** A game's leaderboard: adds Play and Top 10 tabs around the children. */
+  board?: { id: BoardId; best: number; offer: boolean }
   children: React.ReactNode
 }
 
@@ -36,7 +40,7 @@ export function useEscapeKey(onEscape: () => void) {
  * A pixel window over the house for things that aren't pages: the directory,
  * the wardrobe and the kitchen games. Escape or a click outside closes it.
  */
-export function PanelWindow({ title, eyebrow, onClose, width = 'wide', children }: Props) {
+export function PanelWindow({ title, eyebrow, onClose, width = 'wide', board, children }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -67,7 +71,13 @@ export function PanelWindow({ title, eyebrow, onClose, width = 'wide', children 
             <X size={14} />
           </button>
         </div>
-        {children}
+        {board ? (
+          <BoardTabs board={board.id} best={board.best} offer={board.offer}>
+            {children}
+          </BoardTabs>
+        ) : (
+          children
+        )}
       </div>
     </div>
   )

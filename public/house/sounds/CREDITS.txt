@@ -1,0 +1,11 @@
+Sound recordings used in the house (played by src/components/house/sfx.ts).
+
+All three come from Pixabay (https://pixabay.com/sound-effects/) under the
+Pixabay Content License (https://pixabay.com/service/license-summary/):
+free to use, including commercially, with no attribution required. The
+licence doesn't allow redistributing the files on their own, unchanged; they
+are here only as part of this site.
+
+- zeno-meow.mp3  Zeno's meow when he's petted
+- beer.mp3       a Super Bock opening
+- coffee.mp3     the coffee machine pulling a bica

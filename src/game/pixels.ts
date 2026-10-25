@@ -232,16 +232,6 @@ export function drawWindow(
   if (edges.right) r(14, drop[0], 2, drop[1], WINDOW.curtain)
 }
 
-/** A window in an outside wall seen from above: a slit of glass along the wall top. */
-export function drawCapWindow(ctx: Ctx, ox: number, oy: number, edges: { left: boolean; right: boolean }) {
-  drawWallCap(ctx, ox, oy)
-  const x = edges.left ? 2 : 0
-  const w = (edges.right ? 14 : 16) - x
-  rect(ctx, ox + x, oy + 5, w, 6, WINDOW.frame)
-  rect(ctx, ox + x + (edges.left ? 1 : 0), oy + 6, w - (edges.left ? 1 : 0) - (edges.right ? 1 : 0), 4, WINDOW.glass)
-  if (edges.left) rect(ctx, ox + x + 2, oy + 7, 2, 1, WINDOW.glint)
-}
-
 const IRON = '#2b2a33'
 
 /** The balcony's wrought-iron front railing, seen face-on against the street below. */
@@ -257,6 +247,22 @@ export function drawRailingFront(ctx: Ctx, ox: number, oy: number) {
     rect(ctx, ox + x - 1, oy + 7, 3, 1, IRON)
     rect(ctx, ox + x, oy + 8, 1, 1, IRON)
   }
+  // A string of festoon bulbs, sagging between the railing's posts.
+  rect(ctx, ox, oy + 1, 4, 1, FESTOON.wire)
+  rect(ctx, ox + 4, oy + 2, 8, 1, FESTOON.wire)
+  rect(ctx, ox + 12, oy + 1, 4, 1, FESTOON.wire)
+  drawBulb(ctx, ox + 7, oy + 3)
+}
+
+const FESTOON = { wire: '#5c5862', glass: '#f6dca0', shine: '#fff4d6' }
+
+/** Where the festoon bulbs hang on the balcony railings, from the tile's corner. */
+export const FESTOON_BULBS = { front: { x: 8, y: 5 }, side: { x: 3, y: 9 } }
+
+function drawBulb(ctx: Ctx, x: number, y: number) {
+  rect(ctx, x, y, 2, 1, IRON)
+  rect(ctx, x, y + 1, 2, 3, FESTOON.glass)
+  rect(ctx, x, y + 1, 1, 1, FESTOON.shine)
 }
 
 /** The balcony's side railing from above: the slab ends at a line of iron. */
@@ -270,6 +276,8 @@ export function drawRailingSide(ctx: Ctx, ox: number, oy: number, floor: FloorKi
   rect(ctx, ox + 8, oy, 1, 16, '#b5aa94')
   rect(ctx, ox + 5, oy, 2, 16, IRON)
   for (let y = 1; y < 16; y += 4) rect(ctx, ox + 4, oy + y, 4, 2, IRON)
+  rect(ctx, ox + 3, oy, 1, 16, FESTOON.wire)
+  drawBulb(ctx, ox + 2, oy + 7)
 }
 
 /** An open doorway: the room's floor runs through, framed by wooden posts. */
@@ -466,15 +474,6 @@ export const DESK_LEDS = [
   { x: 41, y: 11 },
 ]
 /** Where light comes from, for the scene's warm glows. */
-export const LIGHT_SOURCES: Partial<Record<PropName, { x: number; y: number; radius: number }>> = {
-  floorlamp: { x: 8, y: 5, radius: 30 },
-  tv: { x: 32, y: 18, radius: 30 },
-  nightstand: { x: 8, y: 2, radius: 16 },
-  desk: { x: 24, y: 8, radius: 18 },
-  xmastree: { x: 8, y: 14, radius: 20 },
-  pumpkin: { x: 8, y: 9, radius: 12 },
-}
-
 const BOOK_COLORS = ['#8e2f35', '#2f5f63', '#c9a227', '#3f6b8a', '#6b4a2e', '#4f7a3a', '#d9a99d', '#2a2233']
 const WHITE_GOODS = { body: '#e8e4da', line: '#c9c3b5', steel: '#b8bcc4', steelDark: '#8a9099' }
 
@@ -549,15 +548,19 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   switch (name) {
     // --- Entrance hall --------------------------------------------------------
     case 'console': {
-      // A narrow table along the side wall: the day's post, and a framed plan of the flat.
+      // A narrow table along the side wall: a little lamp, the day's post, and a framed plan of the flat.
       r(1, 0, 14, 31, PALETTE.ink)
       r(2, 1, 12, 28, PALETTE.wood)
       r(2, 1, 1, 28, PALETTE.woodHighlight)
-      r(4, 3, 9, 10, PALETTE.woodDark)
-      r(5, 4, 7, 5, PALETTE.paper)
-      r(6, 6, 7, 5, '#fbf6ea')
-      r(10, 7, 2, 2, PALETTE.red)
-      r(7, 9, 4, 1, '#b5aa94')
+      // The lamp's linen shade from above, the bulb showing through its top.
+      disc(ctx, ox + 8, oy + 4, 3, '#b8a27a')
+      disc(ctx, ox + 8, oy + 4, 2, '#efe3c6')
+      r(7, 3, 2, 2, '#fff4d6')
+      r(4, 8, 9, 7, PALETTE.woodDark)
+      r(5, 9, 7, 4, PALETTE.paper)
+      r(6, 10, 7, 4, '#fbf6ea')
+      r(10, 11, 2, 2, PALETTE.red)
+      r(7, 13, 4, 1, '#b5aa94')
       r(4, 16, 9, 11, PALETTE.ink)
       r(5, 17, 7, 9, PALETTE.paper)
       r(6, 18, 2, 3, '#7f9f88')
@@ -1056,16 +1059,44 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     case 'basin': {
-      r(2, 1, 12, 10, WHITE_GOODS.steel)
-      r(3, 2, 10, 8, '#bfe3f2')
-      r(4, 3, 3, 1, '#e8f6fc')
-      r(7, 11, 2, 4, WHITE_GOODS.steel)
-      r(1, 14, 14, 6, PALETTE.ink)
-      r(2, 15, 12, 4, '#f4f6f8')
-      r(4, 16, 8, 2, '#dfe6ec')
-      r(1, 20, 14, 10, '#c9b38f')
-      r(7, 21, 1, 9, '#a8946f')
-      r(1, 30, 14, 1, PALETTE.shadow)
+      // The mirror hangs high on the wall, over a glass shelf.
+      r(2, -5, 12, 10, PALETTE.ink)
+      r(3, -4, 10, 8, WHITE_GOODS.steel)
+      r(4, -3, 8, 6, '#a9d4e6')
+      r(4, 2, 8, 1, '#93c2d6')
+      r(5, -2, 3, 1, '#e8f6fc')
+      r(5, -1, 1, 1, '#e8f6fc')
+      r(9, 0, 1, 1, '#e8f6fc')
+      r(10, -1, 1, 1, '#e8f6fc')
+      r(3, 7, 10, 1, '#dfe6ec')
+      r(3, 8, 10, 1, WHITE_GOODS.steelDark)
+      // The basin set in its counter, a small mixer tap over the bowl.
+      r(0, 13, 16, 8, PALETTE.ink)
+      r(1, 14, 14, 6, '#f4f6f8')
+      r(3, 15, 10, 4, '#dfe6ec')
+      r(3, 15, 1, 1, '#f4f6f8')
+      r(12, 15, 1, 1, '#f4f6f8')
+      r(3, 18, 1, 1, '#f4f6f8')
+      r(12, 18, 1, 1, '#f4f6f8')
+      r(4, 17, 8, 2, '#c9d3dc')
+      r(7, 17, 2, 1, WHITE_GOODS.steelDark)
+      r(1, 19, 14, 1, '#dfe6ec')
+      r(7, 13, 2, 1, WHITE_GOODS.steelDark)
+      r(7, 14, 1, 1, WHITE_GOODS.steel)
+      r(7, 15, 1, 1, WHITE_GOODS.steelDark)
+      // The cabinet under it: two doors with brass knobs, on a plinth.
+      r(0, 21, 16, 10, PALETTE.ink)
+      r(1, 21, 14, 9, '#d2b48c')
+      r(1, 21, 14, 1, '#e0c8a2')
+      r(2, 22, 5, 7, '#c2a27a')
+      r(9, 22, 5, 7, '#c2a27a')
+      r(3, 23, 3, 5, '#d2b48c')
+      r(10, 23, 3, 5, '#d2b48c')
+      r(7, 22, 2, 7, '#a8946f')
+      r(6, 25, 1, 2, PALETTE.brass)
+      r(9, 25, 1, 2, PALETTE.brass)
+      r(1, 29, 14, 1, '#8f7a58')
+      r(0, 31, 16, 1, PALETTE.shadow)
       break
     }
     case 'shower': {

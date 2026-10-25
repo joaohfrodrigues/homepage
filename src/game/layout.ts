@@ -9,9 +9,10 @@ export const METRES_PER_TILE = 0.5
  *   .  floor
  *   D  doorway through a north wall (walkable)
  *   d  doorway through a side wall (walkable)
- *   X  a shut door (the bathroom: occupied)
+ *   X  a shut door (the bathroom: occupied until its mission opens it)
  *   F  front door
- *   W  window: tall and glazed in a wall face, a slit of glass in a wall top
+ *   W  window: tall and glazed in a wall face; in a back wall seen from above,
+ *      just wall (only the street windows show the sky)
  *   =  the balcony's front railing; |  its side railing
  *      (space) outside the flat
  *
@@ -55,6 +56,14 @@ export const MAP_HEIGHT = FLOOR_PLAN.length
 
 export type RoomId = 'hall' | 'corridor' | 'living' | 'kitchen' | 'study' | 'bedroom' | 'bathroom' | 'balcony'
 
+/** Parts of the house a mission opens up (see `src/game/missions.ts`). */
+export type UnlockId = 'bathroom'
+
+/** Shut doors on the plan and what opens each: once open it is drawn and walked as a doorway. */
+const LOCKED_DOORS: Partial<Record<string, UnlockId>> = { X: 'bathroom' }
+
+const NOTHING_UNLOCKED: ReadonlySet<UnlockId> = new Set()
+
 /**
  * One light oak runs through every room but the kitchen and bathroom. Its
  * planks run front-to-back, towards the street windows, except in the
@@ -78,8 +87,8 @@ export interface Room {
   wall: WallKind
   spawn: Point
   spawnFacing: Direction
-  /** Behind a shut door: shown on the floor plan but not somewhere to teleport. */
-  locked?: boolean
+  /** Behind a shut door until this is unlocked: shown on the floor plan but not somewhere to teleport. */
+  unlock?: UnlockId
 }
 
 export const ROOMS: Room[] = [
@@ -145,7 +154,7 @@ export const ROOMS: Room[] = [
     wall: 'bath',
     spawn: { x: 12, y: 17 },
     spawnFacing: 'up',
-    locked: true,
+    unlock: 'bathroom',
   },
   {
     id: 'balcony',
@@ -168,14 +177,22 @@ export function roomAt(x: number, y: number): Room | undefined {
   )
 }
 
-export function cellAt(x: number, y: number): string {
+/** Whether a room can be walked into, given what has been unlocked. */
+export function isRoomOpen(room: Room, unlocks: ReadonlySet<UnlockId> = NOTHING_UNLOCKED): boolean {
+  return room.unlock === undefined || unlocks.has(room.unlock)
+}
+
+/** The plan's character at a tile; a shut door that has been unlocked reads as a doorway (`D`). */
+export function cellAt(x: number, y: number, unlocks: ReadonlySet<UnlockId> = NOTHING_UNLOCKED): string {
   if (y < 0 || y >= MAP_HEIGHT || x < 0 || x >= MAP_WIDTH) return ' '
-  return FLOOR_PLAN[y][x]
+  const cell = FLOOR_PLAN[y][x]
+  const unlock = LOCKED_DOORS[cell]
+  return unlock && unlocks.has(unlock) ? 'D' : cell
 }
 
 /** Tiles the player can stand on, ignoring furniture and characters. */
-export function isFloorCell(x: number, y: number): boolean {
-  const cell = cellAt(x, y)
+export function isFloorCell(x: number, y: number, unlocks?: ReadonlySet<UnlockId>): boolean {
+  const cell = cellAt(x, y, unlocks)
   return cell === '.' || cell === 'D' || cell === 'd'
 }
 
