@@ -5,7 +5,46 @@ import { BOARDS, type BoardId, type ScoreEntry, type ScoreMeta } from '@/lib/sco
 import { fetchBoard, lastName, ownEntryId, submittedScore, submitToBoard } from '@/lib/scores/client'
 import { NAME_MAX, checkName } from '@/lib/scores/validate'
 import { cn } from '@/lib/utils'
-import { fanfare } from './sfx'
+import { fanfare, signature } from './sfx'
+
+/** The board visitors sign once they have every sticker, as opposed to the games' scoreboards. */
+export const HALL = 'hall-of-fame' satisfies BoardId
+
+/** When a Hall of Fame entry was signed, as "Oct 2026". */
+function signedOn(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
+/** The Hall of Fame, newest first: each name with the sticker count it signed with ("13/13"). */
+function HallOfFame({ entries, ownId }: { entries: ScoreEntry[]; ownId?: string }) {
+  if (entries.length === 0) return <p className="text-sm text-[#6d6359]">Nobody has signed yet. Collect every sticker to be the first.</p>
+  return (
+    <ol className="space-y-1 text-sm" aria-label="Hall of Fame signatures">
+      {entries.map((entry) => {
+        const own = entry.id === ownId
+        return (
+          <li
+            key={entry.id}
+            aria-current={own ? 'true' : undefined}
+            className={cn(
+              'grid grid-cols-[1fr_auto] items-baseline gap-2 border-2 px-2 py-0.5',
+              own ? 'border-[#2a2233] bg-[#f0dc96]' : 'border-transparent',
+            )}
+          >
+            <span className="truncate">
+              <span aria-hidden className="font-pixel mr-2 text-[#c9a227]">★</span>
+              {entry.name}
+              {own && <span className="font-pixel ml-2 text-xs text-[#6d6359]">you</span>}
+            </span>
+            <span className="font-pixel text-xs">
+              {entry.score}/{entry.meta?.total ?? entry.score} <span className="text-[#6d6359]">· {signedOn(entry.at)}</span>
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
 
 export type BoardState = { status: 'loading' } | { status: 'offline' } | { status: 'ok'; entries: ScoreEntry[] }
 
@@ -30,8 +69,13 @@ export function Leaderboard({ board, state, ownId }: { board: BoardId; state: Bo
   const { title, unit } = BOARDS[board]
   if (state.status === 'loading') return <p className="text-sm text-[#6d6359]">Fetching the board…</p>
   if (state.status === 'offline') {
-    return <p className="text-sm text-[#6d6359]">The {title} board is offline right now. Your scores are still kept here.</p>
+    return board === HALL ? (
+      <p className="text-sm text-[#6d6359]">The Hall of Fame is unavailable right now. Your stickers are still kept here.</p>
+    ) : (
+      <p className="text-sm text-[#6d6359]">The {title} board is offline right now. Your scores are still kept here.</p>
+    )
   }
+  if (board === HALL) return <HallOfFame entries={state.entries} ownId={ownId} />
   if (state.entries.length === 0) return <p className="text-sm text-[#6d6359]">No scores yet. Be the first on the board.</p>
   return (
     <ol className="space-y-1 text-sm" aria-label={`${title} top ${state.entries.length}`}>
@@ -76,6 +120,7 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
   const [problem, setProblem] = useState<string | null>(null)
   const inputId = useId()
   const { title, unit } = BOARDS[board]
+  const hall = board === HALL
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -88,9 +133,13 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
     setProblem(null)
     const result = await submitToBoard(board, checked.value, score, meta)
     setBusy(false)
-    if (result.status === 'offline') setProblem('The leaderboard is offline right now. Try again later.')
-    else if (result.status === 'error') setProblem(result.message)
-    else {
+    if (result.status === 'offline') {
+      setProblem(hall ? 'The Hall of Fame is unavailable right now. Try again later.' : 'The leaderboard is offline right now. Try again later.')
+    } else if (result.status === 'error') setProblem(result.message)
+    else if (hall) {
+      signature()
+      onSubmitted(result.entry, 'Signed! Your name is up in the Hall of Fame.', result.entries)
+    } else {
       if (result.improved && result.rank) fanfare()
       const message = !result.improved
         ? `Your best of ${result.entry.score} is already on the board.`
@@ -104,7 +153,15 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
   return (
     <form onSubmit={submit} className="border-2 border-dashed border-[#b5aa94] p-3 text-sm">
       <label htmlFor={inputId} className="mb-2 block">
-        Put your best, <span className="font-pixel">{score} {unit}</span>, on the {title} board?
+        {hall ? (
+          <>
+            You have all <span className="font-pixel">{score} {unit}</span>. Sign the Hall of Fame?
+          </>
+        ) : (
+          <>
+            Put your best, <span className="font-pixel">{score} {unit}</span>, on the {title} board?
+          </>
+        )}
       </label>
       <div className="flex flex-wrap gap-2">
         <input
@@ -118,11 +175,14 @@ export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
           className="min-w-0 flex-1 basis-40 border-2 border-[#2a2233] bg-[#fbf6ea] px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]"
         />
         <button type="submit" className="pixel-button" disabled={busy}>
-          {busy ? 'Sending…' : 'Submit to the leaderboard'}
+          {busy ? 'Sending…' : hall ? 'Sign the Hall of Fame' : 'Submit to the leaderboard'}
         </button>
       </div>
       <p className="mt-2 text-xs text-[#6d6359]" aria-live="polite">
-        {problem ?? 'Only this name and score are sent, and only when you press the button.'}
+        {problem ??
+          (hall
+            ? 'Only this name and your sticker count are sent, and only when you press the button.'
+            : 'Only this name and score are sent, and only when you press the button.')}
       </p>
     </form>
   )

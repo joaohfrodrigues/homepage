@@ -77,7 +77,9 @@ site's sections:
     grab a beer). Each game has a Top 10 tab, and after a new personal best offers to put it on the
     public leaderboard under a name of the visitor's choosing (prefilled with the last one used).
 - **Corridor** - the trophy poster opens the leaderboards, a tab per game with the visitor's own
-    best, the top 10, and the same opt-in form while that best isn't on the board yet.
+    best, the top 10, and the same opt-in form while that best isn't on the board yet. Its last tab
+    is the Hall of Fame: visitors who collected every sticker, newest first, each with the sticker
+    count they signed with and the month ("13/13 · Oct 2026").
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
@@ -104,6 +106,10 @@ up a toast ("★ First sip unlocked") under the HUD for a few seconds, also anno
 readers; clicking it opens the guestbook. Announced sticker ids are saved under
 `house:stickers-seen`, so a reload doesn't repeat a toast, and stickers earned before toasts existed
 are marked seen quietly. A new sticker needs only an entry in `ACHIEVEMENTS` to get its toast.
+With every sticker earned, the guestbook offers to sign the Hall of Fame, which opens the trophy
+poster's panel on that tab (no walk to the corridor). Each browser signs once per sticker total: a
+new sticker in `ACHIEVEMENTS` makes the set incomplete again, and completing it lets the visitor
+sign again, replacing their entry and moving it to the top.
 
 Pages over the house have real URLs, so Back closes them. Panels, dialogue and the photo lightbox
 aren't pages, but each gets a history entry at the same URL while it is open
@@ -122,7 +128,8 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, the stuck bathroom door
 rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
-poster and a fanfare when a submitted score makes a top 10, plus the hidden behaviours' own: a
+poster, a fanfare when a submitted score makes a top 10 and a pen scribble before it when the Hall of
+Fame is signed, plus the hidden behaviours' own: a
 heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
 clink for the toast, snoring as the guest nods off and birds when they wake, and the call of a gull
 gliding over the roofs. Zeno's meow, the Super Bock and the coffee machine are recordings in
@@ -195,8 +202,8 @@ Where things live:
     between Phaser and React.
 - `src/components/house/` - the shell, panels (directory, wardrobe, guestbook, record player, travel
     map, ...), dialogue, the sticker toast and the sound (`audio.ts`, `sfx.ts`, `record-player.ts`);
-    `leaderboard.tsx` holds the games' Top 10 tabs and submit form, and `scores-panel.tsx` the
-    trophy poster's tabbed boards.
+    `leaderboard.tsx` holds the games' Top 10 tabs, the Hall of Fame list and the submit form, and
+    `scores-panel.tsx` the trophy poster's tabbed boards.
 - `public/house/` - the art: character and furniture atlases cut from LimeZu's
     [Modern Interiors](https://limezu.itch.io/moderninteriors) pack (licence in
     `public/house/LICENSE-limezu.txt`) and the world-map land outlines.
@@ -229,9 +236,9 @@ there, with its score bounds and whether it ranks by score or lists newest first
     `{ board, id, hidden }` - hides an entry (or shows it again). Hidden entries stay hidden if
     their browser submits again. Entries can also be edited in the Upstash console.
 
-In the house, nothing is posted until the visitor presses *Submit to the leaderboard*; boards are
-only read, when a game's Top 10 tab or the trophy poster is opened. A board that
-can't be reached shows as offline, and the games play on regardless.
+In the house, nothing is posted until the visitor presses *Submit to the leaderboard* (or *Sign the
+Hall of Fame*); boards are only read, when a game's Top 10 tab or the trophy poster is opened. A
+board that can't be reached shows as offline, and the games play on regardless.
 
 Everything is checked on the server: scores must be whole numbers within the board's bounds, names
 2-16 characters of Latin letters, digits and single `space . _ ' -` separators, and past a small

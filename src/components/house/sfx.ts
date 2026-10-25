@@ -263,13 +263,26 @@ export function rustle() {
   })
 }
 
+const taDaDaa: Sound = (audio, t) => {
+  note(audio, t, { from: hz(67), length: 0.12, level: 0.04, type: 'square' })
+  note(audio, t + 0.12, { from: hz(72), length: 0.12, level: 0.04, type: 'square' })
+  note(audio, t + 0.24, { from: hz(76), length: 0.5, level: 0.045, type: 'square' })
+  note(audio, t + 0.24, { from: hz(64), length: 0.5, level: 0.025, type: 'triangle' })
+}
+
 /** Ta-da-daa: a submitted score made a top 10. */
 export function fanfare() {
+  play(taDaDaa)
+}
+
+/** A pen scratching a quick autograph on the Hall of Fame, then the fanfare. */
+export function signature() {
   play((audio, t) => {
-    note(audio, t, { from: hz(67), length: 0.12, level: 0.04, type: 'square' })
-    note(audio, t + 0.12, { from: hz(72), length: 0.12, level: 0.04, type: 'square' })
-    note(audio, t + 0.24, { from: hz(76), length: 0.5, level: 0.045, type: 'square' })
-    note(audio, t + 0.24, { from: hz(64), length: 0.5, level: 0.025, type: 'triangle' })
+    // Short strokes of nib on paper, each pitched a little differently, like loops of a signature.
+    ;[2600, 3400, 2200, 3800, 3000].forEach((cutoff, i) => {
+      burst(audio, t + i * 0.07, { length: 0.06, level: 0.025, filter: 'bandpass', cutoff, attack: 0.01 })
+    })
+    taDaDaa(audio, t + 0.45)
   })
 }
 

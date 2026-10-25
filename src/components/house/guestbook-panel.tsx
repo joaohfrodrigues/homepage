@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { getRoom, type RoomId } from '@/game/layout'
 import { MISSIONS, currentStep, isMissionStarted, missionProgress, type Mission } from '@/game/missions'
+import { submittedScore } from '@/lib/scores/client'
 import { cn } from '@/lib/utils'
+import { HALL } from './leaderboard'
 import { PanelWindow } from './panel-window'
 import {
   ACHIEVEMENTS,
@@ -18,6 +20,8 @@ import {
 interface Props {
   /** After the page is torn out, so the house can shut whatever missions had opened. */
   onReset?: () => void
+  /** Opens the Hall of Fame on the trophy poster, to sign it or see it. */
+  onHallOfFame?: () => void
   onClose: () => void
 }
 
@@ -163,7 +167,7 @@ function MissionCard({ mission, stats }: { mission: Mission; stats: VisitorStats
  * The hall guestbook: the visitor's own stats and best scores, plus a page of
  * stickers to collect. Everything comes from this browser's localStorage.
  */
-export function GuestbookPanel({ onReset, onClose }: Props) {
+export function GuestbookPanel({ onReset, onHallOfFame, onClose }: Props) {
   // A snapshot: walking keeps changing the live stats, but nobody walks with this open.
   const [stats, setStats] = useState(() => structuredClone(readStats()))
   const [confirmReset, setConfirmReset] = useState(false)
@@ -175,6 +179,9 @@ export function GuestbookPanel({ onReset, onClose }: Props) {
   const bicas = totalBicas(stats)
   const walked = distance(metresWalked(stats))
   const earned = ACHIEVEMENTS.filter((achievement) => achievement.earned(stats))
+  const fullSet = earned.length === ACHIEVEMENTS.length
+  // Signed with every sticker there is now; new stickers make it signable again.
+  const signed = submittedScore(HALL) >= ACHIEVEMENTS.length
 
   function reset() {
     if (!confirmReset) {
@@ -290,6 +297,20 @@ export function GuestbookPanel({ onReset, onClose }: Props) {
             )
           })}
         </ul>
+        {fullSet && onHallOfFame ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-2 border-[#2a2233] bg-[#f0dc96] p-3 text-sm">
+            <p>
+              {signed
+                ? 'You’re in the Hall of Fame on the corridor’s trophy poster.'
+                : 'Every sticker! Put your name in the Hall of Fame.'}
+            </p>
+            <button type="button" className="pixel-button" onClick={onHallOfFame}>
+              {signed ? 'See the Hall of Fame' : 'Sign the Hall of Fame'}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-[#6d6359]">Collect every sticker to sign the Hall of Fame on the corridor’s trophy poster.</p>
+        )}
       </section>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-[#b5aa94] pt-4">
