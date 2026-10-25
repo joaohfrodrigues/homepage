@@ -48,7 +48,8 @@ test.describe('Too many bicas', () => {
   })
 
   test('ten in a row set the guest vibrating, until a nap', async ({ page }) => {
-    await page.goto('/')
+    // No season: a holiday greeting would come before João's aside and throw off the clicks below.
+    await page.goto('/?season=none')
     await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
     const bica = await openBica(page)
     await pull(page, 4)
