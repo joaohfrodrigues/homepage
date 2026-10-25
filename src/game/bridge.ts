@@ -1,5 +1,6 @@
 import type { Direction, RoomId, UnlockId } from './layout'
 import type { Outfit } from './characters'
+import type { Weather } from '@/lib/weather'
 
 /** Windows drawn by React over the house that aren't pages of their own. */
 export type PanelId = 'directory' | 'wardrobe' | 'bica' | 'geoguess' | 'guestbook' | 'recordplayer' | 'leaderboards'
@@ -79,6 +80,8 @@ interface GameEvents {
   rosa: 'tap' | 'thanks' | 'gone'
   /** A beat of the pounding heart while an effect shakes (even when reduced motion keeps the camera still). */
   heartbeat: undefined
+  /** A gull gliding over the house calls out. */
+  gull: undefined
 }
 
 interface UiEvents {
@@ -95,8 +98,10 @@ interface UiEvents {
    * the thing there, which a second tap (once the guest is facing it) uses.
    */
   tapAt: { x: number; y: number }
-  /** Switch to night (lamps on, rooms dark) or back to day; fades when `animate`. */
-  night: { on: boolean; animate: boolean }
+  /** Lisbon's light: how far into the night (0–1) and how golden; `animate` fades through black, as after a nap. */
+  sky: { night: number; warmth: number; moon: number; animate: boolean }
+  /** Lisbon's sky through the windows and on the balcony. */
+  weather: Weather
   outfit: Outfit
   /** Everything missions have opened so far; anything left out is (or goes back to being) shut. */
   unlocks: UnlockId[]

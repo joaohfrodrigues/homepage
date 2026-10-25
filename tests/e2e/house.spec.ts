@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 import { furnishHouse } from '../../src/game/furnishings'
 import { TILE, type Point } from '../../src/game/layout'
 
@@ -375,6 +375,54 @@ test.describe('House', () => {
     await bica.getByRole('button', { name: 'Start the pull' }).click()
     await bica.getByRole('button', { name: 'Stop!' }).click()
     await expect(page.getByRole('status').getByRole('button', { name: 'First sip unlocked' })).toBeVisible()
+  })
+})
+
+test.describe('Lisbon weather', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
+  })
+
+  /** Jumps to the balcony and steps up to the railing to look out. */
+  async function lookOut(page: Page) {
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('m')
+    await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the balcony' }).click()
+    await expect(page.getByText('Balcony', { exact: true })).toBeVisible()
+    const railing = page.getByRole('button', { name: 'E Railing — look out over Lisbon' })
+    await expect(async () => {
+      await page.keyboard.press('ArrowRight')
+      await expect(railing).toBeVisible({ timeout: 500 })
+    }).toPass()
+    await railing.click()
+    return page.getByRole('dialog', { name: 'Notice' })
+  }
+
+  test('rain in Lisbon shows in the HUD and from the balcony', async ({ page }) => {
+    await page.route('**/api/weather', (route) => route.fulfill({ json: { weather: 'rain' } }))
+    await page.goto('/')
+    await expect(page.getByLabel('Raining in Lisbon')).toBeVisible({ timeout: 15_000 })
+    await expect(await lookOut(page)).toContainText('Raining in Lisbon. Again.')
+  })
+
+  test('a failed forecast leaves the sky clear', async ({ page }) => {
+    await page.route('**/api/weather', (route) => route.abort())
+    await page.goto('/')
+    const view = await lookOut(page)
+    await expect(view).toContainText(/Terracotta rooftops|The street lamps are on/)
+    await expect(page.getByLabel(/in Lisbon|over Lisbon/)).toHaveCount(0)
+  })
+
+  test('?weather= previews a sky without asking for the forecast', async ({ page }) => {
+    let asked = false
+    await page.route('**/api/weather', (route) => {
+      asked = true
+      return route.fulfill({ json: { weather: 'clear' } })
+    })
+    await page.goto('/?weather=storm')
+    await expect(page.getByLabel('Storm over Lisbon')).toBeVisible({ timeout: 15_000 })
+    await expect(await lookOut(page)).toContainText('Thunder rolls in over the Tejo')
+    expect(asked).toBe(false)
   })
 })
 

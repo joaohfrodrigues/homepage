@@ -21,8 +21,11 @@ import {
 import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
+import { WeatherLayer } from './weather-layer'
+import { Exterior } from './exterior'
+import { Lighting } from './lighting'
+import { isNight, type Sky } from '@/lib/sun'
 import {
-  LIGHT_SOURCES,
   MAP_WALL,
   FACINGS,
   PROP_SIZES,
@@ -35,7 +38,6 @@ import {
   drawFocusArrow,
   drawSparkle,
   traceSilhouette,
-  drawCapWindow,
   drawDoorway,
   drawFloor,
   drawRailingFront,
@@ -70,11 +72,17 @@ export interface HouseSceneConfig {
   trips: Trip[]
   startRoom: RoomId
   fontFamily: string
-  night: boolean
+  /** Lisbon's light when the house opens. */
+  sky: Sky
   outfit: Outfit
   /** What missions have opened up already. */
   unlocks: UnlockId[]
 }
+
+/** How long the light takes to catch up with Lisbon's sun after each tick of the clock. */
+const SKY_EASE_MS = 2500
+/** Waking on the sofa after a heavy night: full daylight, still a little golden. */
+const MORNING: Omit<Sky, 'moon'> = { night: 0, warmth: 0.35 }
 
 const DELTAS: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -180,8 +188,11 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
-  private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
-  private nightOverlay!: Phaser.GameObjects.Rectangle
+  private lighting!: Lighting
+  private sky: Sky = { night: 0, warmth: 0, moon: 0 }
+  private skyTween: Phaser.Tweens.Tween | null = null
+  private weather!: WeatherLayer
+  private exterior?: Exterior
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -240,6 +251,7 @@ export class HouseScene extends Phaser.Scene {
   }
 
   create() {
+    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     this.bakeHouse()
     this.bakeCharacters()
     this.bakeZeno()
@@ -247,6 +259,13 @@ export class HouseScene extends Phaser.Scene {
     this.addAmbience()
 
     this.bakeCues()
+    this.weather = new WeatherLayer(this, this.reducedMotion)
+    this.weather.setNight(this.sky.night, this.sky.moon)
+    this.exterior = new Exterior(this, {
+      reducedMotion: this.reducedMotion,
+      night: isNight(this.cfg.sky),
+      onCry: () => this.cfg.bridge.game.emit('gull'),
+    })
 
     const start = getRoom(this.cfg.startRoom).spawn
     this.player = this.addWalker('guest', start, this.spawnFacing(this.cfg.startRoom))
@@ -390,9 +409,8 @@ export class HouseScene extends Phaser.Scene {
         } else {
           const part = wallPartAt(x, y)
           const edges = { left: openCellAt(x - 1, y) !== cell, right: openCellAt(x + 1, y) !== cell }
-          if (cell === 'W' && (part === 'cap' || !below)) {
-            drawCapWindow(ctx, ox, oy, edges)
-          } else if (part === 'cap' || !below) {
+          // A back window seen from above is just wall: only the street windows show the sky.
+          if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
           } else if (cell === 'W') {
             drawWindow(ctx, ox, oy, below.wall, part, edges)
@@ -602,35 +620,10 @@ export class HouseScene extends Phaser.Scene {
     return this.furnishings.decor.find((item) => item.kind === 'prop' && item.prop === name)
   }
 
-  /** The cosy bits: warm light pools under lamps and screens, and the Pi's blinking LEDs. */
+  /** The house's light, day and night, and the Pi's blinking LEDs. */
   private addAmbience() {
-    const glow = this.textures.createCanvas('glow', 64, 64)!
-    const gctx = glow.getContext()
-    const gradient = gctx.createRadialGradient(32, 32, 0, 32, 32, 32)
-    gradient.addColorStop(0, 'rgba(255, 196, 120, 0.55)')
-    gradient.addColorStop(1, 'rgba(255, 196, 120, 0)')
-    gctx.fillStyle = gradient
-    gctx.fillRect(0, 0, 64, 64)
-    glow.refresh()
-
-    for (const item of this.furnishings.decor) {
-      if (item.kind !== 'prop') continue
-      const light = LIGHT_SOURCES[item.prop]
-      if (!light) continue
-      const image = this.add
-        .image(item.x * TILE + light.x, item.y * TILE + light.y, 'glow')
-        .setDisplaySize(light.radius * 2, light.radius * 2)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(30)
-      this.glows.push({ image, day: item.prop === 'tv' ? 0.35 : 0.6, night: item.prop === 'tv' ? 0.8 : 1 })
-    }
-
-    // Night: everything but the light pools and interaction cues sinks into blue.
-    this.nightOverlay = this.add
-      .rectangle(-20 * TILE, -20 * TILE, (MAP_WIDTH + 40) * TILE, (MAP_HEIGHT + 40) * TILE, 0x0b1030)
-      .setOrigin(0)
-      .setDepth(29)
-    this.applyNight(this.cfg.night)
+    this.lighting = new Lighting(this, this.furnishings.decor, this.reducedMotion)
+    this.applySky(this.cfg.sky)
 
     // The Pi's disk enclosure on the study desk.
     const rack = this.propAt('desk')
@@ -653,22 +646,42 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
-  private applyNight(on: boolean) {
-    this.nightOverlay.setAlpha(on ? 0.55 : 0)
-    for (const glow of this.glows) glow.image.setAlpha(on ? glow.night : glow.day)
+  private applySky(sky: Sky) {
+    this.sky = sky
+    this.lighting.setSky(sky)
+    this.exterior?.setNight(isNight(sky))
+    this.weather?.setNight(sky.night, sky.moon)
   }
 
-  /** Fade out, flip day/night, fade back in — as if the visitor just woke up. */
-  private setNight(on: boolean, animate: boolean) {
-    if (!animate || this.reducedMotion) {
-      this.applyNight(on)
+  /**
+   * Lisbon's light moves on: eased in over a few seconds as the sun goes, or,
+   * after a nap, faded through black as if the visitor just woke up.
+   */
+  private setSky(sky: Sky, animate: boolean) {
+    this.skyTween?.stop()
+    if (animate && !this.reducedMotion) {
+      const camera = this.cameras.main
+      camera.fadeOut(450, 8, 10, 24)
+      camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.applySky(sky)
+        camera.fadeIn(700, 8, 10, 24)
+      })
       return
     }
-    const camera = this.cameras.main
-    camera.fadeOut(450, 8, 10, 24)
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.applyNight(on)
-      camera.fadeIn(700, 8, 10, 24)
+    if (animate || this.reducedMotion) return this.applySky(sky)
+    const from = this.sky
+    this.skyTween = this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: SKY_EASE_MS,
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 1
+        this.applySky({
+          night: from.night + (sky.night - from.night) * t,
+          warmth: from.warmth + (sky.warmth - from.warmth) * t,
+          moon: sky.moon,
+        })
+      },
     })
   }
 
@@ -773,7 +786,7 @@ export class HouseScene extends Phaser.Scene {
       seat,
       'down',
       () => {
-        this.applyNight(false)
+        this.applySky({ ...MORNING, moon: this.sky.moon })
         // At the corner of the sofa rather than straight in front, so he doesn't hide the guest.
         const beside = [1, -1, 0]
           .map((dx) => ({ x: seat.x + dx, y: seat.y + 1 }))
@@ -824,7 +837,6 @@ export class HouseScene extends Phaser.Scene {
    * sparkle shown while the visitor is close by.
    */
   private bakeCues() {
-    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     const small = (name: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
       const texture = this.textures.createCanvas(name, w, h)!
       draw(texture.getContext())
@@ -1872,7 +1884,12 @@ export class HouseScene extends Phaser.Scene {
     this.unsubscribers.push(
       ui.on('teleport', (room) => this.teleport(room)),
       ui.on('visit', (target) => this.visit(target)),
-      ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
+      ui.on('sky', ({ animate, ...sky }) => this.setSky(sky, animate)),
+      ui.on('weather', (weather) => {
+        this.weather.set(weather)
+        this.exterior?.setWeather(weather)
+        this.lighting.setWeather(weather)
+      }),
       ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
       ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
       ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),

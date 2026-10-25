@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 // data/watch-history.json is live data periodically overwritten by the Plex
 // sync — these assertions are intentionally structural (shape, not specific

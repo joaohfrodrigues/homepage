@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { decorTiles, furnishHouse } from '../../src/game/furnishings'
 import { MAP_HEIGHT, MAP_WIDTH, ROOMS, TILE, getRoom, isFloorCell, type Point, type UnlockId } from '../../src/game/layout'
 import { limezuRect } from '../../src/game/limezu-furniture'

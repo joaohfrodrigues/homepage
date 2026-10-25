@@ -2,13 +2,15 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
+import { BookOpen, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
 import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
+import { isNight, nextSun, offsetToLisbonTime, skyAt, type Sky } from '@/lib/sun'
+import { isWeather, type Weather } from '@/lib/weather'
 import { setSoundOn, useSound } from './audio'
 import { BicaPanel } from './bica-panel'
 import { ComicStrip, type ComicId } from './comic-strip'
@@ -51,11 +53,29 @@ const OUTFIT_KEY = 'house:outfit'
 /** Set once a visitor has dismissed the first-visit welcome card. */
 const WELCOMED_KEY = 'house:welcomed'
 
-/** The house starts at night between 8pm and 7am, visitor's local time. */
-function isNightNow(): boolean {
-  const hour = new Date().getHours()
-  return hour >= 20 || hour < 7
+/** How often the house checks where Lisbon's sun has got to. */
+const SKY_TICK_MS = 60_000
+/** A nap until evening wakes you once dusk is over; a night's sleep, in daylight. */
+const AFTER_SUNSET_MS = 45 * 60_000
+const AFTER_SUNRISE_MS = 60 * 60_000
+
+/** `?time=21:15` previews that time of day in Lisbon; the clock runs on from there. */
+function readTimePreview(): number {
+  const preview = new URLSearchParams(window.location.search).get('time')
+  return (preview && offsetToLisbonTime(preview, new Date())) || 0
 }
+
+/** `?weather=rain` (or clear, cloudy, storm) previews a sky without waiting for one. */
+function readWeatherPreview(): Weather | null {
+  const preview = new URLSearchParams(window.location.search).get('weather')
+  return isWeather(preview) ? preview : null
+}
+
+const WEATHER_ICONS = {
+  cloudy: { Icon: Cloud, label: 'Cloudy in Lisbon' },
+  rain: { Icon: CloudRain, label: 'Raining in Lisbon' },
+  storm: { Icon: CloudLightning, label: 'Storm over Lisbon' },
+} as const
 
 function readWelcomed(): boolean {
   try {
@@ -116,13 +136,23 @@ export function HouseShell({ data, children }: Props) {
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
   const [showControls, setShowControls] = useState(true)
-  // Night and outfit only matter once the game has booted client-side, so
+  // The sky and outfit only matter once the game has booted client-side, so
   // reading the clock and localStorage in the initializers can't cause a
-  // hydration mismatch.
-  const [night, setNight] = useState(() => typeof window !== 'undefined' && isNightNow())
+  // hydration mismatch. The house keeps Lisbon's time, moved on by any naps.
+  const [startOffset] = useState(() => (typeof window !== 'undefined' ? readTimePreview() : 0))
+  const clockOffset = useRef(startOffset)
+  const lisbonNow = useCallback(() => new Date(Date.now() + clockOffset.current), [])
+  const [sky, setSky] = useState<Sky>(() =>
+    typeof window !== 'undefined' ? skyAt(new Date(Date.now() + startOffset)) : { night: 0, warmth: 0, moon: 0 },
+  )
+  const night = isNight(sky)
+  // A nap fades to black on its way to the new light; the clock's own ticks ease in.
+  const fadeToSky = useRef(false)
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
   const [unlocks, setUnlocks] = useState<UnlockId[]>(() => (typeof window !== 'undefined' ? readUnlocks() : []))
-  const initialLook = useRef({ night, outfit, unlocks })
+  const initialLook = useRef({ sky, outfit, unlocks })
+  const [weatherPreview] = useState(() => (typeof window !== 'undefined' ? readWeatherPreview() : null))
+  const [weather, setWeather] = useState<Weather>(weatherPreview ?? 'clear')
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
   const [coarsePointer] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches,
@@ -237,6 +267,7 @@ export function HouseShell({ data, children }: Props) {
     const offs = [
       bridge.game.on('step', sfx.step),
       bridge.game.on('heartbeat', sfx.heartbeat),
+      bridge.game.on('gull', sfx.gull),
       bridge.game.on('rosa', (moment) => {
         if (moment === 'tap') sfx.showerOff()
         else if (moment === 'thanks') sfx.blip()
@@ -282,6 +313,46 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
+
+  // Lisbon's real sky, unless a preview asked for another; clear if it can't be had.
+  useEffect(() => {
+    if (weatherPreview) return
+    let cancelled = false
+    fetch('/api/weather')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: { weather?: unknown } | null) => {
+        if (!cancelled && isWeather(body?.weather)) setWeather(body.weather)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [weatherPreview])
+
+  useEffect(() => {
+    if (ready) bridge.ui.emit('weather', weather)
+  }, [bridge, ready, weather])
+
+  // Follow Lisbon's sun as the visit goes on.
+  useEffect(() => {
+    const tick = window.setInterval(() => setSky(skyAt(lisbonNow())), SKY_TICK_MS)
+    return () => window.clearInterval(tick)
+  }, [lisbonNow])
+
+  useEffect(() => {
+    if (!ready) return
+    bridge.ui.emit('sky', { ...sky, animate: fadeToSky.current })
+    fadeToSky.current = false
+  }, [bridge, ready, sky])
+
+  /** Moves the house's clock on to `then`, as a nap does. */
+  const skipTo = useCallback(
+    (then: Date) => {
+      clockOffset.current += then.getTime() - lisbonNow().getTime()
+      setSky(skyAt(then))
+    },
+    [lisbonNow],
+  )
 
   // Missions open parts of the house (and a guestbook reset shuts them again).
   useEffect(() => {
@@ -361,7 +432,14 @@ export function HouseShell({ data, children }: Props) {
 
   const changeNight = useCallback(
     (on: boolean) => {
-      setNight(on)
+      // Sleep through to after dusk, or to the next morning.
+      const now = lisbonNow()
+      fadeToSky.current = true
+      skipTo(
+        on
+          ? new Date(nextSun('sunset', now).getTime() + AFTER_SUNSET_MS)
+          : new Date(nextSun('sunrise', now).getTime() + AFTER_SUNRISE_MS),
+      )
       sfx.lightSwitch()
       if (on) updateStats((stats) => stats.naps++)
       // A nap sleeps off the coffee and the beers.
@@ -369,9 +447,8 @@ export function HouseShell({ data, children }: Props) {
       beer.clear()
       bridge.ui.emit('effect', { source: 'caffeine', effect: null })
       bridge.ui.emit('effect', { source: 'beer', effect: null })
-      bridge.ui.emit('night', { on, animate: true })
     },
-    [bridge],
+    [bridge, lisbonNow, skipTo],
   )
 
   // Ten bicas in five minutes: the guest starts vibrating, and João notices.
@@ -428,10 +505,10 @@ export function HouseShell({ data, children }: Props) {
   useEffect(
     () =>
       bridge.game.on('dozed', () => {
-        setNight(false)
+        skipTo(new Date(nextSun('sunrise', lisbonNow()).getTime() + AFTER_SUNRISE_MS))
         setComic('wake')
       }),
-    [bridge],
+    [bridge, lisbonNow, skipTo],
   )
 
   // What follows each close-up: the fade to the sofa after nodding off, João's chat after waking.
@@ -453,6 +530,7 @@ export function HouseShell({ data, children }: Props) {
         : withMissionChoices(
             buildDialogue(dialogue, data, {
               night,
+              weather,
               buzzing: caffeine.count() >= BUZZING_AT,
               beers: beer.count(),
               binge,
@@ -461,7 +539,7 @@ export function HouseShell({ data, children }: Props) {
             dialogue,
             readStats(),
           )),
-    [dialogue, data, night, binge],
+    [dialogue, data, night, weather, binge],
   )
 
   const dismissWelcome = useCallback(() => {
@@ -544,6 +622,7 @@ export function HouseShell({ data, children }: Props) {
               <span className="flex items-center gap-1.5 text-sm leading-tight sm:text-base">
                 João&rsquo;s house
                 {night ? <Moon size={12} aria-label="Night" /> : <Sun size={12} aria-label="Day" />}
+                {weather !== 'clear' && <WeatherIcon weather={weather} />}
               </span>
               {room && <span className="block text-xs leading-tight text-[#e8c95a]">{getRoom(room).name}</span>}
             </div>
@@ -662,4 +741,9 @@ export function HouseShell({ data, children }: Props) {
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
     </div>
   )
+}
+
+function WeatherIcon({ weather }: { weather: Exclude<Weather, 'clear'> }) {
+  const { Icon, label } = WEATHER_ICONS[weather]
+  return <Icon size={12} aria-label={label} />
 }
