@@ -174,10 +174,19 @@ as well as the bicas. Those counts live in memory for the session only
 `prefers-reduced-motion` the temporary effects (`effect` on the bridge) drop shake, jitter, sway
 and drift, hold the vignette and blur still, and the comic panels appear all at once.
 
+The visitor's local date also puts up seasonal decorations (`src/game/seasons.ts`): a tree and a
+bolo-rei in December until Dia de Reis, sardines, manjericos and paper garlands through June for the
+Santos Populares, a pumpkin by the front door and Zeno in a witch's hat for Halloween week, and
+balloons on New Year's Eve and Day (and on João's birthday, once `BIRTHDAY` is set). João greets
+visitors with a seasonal line, and at night the tree's lights and the pumpkin's candle light the
+dark around them like the lamps. Add `?season=xmas` (or `santos`, `halloween`, `newyear`,
+`birthday`) to the URL to preview one whatever the date, or `?season=none` to turn them off.
+
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/missions.ts` - missions and what they unlock;
+    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/missions.ts` - missions and what
+    they unlock; `src/game/seasons.ts` - which decorations are up;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
     lamps; `src/game/exterior.ts` - the street, roof and gulls outside the balcony;
     `src/game/weather-layer.ts` - rain, cloud and lightning over it; `src/game/bridge.ts` - events
@@ -200,7 +209,8 @@ bun run og                                                  # re-snapshot the sh
 
 The pack's licence forbids redistributing it, so only the packed atlases are committed — never the
 pack itself. `bun run og` needs a running dev server and writes `src/assets/og-image.png`; re-run it
-and commit the PNG whenever the house art changes.
+and commit the PNG whenever the house art changes. It always snapshots the everyday house
+(`?season=none`), so seasonal decorations never need a new one.
 
 ## 🏆 Scoreboards API
 
@@ -397,7 +407,7 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions
+│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, seasons
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured

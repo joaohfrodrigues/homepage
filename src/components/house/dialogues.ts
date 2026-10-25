@@ -1,5 +1,6 @@
 import type { DialogueId, PanelId } from '@/game/bridge'
 import { isMissionComplete, type MissionId } from '@/game/missions'
+import type { Season } from '@/game/seasons'
 import type { HouseData } from '@/lib/house'
 import type { Weather } from '@/lib/weather'
 import { DOZE_AT } from './intoxication'
@@ -40,6 +41,15 @@ export interface Dialogue {
   choices: DialogueChoice[]
 }
 
+/** What João has to say about the decorations, if any are up. */
+const SEASON_GREETINGS: Record<Season, string> = {
+  xmas: 'Feliz Natal! There’s bolo-rei on the table. Whoever finds the fava buys next year’s.',
+  santos: 'Santos Populares! Smell that? Half of Lisbon is grilling sardines tonight. Take a manjerico on your way out.',
+  halloween: 'Happy Halloween! Zeno agreed to the costume for exactly one treat. Mind the pumpkin by the door.',
+  newyear: 'Feliz Ano Novo! Twelve raisins at midnight, one wish each. I always run out of wishes first.',
+  birthday: 'You came on my birthday! Grab a balloon on your way through.',
+}
+
 /**
  * João's pointers to whatever the visitor hasn't found yet, most worth seeing
  * first. Each one drops out once its stat says it's been done.
@@ -68,7 +78,7 @@ function nothingLeft(stats: VisitorStats): string {
 export function buildDialogue(
   id: DialogueKey,
   data: HouseData,
-  house: { night: boolean; weather?: Weather; buzzing?: boolean; beers?: number; binge?: Binge | null; stats: VisitorStats },
+  house: { night: boolean; weather?: Weather; buzzing?: boolean; beers?: number; binge?: Binge | null; stats: VisitorStats; season?: Season | null },
 ): Dialogue {
   const contactChoices: DialogueChoice[] = data.contactLinks.map((link) => ({
     label: link.label,
@@ -83,11 +93,13 @@ export function buildDialogue(
       // The chat is counted as it opens, so the first one already reads 1.
       const firstMeeting = house.stats.chats <= 1
       const buzzing = house.buzzing ? ['…you’re buzzing a bit. How many bicas was that?'] : []
+      const seasonal = house.season ? [SEASON_GREETINGS[house.season]] : []
       if (firstMeeting) {
         return {
           speaker: 'João',
           lines: [
             "Hey, welcome in! I'm João.",
+            ...seasonal,
             ...buzzing,
             'By day I build data pipelines. The rest of the time it’s photography, films and the drums.',
             'If you ever need me, my contacts are on the note on the console by the front door.',
@@ -109,7 +121,7 @@ export function buildDialogue(
             : greetings[house.stats.chats % greetings.length]
       return {
         speaker: 'João',
-        lines: [greeting, ...buzzing, tips[0] ?? nothingLeft(house.stats)],
+        lines: [greeting, ...seasonal, ...buzzing, tips[0] ?? nothingLeft(house.stats)],
         choices: [
           ...(tips.length > 1 ? [{ label: 'Any other tips?', kind: 'next', id: 'joao-tip' } as const] : []),
           { label: 'More about me →', kind: 'link', href: '/about' },
@@ -248,7 +260,12 @@ export function buildDialogue(
             choices: [{ label: 'Blink back', kind: 'close' }],
           }
         : {
-            lines: ['Zeno, the tuxedo cat, bumps his head into your hand.', 'Prrrrrrrr…'],
+            lines: [
+              house.season === 'halloween'
+                ? 'Zeno, the tuxedo cat, bumps his head into your hand. His witch’s hat slips over one eye.'
+                : 'Zeno, the tuxedo cat, bumps his head into your hand.',
+              'Prrrrrrrr…',
+            ],
             choices: [{ label: 'Scratch behind the ears', kind: 'close' }],
           }
     case 'litterbox-dirty':

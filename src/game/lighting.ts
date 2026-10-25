@@ -64,6 +64,9 @@ const PROP_LIGHTS: Partial<Record<PropName, Omit<Light, 'x' | 'y'> & { dx: numbe
   // and spreads down over the unit or desk below onto the floor.
   tv: { dx: 32, dy: 7, shape: 'fan', w: 80, h: 100, colour: SCREEN, reveal: 0.55, night: 0.2, day: 0.05, flicker: true },
   desk: { dx: 23, dy: 2, shape: 'fan', w: 44, h: 52, colour: 0xa9c4ff, reveal: 0.45, night: 0.16, day: 0.04 },
+  // Seasonal: the tree's fairy lights and the candle in the pumpkin.
+  xmastree: { dx: 8, dy: 14, shape: 'pool', w: 48, h: 44, colour: 0xffd690, reveal: 0.5, night: 0.2, day: 0 },
+  pumpkin: { dx: 8, dy: 9, shape: 'pool', w: 28, h: 24, colour: 0xff9a3c, reveal: 0.35, night: 0.22, day: 0 },
 }
 
 /** Builds every light in the house from the furniture and the floor plan. */

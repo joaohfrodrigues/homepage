@@ -7,6 +7,7 @@ import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTa
 import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
 import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
 import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
+import { currentSeason } from '@/game/seasons'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
 import { isNight, nextSun, offsetToLisbonTime, skyAt, type Sky } from '@/lib/sun'
@@ -150,7 +151,9 @@ export function HouseShell({ data, children }: Props) {
   const fadeToSky = useRef(false)
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
   const [unlocks, setUnlocks] = useState<UnlockId[]>(() => (typeof window !== 'undefined' ? readUnlocks() : []))
-  const initialLook = useRef({ sky, outfit, unlocks })
+  // The holidays go by the visitor's calendar, not Lisbon's; `?season=` previews one.
+  const [season] = useState(() => (typeof window !== 'undefined' ? currentSeason(window.location.search) : null))
+  const initialLook = useRef({ sky, outfit, unlocks, season })
   const [weatherPreview] = useState(() => (typeof window !== 'undefined' ? readWeatherPreview() : null))
   const [weather, setWeather] = useState<Weather>(weatherPreview ?? 'clear')
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
@@ -535,11 +538,12 @@ export function HouseShell({ data, children }: Props) {
               beers: beer.count(),
               binge,
               stats: readStats(),
+              season,
             }),
             dialogue,
             readStats(),
           )),
-    [dialogue, data, night, weather, binge],
+    [dialogue, data, night, weather, binge, season],
   )
 
   const dismissWelcome = useCallback(() => {
