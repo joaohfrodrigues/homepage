@@ -145,11 +145,6 @@ export function isMissionComplete(stats: VisitorStats, id: MissionId): boolean {
   return missionProgress(stats, mission) === mission.steps.length
 }
 
-/** Missions under way: started, not finished. */
-export function activeMissions(stats: VisitorStats): Mission[] {
-  return MISSIONS.filter((mission) => isMissionStarted(stats, mission) && currentStep(stats, mission) !== undefined)
-}
-
 /** Everything finished missions have opened. Derived from the steps, so a guestbook reset locks it all again. */
 export function unlocksOf(stats: VisitorStats): Set<UnlockId> {
   return new Set(

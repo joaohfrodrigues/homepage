@@ -58,7 +58,7 @@ export function decorTiles(decor: Decor): Point[] {
 }
 
 /** Opening a topic goes straight into its window. */
-export function topicAction(id: TopicId): InteractAction {
+function topicAction(id: TopicId): InteractAction {
   return { type: 'navigate', href: getTopic(id).href }
 }
 

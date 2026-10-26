@@ -8,7 +8,7 @@ export const SEASONS = ['xmas', 'santos', 'halloween', 'newyear', 'birthday'] as
 export type Season = (typeof SEASONS)[number]
 
 /** João's birthday as month (1-12) and day; the party only happens once it's set. */
-export const BIRTHDAY: { month: number; day: number } | null = null
+const BIRTHDAY: { month: number; day: number } | null = null
 
 /** The season on this local date, or null on an ordinary day. */
 export function seasonOn(date: Date): Season | null {

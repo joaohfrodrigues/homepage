@@ -70,7 +70,7 @@ const PROP_LIGHTS: Partial<Record<PropName, Omit<Light, 'x' | 'y'> & { dx: numbe
 }
 
 /** Builds every light in the house from the furniture and the floor plan. */
-export function houseLights(decor: Decor[]): Light[] {
+function houseLights(decor: Decor[]): Light[] {
   const lights: Light[] = []
   for (const item of decor) {
     if (item.kind !== 'prop') continue

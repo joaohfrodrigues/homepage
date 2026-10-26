@@ -7,7 +7,7 @@ import type { FloorKind, WallKind } from './layout'
 
 export type Ctx = CanvasRenderingContext2D
 
-export const PALETTE = {
+const PALETTE = {
   ink: '#2a2233',
   shadow: 'rgba(20, 14, 30, 0.28)',
   // Walnut: dark enough to read against the light oak floors.
@@ -1301,7 +1301,7 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
 // ---------------------------------------------------------------------------
 // Interaction cues
 
-export const OUTLINE_COLOR = '#fff3c4'
+const OUTLINE_COLOR = '#fff3c4'
 
 /**
  * Traces the opaque pixels of `src` (anything over half alpha, so soft drop
