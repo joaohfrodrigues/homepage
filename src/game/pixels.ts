@@ -596,59 +596,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   }
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
-    // --- Kitchen --------------------------------------------------------------
-    case 'coffeecounter': {
-      drawKitchenUnit(ctx, ox, oy)
-      r(4, 9, 8, 8, PALETTE.ink)
-      r(5, 10, 6, 6, '#2a2a30')
-      r(6, 13, 3, 1, '#c0392b')
-      r(9, 15, 2, 2, PALETTE.paper)
-      break
-    }
-    case 'sink': {
-      drawKitchenUnit(ctx, ox, oy)
-      r(7, 11, 2, 5, WHITE_GOODS.steel)
-      r(3, 16, 10, 3, WHITE_GOODS.steel)
-      r(4, 17, 8, 1, WHITE_GOODS.steelDark)
-      break
-    }
-    case 'kcounter':
-      drawSideCounter(ctx, ox, oy, [0, 1, 2, 1][Math.floor(oy / 16) % 4])
-      break
-    case 'khob': {
-      drawSideCounter(ctx, ox, oy, 0)
-      r(1, 1, 9, 14, '#1b1b20')
-      for (const [cx, cy] of [
-        [3, 4],
-        [8, 4],
-        [3, 11],
-        [8, 11],
-      ] as const) {
-        disc(ctx, ox + cx, oy + cy, 2, '#3a3a44')
-        r(cx, cy, 1, 1, '#1b1b20')
-      }
-      r(5, 7, 1, 1, '#e05a48')
-      break
-    }
-    case 'litterbox': {
-      // An open tray of sand, so whatever Zeno leaves in it is plain to see.
-      r(1, 3, 14, 12, PALETTE.ink)
-      r(2, 4, 12, 10, '#7fa7bd')
-      r(2, 4, 12, 1, '#9fc3d6')
-      r(3, 5, 10, 8, '#e3d6b4')
-      for (const [x, y] of [
-        [4, 6],
-        [8, 7],
-        [11, 6],
-        [5, 10],
-        [10, 11],
-        [7, 9],
-      ] as const) {
-        r(x, y, 1, 1, '#cbbd96')
-      }
-      r(1, 15, 14, 1, PALETTE.shadow)
-      break
-    }
     // --- Bedroom ----------------------------------------------------------------
     case 'nightstand': {
       r(2, 5, 12, 10, PALETTE.ink)
