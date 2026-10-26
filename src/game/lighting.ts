@@ -14,8 +14,10 @@ import { FESTOON_BULBS, type PropName } from './pixels'
  * hall console and festoon bulbs on the balcony.
  * The TV and the study's monitor throw a cool fan of light forward rather than
  * a ring. The dark is one canvas with soft holes cut where light falls, so
- * lamps light what's around them instead of glowing on top of it; a faint tint
- * on top gives each its colour.
+ * lamps light what's around them instead of glowing on top of it. With WebGL,
+ * the lamps and screens are Phaser's per-pixel lights, which brighten what they
+ * fall on and leave dark pixels dark; bare bulbs you look straight at, and
+ * every light on the Canvas renderer, are a faint tint on top instead.
  */
 
 /** The night's blue, and how much of the scene it covers away from any light. */
@@ -34,12 +36,6 @@ const WARM = 0xffc27a
 const SCREEN_SPREAD = 0.45
 const SCREEN = 0x9db8ff
 
-/**
- * Prototype: `?lights=shader` lights the lamps and screens with Phaser's
- * per-pixel lights instead of tints laid on top, so a lamp brightens what it falls on
- * and leaves dark pixels dark. The night overlay stays as it is. L flips
- * between the two to compare.
- */
 /** Shader light strength for each unit of a light's `night` tint; a screen's cool light shows less on warm wood. */
 const SHADER_GAIN: Record<Shape, number> = { pool: 3.2, fan: 14, beam: 0 }
 /** How high above the floor each kind of light sits, in px; higher spreads it wider. */
@@ -189,10 +185,8 @@ export class Lighting {
   private wash: Phaser.GameObjects.Rectangle
   private weather: Weather = 'clear'
   private flicker = 1
-  /** The prototype's shader lights, each standing in for one tint while `shaderOn`. */
+  /** Shader lights, each standing in for one light's tint. */
   private shaderLights = new Map<Light, Phaser.GameObjects.Light[]>()
-  private shaderLit: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[] = []
-  private shaderOn = false
 
   constructor(
     private scene: Phaser.Scene,
@@ -244,12 +238,11 @@ export class Lighting {
   }
 
   /**
-   * Under `?lights=shader`, lights `objects` with Phaser's lights for the
-   * house's lamps and screens. Does nothing without WebGL.
+   * Lights `objects` with Phaser's lights for the house's lamps and screens.
+   * Without WebGL they keep their tints.
    */
   useShaderLights(objects: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[]) {
     const { scene } = this
-    if (new URLSearchParams(window.location.search).get('lights') !== 'shader') return
     if (scene.sys.renderer.type !== Phaser.WEBGL) return
     scene.lights.enable().setAmbientColor(0xffffff)
     for (const light of this.lights) {
@@ -269,14 +262,7 @@ export class Lighting {
       })
       this.shaderLights.set(light, cones)
     }
-    this.shaderLit = objects
-    this.setShader(true)
-    scene.input.keyboard?.on('keydown-L', () => this.setShader(!this.shaderOn))
-  }
-
-  private setShader(on: boolean) {
-    this.shaderOn = on
-    for (const object of this.shaderLit) object.setLighting(on)
+    for (const object of objects) object.setLighting(true)
     this.applyTints()
   }
 
@@ -300,9 +286,8 @@ export class Lighting {
       if (light.flicker) alpha *= this.flicker
       const shader = this.shaderLights.get(light)
       if (shader) {
-        const intensity = this.shaderOn ? (alpha * SHADER_GAIN[light.shape]) / shader.length : 0
-        for (const part of shader) part.setIntensity(intensity)
-        if (this.shaderOn) alpha = 0
+        for (const part of shader) part.setIntensity((alpha * SHADER_GAIN[light.shape]) / shader.length)
+        alpha = 0
       }
       image.setAlpha(alpha).setVisible(alpha > 0.002)
     }
