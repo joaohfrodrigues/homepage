@@ -246,8 +246,7 @@ export function LowPolyRoom() {
       const joao = new THREE.Group()
       const body = joaoGltf.scene
       body.scale.setScalar(CHAR_SCALE)
-      // The pack's clips turn the root bone round, so the animated body faces -Z; face it forward again.
-      body.rotation.y = Math.PI
+      // The animated body faces +Z, so joao.rotation.y = atan2(dir.x, dir.z) points him along dir.
       joao.add(body)
       joao.position.copy(grid.centre(...layout.start))
       joao.rotation.y = -Math.PI / 4 // facing the camera
