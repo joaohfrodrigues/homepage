@@ -41,7 +41,7 @@ const SCREEN = 0x9db8ff
  * between the two to compare.
  */
 /** Shader light strength for each unit of a light's `night` tint; a screen's cool light shows less on warm wood. */
-const SHADER_GAIN: Record<Shape, number> = { pool: 3.2, fan: 9, beam: 0 }
+const SHADER_GAIN: Record<Shape, number> = { pool: 3.2, fan: 14, beam: 0 }
 /** How high above the floor each kind of light sits, in px; higher spreads it wider. */
 const SHADER_HEIGHT: Record<Shape, number> = { pool: 22, fan: 70, beam: 0 }
 /**
@@ -49,6 +49,11 @@ const SHADER_HEIGHT: Record<Shape, number> = { pool: 22, fan: 70, beam: 0 }
  * doesn't light the picture itself: this share of its fan's length down.
  */
 const SCREEN_FOOT = 0.15
+/**
+ * A screen is a row of this many cones across its width, so its light comes off
+ * the whole screen rather than fanning out of one pixel.
+ */
+const SCREEN_CONES = 4
 
 type Shape = 'pool' | 'fan' | 'beam'
 
@@ -185,7 +190,7 @@ export class Lighting {
   private weather: Weather = 'clear'
   private flicker = 1
   /** The prototype's shader lights, each standing in for one tint while `shaderOn`. */
-  private shaderLights = new Map<Light, Phaser.GameObjects.Light>()
+  private shaderLights = new Map<Light, Phaser.GameObjects.Light[]>()
   private shaderLit: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[] = []
   private shaderOn = false
 
@@ -250,13 +255,19 @@ export class Lighting {
     for (const light of this.lights) {
       if (light.window || light.glow) continue
       const z = SHADER_HEIGHT[light.shape]
-      // A screen faces the room, down the map: a cone about as wide as its fan.
+      if (light.shape === 'pool') {
+        this.shaderLights.set(light, [scene.lights.addLight(light.x, light.y, light.w * 0.75, light.colour, 0, z)])
+        continue
+      }
+      // A screen faces the room, down the map: cones about as wide as its fan,
+      // spread along its foot.
       const spread = 2 * Math.atan(light.w / 2 / light.h)
-      const phaser =
-        light.shape === 'pool'
-          ? scene.lights.addLight(light.x, light.y, light.w * 0.75, light.colour, 0, z)
-          : scene.lights.addConeLight(light.x, light.y + light.h * SCREEN_FOOT, light.h * 1.1, light.colour, 0, Math.PI / 2, spread * 1.3, spread * 2.6, z)
-      this.shaderLights.set(light, phaser)
+      const width = light.w * SCREEN_SPREAD
+      const cones = Array.from({ length: SCREEN_CONES }, (_, i) => {
+        const x = light.x - width / 2 + (width * (i + 0.5)) / SCREEN_CONES
+        return scene.lights.addConeLight(x, light.y + light.h * SCREEN_FOOT, light.h * 1.1, light.colour, 0, Math.PI / 2, spread * 1.6, spread * 3.2, z)
+      })
+      this.shaderLights.set(light, cones)
     }
     this.shaderLit = objects
     this.setShader(true)
@@ -289,7 +300,8 @@ export class Lighting {
       if (light.flicker) alpha *= this.flicker
       const shader = this.shaderLights.get(light)
       if (shader) {
-        shader.setIntensity(this.shaderOn ? alpha * SHADER_GAIN[light.shape] : 0)
+        const intensity = this.shaderOn ? (alpha * SHADER_GAIN[light.shape]) / shader.length : 0
+        for (const part of shader) part.setIntensity(intensity)
         if (this.shaderOn) alpha = 0
       }
       image.setAlpha(alpha).setVisible(alpha > 0.002)

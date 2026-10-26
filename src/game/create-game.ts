@@ -10,6 +10,8 @@ export function createHouseGame(parent: HTMLElement, config: HouseSceneConfig): 
     pixelArt: true,
     roundPixels: true,
     antialias: false,
+    // Room for the lamps and each screen's row of cones in view under the `?lights=shader` prototype.
+    maxLights: 16,
     scale: {
       mode: Phaser.Scale.RESIZE,
       width: parent.clientWidth,
