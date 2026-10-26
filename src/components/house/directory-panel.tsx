@@ -87,7 +87,7 @@ function EntryRow({
 }
 
 /** Each room's walls on the plan: azulejo blue, warm white, terracotta, ochre tile, greens. */
-const ROOM_COLORS: Record<RoomId, string> = {
+export const ROOM_COLORS: Record<RoomId, string> = {
   hall: '#b9cbe0',
   corridor: '#e6dccb',
   living: '#e9c2a6',

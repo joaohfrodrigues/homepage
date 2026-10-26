@@ -13,13 +13,13 @@ keeps the pack's top-lit shading. The page only offers shirt, trousers and hair
 for now; the other roles keep their colours.
 
 Animations stay in the pack's own files (Rig_Medium_General.glb and
-Rig_Medium_MovementBasic.glb), which the script copies next to the model: they
-drive any character on the same skeleton.
+Rig_Medium_MovementBasic.glb): they drive any character on the same skeleton.
+`bun run house3d:compress` picks the clips the page plays out of them into
+public/house3d/joao-animations.glb, and compresses joao.glb.
 """
 
 import math
 import os
-import shutil
 
 import bpy
 import numpy as np
@@ -210,9 +210,6 @@ def export(arm):
         export_cameras=False,
         export_lights=False,
     )
-    anims = os.path.join(PACK, 'animations', 'Rig_Medium')
-    for name in ('Rig_Medium_General.glb', 'Rig_Medium_MovementBasic.glb'):
-        shutil.copyfile(os.path.join(anims, name), os.path.join(OUT_DIR, name))
 
 
 def preview():

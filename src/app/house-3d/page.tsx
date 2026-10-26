@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { LowPolyRoom } from '@/components/house3d/low-poly-room'
+import { LowPolyHouse } from '@/components/house3d/low-poly-house'
 
 export const metadata: Metadata = {
-  title: 'Low-poly living room (proof of concept)',
+  title: 'Low-poly house (work in progress)',
   robots: { index: false, follow: false },
 }
 
-/** A proof of concept for rebuilding the house in low-poly 3D; not linked from the site. */
+/** The house being rebuilt in low-poly 3D; not linked from the site until it replaces the pixel one. */
 export default function House3dPage() {
-  return <LowPolyRoom />
+  return <LowPolyHouse />
 }

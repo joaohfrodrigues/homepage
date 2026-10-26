@@ -1,0 +1,503 @@
+{
+    "$comment": "The low-poly house, hand-edited. Read by scripts/lowpoly/build_house.py (the model) and the /house-3d page (walking, rooms, items). Types and rules in src/game/house3d/layout.ts.",
+    "scale": {
+        "tile": 0.75,
+        "wallHeight": 4,
+        "outerWall": 0.3,
+        "innerWall": 0.2,
+        "cutHeight": 0.3,
+        "doorHeight": 3.15
+    },
+    "rooms": [
+        {
+            "id": "living",
+            "name": "Living room",
+            "rect": [0, 0, 10, 10],
+            "floor": "oak",
+            "wall": "warmwhite",
+            "spawn": [7, 7]
+        },
+        {
+            "id": "bedroom",
+            "name": "Bedroom",
+            "rect": [10, 0, 8, 8],
+            "floor": "oak",
+            "wall": "sage",
+            "spawn": [13, 5]
+        },
+        {
+            "id": "balcony",
+            "name": "Balcony",
+            "rect": [18, 0, 3, 8],
+            "floor": "balcony",
+            "wall": "railing",
+            "spawn": [19, 4]
+        },
+        {
+            "id": "kitchen",
+            "name": "Kitchen",
+            "rect": [0, 10, 6, 9],
+            "floor": "hydraulic",
+            "wall": "metro",
+            "spawn": [3, 14]
+        },
+        {
+            "id": "hall",
+            "name": "Entrance hall",
+            "rect": [6, 10, 4, 9],
+            "floor": "oak",
+            "wall": "azulejo",
+            "spawn": [8, 17]
+        },
+        {
+            "id": "corridor",
+            "name": "Corridor",
+            "rect": [10, 8, 5, 5],
+            "floor": "oak-across",
+            "wall": "warmwhite",
+            "spawn": [12, 10]
+        },
+        {
+            "id": "bathroom",
+            "name": "Bathroom",
+            "rect": [10, 13, 5, 6],
+            "floor": "bath",
+            "wall": "bath",
+            "spawn": [12, 16]
+        },
+        {
+            "id": "study",
+            "name": "Study",
+            "rect": [15, 8, 6, 11],
+            "floor": "oak",
+            "wall": "library",
+            "spawn": [17, 12]
+        }
+    ],
+    "walls": [
+        {
+            "id": "living-street",
+            "axis": "h",
+            "at": 0,
+            "from": 0,
+            "to": 10,
+            "rooms": [null, "living"],
+            "openings": [
+                { "kind": "window", "from": 1, "width": 2 },
+                { "kind": "window", "from": 7, "width": 2 }
+            ]
+        },
+        {
+            "id": "bedroom-street",
+            "axis": "h",
+            "at": 0,
+            "from": 10,
+            "to": 18,
+            "rooms": [null, "bedroom"],
+            "openings": [{ "kind": "window", "from": 13, "width": 2 }]
+        },
+        {
+            "id": "balcony-street",
+            "axis": "h",
+            "at": 0,
+            "from": 18,
+            "to": 21,
+            "rooms": [null, "balcony"],
+            "openings": []
+        },
+        {
+            "id": "balcony-east",
+            "axis": "v",
+            "at": 21,
+            "from": 0,
+            "to": 8,
+            "rooms": ["balcony", null],
+            "openings": []
+        },
+        {
+            "id": "study-east",
+            "axis": "v",
+            "at": 21,
+            "from": 8,
+            "to": 19,
+            "rooms": ["study", null],
+            "openings": []
+        },
+        {
+            "id": "kitchen-courtyard",
+            "axis": "h",
+            "at": 19,
+            "from": 0,
+            "to": 6,
+            "rooms": ["kitchen", null],
+            "openings": [{ "kind": "window", "from": 2, "width": 2 }]
+        },
+        {
+            "id": "hall-landing",
+            "axis": "h",
+            "at": 19,
+            "from": 6,
+            "to": 10,
+            "rooms": ["hall", null],
+            "openings": [{ "kind": "door", "from": 7, "width": 2, "door": true }]
+        },
+        {
+            "id": "bathroom-courtyard",
+            "axis": "h",
+            "at": 19,
+            "from": 10,
+            "to": 15,
+            "rooms": ["bathroom", null],
+            "openings": [{ "kind": "window", "from": 12, "width": 2 }]
+        },
+        {
+            "id": "study-courtyard",
+            "axis": "h",
+            "at": 19,
+            "from": 15,
+            "to": 21,
+            "rooms": ["study", null],
+            "openings": [{ "kind": "window", "from": 17, "width": 2 }]
+        },
+        {
+            "id": "living-west",
+            "axis": "v",
+            "at": 0,
+            "from": 0,
+            "to": 10,
+            "rooms": [null, "living"],
+            "openings": []
+        },
+        {
+            "id": "kitchen-west",
+            "axis": "v",
+            "at": 0,
+            "from": 10,
+            "to": 19,
+            "rooms": [null, "kitchen"],
+            "openings": []
+        },
+
+        {
+            "id": "living-bedroom",
+            "axis": "v",
+            "at": 10,
+            "from": 0,
+            "to": 8,
+            "rooms": ["living", "bedroom"],
+            "openings": []
+        },
+        {
+            "id": "living-corridor",
+            "axis": "v",
+            "at": 10,
+            "from": 8,
+            "to": 10,
+            "rooms": ["living", "corridor"],
+            "openings": []
+        },
+        {
+            "id": "bedroom-corridor",
+            "axis": "h",
+            "at": 8,
+            "from": 10,
+            "to": 15,
+            "rooms": ["bedroom", "corridor"],
+            "openings": [{ "kind": "door", "from": 11, "width": 2, "door": true }]
+        },
+        {
+            "id": "bedroom-study",
+            "axis": "h",
+            "at": 8,
+            "from": 15,
+            "to": 18,
+            "rooms": ["bedroom", "study"],
+            "openings": []
+        },
+        {
+            "id": "balcony-study",
+            "axis": "h",
+            "at": 8,
+            "from": 18,
+            "to": 21,
+            "rooms": ["balcony", "study"],
+            "openings": []
+        },
+        {
+            "id": "bedroom-balcony",
+            "axis": "v",
+            "at": 18,
+            "from": 0,
+            "to": 8,
+            "rooms": ["bedroom", "balcony"],
+            "openings": [{ "kind": "door", "from": 3, "width": 2, "door": true }]
+        },
+        {
+            "id": "living-kitchen",
+            "axis": "h",
+            "at": 10,
+            "from": 0,
+            "to": 6,
+            "rooms": ["living", "kitchen"],
+            "openings": [{ "kind": "door", "from": 4, "width": 2, "door": true }]
+        },
+        {
+            "id": "living-hall",
+            "axis": "h",
+            "at": 10,
+            "from": 6,
+            "to": 10,
+            "rooms": ["living", "hall"],
+            "openings": [{ "kind": "opening", "from": 7, "width": 3 }]
+        },
+        {
+            "id": "kitchen-hall",
+            "axis": "v",
+            "at": 6,
+            "from": 10,
+            "to": 19,
+            "rooms": ["kitchen", "hall"],
+            "openings": [{ "kind": "door", "from": 16, "width": 2, "door": true }]
+        },
+        {
+            "id": "hall-corridor",
+            "axis": "v",
+            "at": 10,
+            "from": 10,
+            "to": 13,
+            "rooms": ["hall", "corridor"],
+            "openings": [{ "kind": "door", "from": 10, "width": 2, "door": true }]
+        },
+        {
+            "id": "hall-bathroom",
+            "axis": "v",
+            "at": 10,
+            "from": 13,
+            "to": 19,
+            "rooms": ["hall", "bathroom"],
+            "openings": []
+        },
+        {
+            "id": "corridor-bathroom",
+            "axis": "h",
+            "at": 13,
+            "from": 10,
+            "to": 15,
+            "rooms": ["corridor", "bathroom"],
+            "openings": [{ "kind": "door", "from": 12, "width": 2, "door": true }]
+        },
+        {
+            "id": "corridor-study",
+            "axis": "v",
+            "at": 15,
+            "from": 8,
+            "to": 13,
+            "rooms": ["corridor", "study"],
+            "openings": [{ "kind": "door", "from": 9, "width": 2, "door": true }]
+        },
+        {
+            "id": "bathroom-study",
+            "axis": "v",
+            "at": 15,
+            "from": 13,
+            "to": 19,
+            "rooms": ["bathroom", "study"],
+            "openings": []
+        }
+    ],
+    "furniture": [
+        {
+            "id": "chimney",
+            "room": "living",
+            "model": "chimney",
+            "rect": [3, 0, 4, 1],
+            "solid": false
+        },
+        { "id": "tv", "room": "living", "model": "tv", "rect": [3, 0, 4, 1], "solid": true },
+        {
+            "id": "tv_books",
+            "room": "living",
+            "model": "pack:book_set",
+            "rect": [3, 0, 4, 1],
+            "solid": false,
+            "offset": [1.0, 0.135, 0.98],
+            "scale": [0.7, 0.7, 0.7]
+        },
+        { "id": "rug", "room": "living", "model": "rug", "rect": [2, 1, 6, 5], "solid": false },
+        {
+            "id": "sofa",
+            "room": "living",
+            "model": "pack:couch_pillows",
+            "rect": [3, 4, 4, 2],
+            "rotation": 180,
+            "solid": true,
+            "offset": [0, 0.05, 0],
+            "colours": { "yellow": "sofa_blue", "blue": "terracotta" }
+        },
+        {
+            "id": "coffee_table",
+            "room": "living",
+            "model": "pack:table_low_decorated",
+            "rect": [4, 2, 2, 1],
+            "solid": true,
+            "offset": [0, -0.05, 0],
+            "scale": [0.62, 0.55, 0.85]
+        },
+        {
+            "id": "floor_lamp",
+            "room": "living",
+            "model": "pack:lamp_standing",
+            "rect": [2, 4, 1, 1],
+            "solid": true,
+            "offset": [0, 0.2, 0],
+            "scale": [0.75, 0.75, 0.85]
+        },
+        {
+            "id": "dining_table",
+            "room": "living",
+            "model": "pack:table_medium_long",
+            "rect": [1, 7, 3, 2],
+            "solid": true,
+            "scale": [0.72, 0.68, 0.95]
+        },
+        {
+            "id": "chair_nw",
+            "room": "living",
+            "model": "pack:chair_A_wood",
+            "rect": [1, 6, 1, 1],
+            "solid": false,
+            "offset": [0, 0.12, 0]
+        },
+        {
+            "id": "chair_ne",
+            "room": "living",
+            "model": "pack:chair_A_wood",
+            "rect": [3, 6, 1, 1],
+            "solid": false,
+            "offset": [0, 0.12, 0]
+        },
+        {
+            "id": "chair_sw",
+            "room": "living",
+            "model": "pack:chair_A_wood",
+            "rect": [1, 9, 1, 1],
+            "rotation": 180,
+            "solid": false,
+            "offset": [0, -0.12, 0]
+        },
+        {
+            "id": "chair_se",
+            "room": "living",
+            "model": "pack:chair_A_wood",
+            "rect": [3, 9, 1, 1],
+            "rotation": 180,
+            "solid": false,
+            "offset": [0, -0.12, 0]
+        },
+        {
+            "id": "table_plant",
+            "room": "living",
+            "model": "pack:cactus_small_A",
+            "rect": [1, 7, 3, 2],
+            "solid": false,
+            "offset": [0, 0, 0.95],
+            "scale": [0.8, 0.8, 0.8]
+        },
+        {
+            "id": "record_player",
+            "room": "living",
+            "model": "record_player",
+            "rect": [9, 3, 1, 2],
+            "solid": true
+        },
+        {
+            "id": "picture",
+            "room": "living",
+            "model": "picture",
+            "rect": [9, 3, 1, 2],
+            "solid": false
+        },
+        {
+            "id": "plant_leafy",
+            "room": "living",
+            "model": "plant_leafy",
+            "rect": [0, 0, 1, 1],
+            "solid": true
+        },
+        {
+            "id": "plant_tree",
+            "room": "living",
+            "model": "plant_tree",
+            "rect": [9, 0, 1, 1],
+            "solid": true
+        },
+        {
+            "id": "zeno",
+            "room": "living",
+            "model": "zeno",
+            "rect": [4, 5, 1, 1],
+            "rotation": 200,
+            "solid": false,
+            "offset": [0, -0.1, 0.62]
+        }
+    ],
+    "interactables": [
+        {
+            "id": "watching",
+            "label": "TV — what I’m watching",
+            "tiles": [
+                [3, 0],
+                [4, 0],
+                [5, 0],
+                [6, 0]
+            ],
+            "furniture": ["tv", "chimney"],
+            "action": { "type": "navigate", "href": "/hobbies/watching" }
+        },
+        {
+            "id": "recordplayer",
+            "label": "Record player — put some music on",
+            "tiles": [
+                [9, 3],
+                [9, 4]
+            ],
+            "furniture": ["record_player"],
+            "action": { "type": "panel", "panel": "recordplayer" }
+        },
+        {
+            "id": "zeno",
+            "label": "Zeno — give him a scratch",
+            "tiles": [
+                [4, 5],
+                [4, 4]
+            ],
+            "furniture": ["zeno"],
+            "action": { "type": "dialogue", "id": "zeno" }
+        },
+        {
+            "id": "lamp",
+            "label": "Floor lamp — switch it on or off",
+            "tiles": [[2, 4]],
+            "furniture": ["floor_lamp"]
+        }
+    ],
+    "spawn": [8, 17],
+    "zeno": {
+        "start": [4, 5],
+        "perches": [
+            [3, 5],
+            [4, 5],
+            [5, 5],
+            [6, 5]
+        ],
+        "spots": [
+            [4, 5],
+            [8, 1],
+            [19, 5],
+            [17, 14],
+            [3, 12]
+        ],
+        "toy": [7, 8],
+        "litterBox": [5, 18]
+    }
+}
