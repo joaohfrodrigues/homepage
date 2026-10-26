@@ -227,8 +227,3 @@ yarn-error.log*
 # Playwright
 /test-results/
 /playwright-report/
-
-# Low-poly house: original KayKit downloads (runtime files live in assets/kaykit/)
-# and local Blender saves / preview renders from scripts/lowpoly/
-assets/KayKit_*/
-assets/lowpoly-poc/
