@@ -15,6 +15,16 @@ volume and mute and stay silent until the visitor's first click or key press. Ke
 (footsteps, anything that repeats) quiet, and leave out sounds for actions that would be silent in
 real life. If a feature has no sound, say why in the PR description.
 
+## Pixel art in the house
+
+Draw new or redrawn furniture as a grid sprite in
+[src/game/sprites/props.ts](./src/game/sprites/props.ts), using only swatches from the palette in
+[src/game/palette.ts](./src/game/palette.ts), lit from the top left. Look at it with
+`bun run sprites:preview <prop>` (and LimeZu pieces alongside with `--limezu`) before and after
+each change, and check it in the running house. Blender renders and PixelLab drafts are starting
+points only: snap them with `bun run sprites:grid import` and clean them up by hand. The tools need
+no paid software; don't add steps that need Aseprite. See "Drawing the house" in the README.
+
 ## Documentation pass before every Pull Request
 
 Before creating any Pull Request, do a documentation pass and update every doc the branch's changes

@@ -194,7 +194,9 @@ dark around them like the lamps. Add `?season=xmas` (or `santos`, `halloween`, `
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/missions.ts` - missions and what
+    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/palette.ts` - the house palette;
+    `src/game/grid-sprite.ts` and `src/game/sprites/` - furniture redrawn as text grids (see
+    [Drawing the house](#drawing-the-house)); `src/game/missions.ts` - missions and what
     they unlock; `src/game/seasons.ts` - which decorations are up;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
     lamps; `src/game/exterior.ts` - the street, roof and gulls outside the balcony;
@@ -220,6 +222,45 @@ The pack's licence forbids redistributing it, so only the packed atlases are com
 pack itself. `bun run og` needs a running dev server and writes `src/assets/og-image.png`; re-run it
 and commit the PNG whenever the house art changes. It always snapshots the everyday house
 (`?season=none`), so seasonal decorations never need a new one.
+
+### Drawing the house
+
+Furniture is drawn in code, no image files. Two ways to write it:
+
+- **Rectangles** in `drawProp` (`src/game/pixels.ts`): most props, as they've always been.
+- **Grid sprites** in `src/game/sprites/props.ts`: one character per pixel, each mapped to a
+    palette swatch such as `'walnut.2'` (`.` is transparent, `,` the drop shadow). A prop listed in
+    `GRID_PROPS` draws from its grid instead of its rectangles. Redrawn and new furniture goes here:
+    a grid is easier to shade, review and edit than runs of rectangles.
+
+Every colour comes from `src/game/palette.ts`: 87 colours in named ramps (`ink`, `walnut`, `oak`,
+`terracotta`, `sky`, ...), dark to light, taken from the existing art. Shade a grid by stepping along
+a ramp, with light from the top left. The unit tests fail on a grid sprite with an off-palette
+swatch, a ragged row or the wrong size.
+
+Tools, in `scripts/sprites/` (they write to `.sprites/`, which is git-ignored):
+
+```bash
+bun run sprites:preview sofa tv          # contact sheet: 1x on the floor, and magnified with a grid
+bun run sprites:preview sofa --limezu palm,bedTeakGrey   # LimeZu pieces alongside, to match
+bun run sprites:palette                  # props still off the palette; --all lists the colours
+bun run sprites:grid export fridge       # prop → PNG, to edit in a pixel editor
+bun run sprites:grid import some.png     # PNG → GridSprite, snapped to the palette
+bun run sprites:ai "an espresso machine" --size 16x32   # optional AI draft (needs PIXELLAB_API_KEY)
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup \
+    --python scripts/sprites/blender_sprite.py -- model.glb .sprites/model.png --size 32x32
+```
+
+- **Pixel editors**: any that saves PNG. [LibreSprite](https://libresprite.github.io/) and
+    [Pixelorama](https://orama-interactive.itch.io/pixelorama) are free; load
+    `scripts/sprites/house-palette.gpl` (rewritten by `sprites:palette`) to paint with the palette.
+    Export a prop, edit it, import it, and paste the printed grid into `props.ts`.
+- **Blender** (`blender_sprite.py`): renders a 3D model (glb, gltf, obj, fbx or blend) at sprite size,
+    orthographic from the house's three-quarter view, flat-shaded, no anti-aliasing. Good for
+    proportions on awkward shapes; import the PNG to snap it to the palette, then clean it up.
+- **PixelLab** (`sprites:ai`, optional): text to pixel art through
+    [PixelLab's API](https://www.pixellab.ai), held to the palette. Billed per image to your own
+    account. Drafts only: import and clean up like a render.
 
 ## 🏆 Scoreboards API
 
@@ -359,6 +400,10 @@ Vercel then picks up the change on the next deploy.
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
 - **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug,
     bed and trophy-poster art for the house (most furniture is hand-drawn in code)
+- **[@napi-rs/canvas](https://github.com/Brooooooklyn/canvas)** - renders the house's art outside the
+    browser for the sprite tools (`scripts/sprites/`)
+- **[Blender](https://www.blender.org/)** and **[PixelLab](https://www.pixellab.ai)** (both optional) -
+    drafts for new furniture art (see [Drawing the house](#drawing-the-house))
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[Open-Meteo](https://open-meteo.com/)** - Lisbon's current weather for the house (no API key)
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
@@ -368,7 +413,7 @@ Vercel then picks up the change on the next deploy.
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
     poster fallback
 - **[Playwright](https://playwright.dev/)** - End-to-end tests
-- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests for the scoreboards
+- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests (scoreboards, dialogue, sprites)
 - **[pytest](https://pytest.org/)** - ETL pipeline tests
 - **[Ruff](https://docs.astral.sh/ruff/)** - Python linter and formatter
 - **[Vercel](https://vercel.com)** - Deployment platform
@@ -409,6 +454,7 @@ homepage/
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
 ├── scripts/             # House asset generators (LimeZu import, world map, share image)
+│   └── sprites/             # Sprite tools: preview sheet, palette, PNG round trip, Blender, PixelLab
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
@@ -416,7 +462,8 @@ homepage/
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, seasons
+│   ├── game/             # Phaser scene, floor plan, furniture, palette, characters, missions, seasons
+│   │   └── sprites/          # Furniture as grid sprites
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
@@ -424,7 +471,7 @@ homepage/
 │   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue, sun, grid sprites)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -436,7 +483,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, and Lisbon's sun and moon
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, Lisbon's sun and moon, and the palette and grid sprites
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 

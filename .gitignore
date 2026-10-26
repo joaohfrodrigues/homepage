@@ -227,3 +227,6 @@ yarn-error.log*
 # Playwright
 /test-results/
 /playwright-report/
+
+# Sprite previews and scratch (scripts/sprites/)
+/.sprites/

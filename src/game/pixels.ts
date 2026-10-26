@@ -3,7 +3,9 @@
  * the furniture. Everything draws onto plain canvases so it can be baked into
  * Phaser textures (and unit-tested without a WebGL context).
  */
+import { drawGrid } from './grid-sprite'
 import type { FloorKind, WallKind } from './layout'
+import { GRID_PROPS } from './sprites/props'
 
 export type Ctx = CanvasRenderingContext2D
 
@@ -592,6 +594,8 @@ function drawChair(ctx: Ctx, ox: number, oy: number, backOnTop: boolean) {
 }
 
 export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
+  const grid = GRID_PROPS[name]
+  if (grid) return drawGrid(ctx, grid, ox, oy)
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
     // --- Entrance hall --------------------------------------------------------
@@ -616,33 +620,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(6, 22, 5, 3, '#e7bfb4')
       r(2, 29, 2, 2, PALETTE.woodDark)
       r(12, 29, 2, 2, PALETTE.woodDark)
-      break
-    }
-    case 'coatstand': {
-      // A walnut coat stand: the hiking backpack on one hook, a rain jacket on the other.
-      r(7, 2, 2, 27, PALETTE.woodDark)
-      r(4, 2, 8, 2, PALETTE.woodDark)
-      r(4, 2, 8, 1, PALETTE.woodLight)
-      r(2, 5, 7, 14, PALETTE.ink)
-      r(3, 6, 5, 12, '#4f7a3a')
-      r(3, 6, 5, 2, '#62924a')
-      r(4, 12, 3, 4, '#3b5c2b')
-      r(5, 14, 1, 1, PALETTE.tape)
-      r(9, 4, 5, 15, PALETTE.ink)
-      r(10, 5, 3, 13, '#3f6b8a')
-      r(10, 5, 3, 1, '#5a88a8')
-      r(4, 28, 8, 2, PALETTE.woodDark)
-      r(3, 30, 10, 1, PALETTE.shadow)
-      break
-    }
-    case 'boots': {
-      for (const x of [2, 9]) {
-        r(x, 4, 5, 10, PALETTE.ink)
-        r(x + 1, 5, 3, 8, '#6b4a2e')
-        r(x + 1, 6, 3, 1, '#b5835a')
-        r(x, 13, 6, 2, '#2b2b33')
-      }
-      r(1, 15, 14, 1, PALETTE.shadow)
       break
     }
     case 'medalstand': {
@@ -993,30 +970,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(7, 11, 2, 5, WHITE_GOODS.steel)
       r(3, 16, 10, 3, WHITE_GOODS.steel)
       r(4, 17, 8, 1, WHITE_GOODS.steelDark)
-      break
-    }
-    case 'fridge': {
-      // 1.8m tall: twice the height of the counters beside it. Covered in trip magnets.
-      r(0, 0, 16, 31, PALETTE.ink)
-      r(1, 1, 14, 29, '#dfe3e8')
-      r(1, 1, 14, 1, '#f4f6f8')
-      r(1, 11, 14, 1, WHITE_GOODS.steel)
-      r(12, 4, 1, 5, WHITE_GOODS.steelDark)
-      r(12, 14, 1, 8, WHITE_GOODS.steelDark)
-      for (const [x, y, color] of [
-        [3, 3, PALETTE.red],
-        [6, 5, '#3f6b8a'],
-        [3, 7, PALETTE.tape],
-        [8, 2, '#4f7a3a'],
-        [3, 14, '#c9a227'],
-        [7, 16, '#8e2f35'],
-        [4, 20, '#2f5f63'],
-        [8, 23, '#e07a3a'],
-      ] as const) {
-        r(x, y, 2, 2, color)
-      }
-      r(5, 13, 5, 4, PALETTE.paper)
-      r(0, 31, 16, 1, PALETTE.shadow)
       break
     }
     case 'kcounter':
