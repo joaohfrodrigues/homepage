@@ -294,12 +294,12 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     zeno: {
       start: { x: 6, y: 9 },
       perches: [
-        ...[4, 5, 6, 7].map((x) => ({ x, y: 6 })), // the sofa seat
+        ...[4, 5, 6, 7].map((x) => ({ x, y: 5 })), // the sofa seat, beyond its back
         ...[14, 15].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 5, y: 17 }, // the litter box
       ],
       spots: [
-        { x: 5, y: 6 }, // sofa
+        { x: 5, y: 5 }, // sofa
         { x: 15, y: 4 }, // bed
         { x: 8, y: 3 }, // under the street window
         { x: 18, y: 6 }, // balcony

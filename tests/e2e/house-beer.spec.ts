@@ -155,7 +155,7 @@ test.describe('Beers from the fridge', () => {
     await page.keyboard.press('Escape')
     const wake = page.getByRole('dialog', { name: 'Talking to João' })
     await expect(wake).toContainText('Morning, sunshine', { timeout: 10_000 })
-    expect(await scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x + 1, y: sofa.y + 1 })
+    expect(await scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x + 1, y: sofa.y })
     expect(await scene(page, (s) => s.lighting.darkImage.alpha)).toBe(0)
     await expect(page.getByLabel('Day')).toBeVisible()
     // The night is over, but not the hangover.
