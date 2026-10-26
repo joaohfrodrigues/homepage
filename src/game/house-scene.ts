@@ -331,7 +331,9 @@ export class HouseScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1800, loop: true, callback: () => this.wanderNpc() })
     this.time.addEvent({ delay: ZENO_TICK_MS, loop: true, callback: () => this.tickZeno() })
 
-    this.lighting.useShaderLights([this.houseBase, this.player.sprite, this.npc.sprite, this.zeno.sprite])
+    const lit = [this.houseBase, this.player.sprite, this.npc.sprite, this.zeno.sprite, this.toy, this.poop]
+    if (this.bathroomDoor) lit.push(this.bathroomDoor)
+    this.lighting.useShaderLights(lit)
 
     this.updateRoom()
     this.updateHint()

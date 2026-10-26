@@ -3,7 +3,7 @@ import type { Sky } from '@/lib/sun'
 import type { Weather } from '@/lib/weather'
 import { NIGHT_BOUNDS } from './exterior'
 import type { Decor } from './furnishings'
-import { FLOOR_PLAN, TILE, cellAt, getRoom, wallPartAt } from './layout'
+import { FLOOR_PLAN, TILE, cellAt, wallPartAt } from './layout'
 import { FESTOON_BULBS, type PropName } from './pixels'
 
 /**
@@ -35,18 +35,20 @@ const SCREEN_SPREAD = 0.45
 const SCREEN = 0x9db8ff
 
 /**
- * Prototype: `?lights=shader` lights the living room with Phaser's per-pixel
- * lights instead of tints laid on top, so a lamp brightens what it falls on
+ * Prototype: `?lights=shader` lights the lamps and screens with Phaser's
+ * per-pixel lights instead of tints laid on top, so a lamp brightens what it falls on
  * and leaves dark pixels dark. The night overlay stays as it is. L flips
  * between the two to compare.
  */
-const SHADER_ROOM = getRoom('living').rect
 /** Shader light strength for each unit of a light's `night` tint; a screen's cool light shows less on warm wood. */
 const SHADER_GAIN: Record<Shape, number> = { pool: 3.2, fan: 9, beam: 0 }
 /** How high above the floor each kind of light sits, in px; higher spreads it wider. */
 const SHADER_HEIGHT: Record<Shape, number> = { pool: 22, fan: 70, beam: 0 }
-/** A screen's cone starts at the foot of the screen rather than its top, so it doesn't light the picture itself. */
-const SCREEN_FOOT = 15
+/**
+ * A screen's cone starts at the foot of the screen rather than its top, so it
+ * doesn't light the picture itself: this share of its fan's length down.
+ */
+const SCREEN_FOOT = 0.15
 
 type Shape = 'pool' | 'fan' | 'beam'
 
@@ -66,6 +68,8 @@ interface Light {
   day: number
   window?: boolean
   flicker?: boolean
+  /** A bare bulb you look straight at: it keeps its tinted glow under shader lights, which only light surfaces. */
+  glow?: boolean
 }
 
 /** Light given off by furniture, from the prop's top-left corner. */
@@ -73,14 +77,14 @@ const PROP_LIGHTS: Partial<Record<PropName, Omit<Light, 'x' | 'y'> & { dx: numbe
   floorlamp: { dx: 8, dy: 6, shape: 'pool', w: 76, h: 64, colour: WARM, reveal: 0.78, night: 0.22, day: 0 },
   console: { dx: 8, dy: 4, shape: 'pool', w: 56, h: 72, colour: WARM, reveal: 0.6, night: 0.18, day: 0 },
   nightstand: { dx: 8, dy: 3, shape: 'pool', w: 54, h: 46, colour: WARM, reveal: 0.72, night: 0.2, day: 0 },
-  alarmclock: { dx: 8, dy: 6, shape: 'pool', w: 18, h: 14, colour: 0xff6050, reveal: 0.2, night: 0.25, day: 0 },
+  alarmclock: { dx: 8, dy: 6, shape: 'pool', w: 18, h: 14, colour: 0xff6050, reveal: 0.2, night: 0.25, day: 0, glow: true },
   // Screens: the light starts across the top of the screen, as wide as it is,
   // and spreads down over the unit or desk below onto the floor.
   tv: { dx: 32, dy: 7, shape: 'fan', w: 80, h: 100, colour: SCREEN, reveal: 0.55, night: 0.2, day: 0.05, flicker: true },
   desk: { dx: 23, dy: 2, shape: 'fan', w: 44, h: 52, colour: 0xa9c4ff, reveal: 0.45, night: 0.16, day: 0.04 },
   // Seasonal: the tree's fairy lights and the candle in the pumpkin.
-  xmastree: { dx: 8, dy: 14, shape: 'pool', w: 48, h: 44, colour: 0xffd690, reveal: 0.5, night: 0.2, day: 0 },
-  pumpkin: { dx: 8, dy: 9, shape: 'pool', w: 28, h: 24, colour: 0xff9a3c, reveal: 0.35, night: 0.22, day: 0 },
+  xmastree: { dx: 8, dy: 14, shape: 'pool', w: 48, h: 44, colour: 0xffd690, reveal: 0.5, night: 0.2, day: 0, glow: true },
+  pumpkin: { dx: 8, dy: 9, shape: 'pool', w: 28, h: 24, colour: 0xff9a3c, reveal: 0.35, night: 0.22, day: 0, glow: true },
 }
 
 /** Builds every light in the house from the furniture and the floor plan. */
@@ -98,7 +102,7 @@ function houseLights(decor: Decor[]): Light[] {
     for (let tx = 0; tx < row.length; tx++) {
       const bulb = row[tx] === '=' ? FESTOON_BULBS.front : row[tx] === '|' ? FESTOON_BULBS.side : null
       if (!bulb) continue
-      lights.push({ x: tx * TILE + bulb.x, y: ty * TILE + bulb.y, shape: 'pool', w: 30, h: 26, colour: 0xffd690, reveal: 0.42, night: 0.22, day: 0 })
+      lights.push({ x: tx * TILE + bulb.x, y: ty * TILE + bulb.y, shape: 'pool', w: 30, h: 26, colour: 0xffd690, reveal: 0.42, night: 0.22, day: 0, glow: true })
     }
   })
   lights.push(...windowLights())
@@ -236,7 +240,7 @@ export class Lighting {
 
   /**
    * Under `?lights=shader`, lights `objects` with Phaser's lights for the
-   * living room's lamps and screens. Does nothing without WebGL.
+   * house's lamps and screens. Does nothing without WebGL.
    */
   useShaderLights(objects: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[]) {
     const { scene } = this
@@ -244,18 +248,14 @@ export class Lighting {
     if (scene.sys.renderer.type !== Phaser.WEBGL) return
     scene.lights.enable().setAmbientColor(0xffffff)
     for (const light of this.lights) {
-      const tx = light.x / TILE
-      const ty = light.y / TILE
-      // The TV hangs on the north wall, the two rows above the floor.
-      const inRoom = tx >= SHADER_ROOM.x && tx < SHADER_ROOM.x + SHADER_ROOM.w && ty >= SHADER_ROOM.y - 2 && ty < SHADER_ROOM.y + SHADER_ROOM.h
-      if (!inRoom || light.window) continue
+      if (light.window || light.glow) continue
       const z = SHADER_HEIGHT[light.shape]
       // A screen faces the room, down the map: a cone about as wide as its fan.
       const spread = 2 * Math.atan(light.w / 2 / light.h)
       const phaser =
         light.shape === 'pool'
           ? scene.lights.addLight(light.x, light.y, light.w * 0.75, light.colour, 0, z)
-          : scene.lights.addConeLight(light.x, light.y + SCREEN_FOOT, light.h * 1.1, light.colour, 0, Math.PI / 2, spread * 1.3, spread * 2.6, z)
+          : scene.lights.addConeLight(light.x, light.y + light.h * SCREEN_FOOT, light.h * 1.1, light.colour, 0, Math.PI / 2, spread * 1.3, spread * 2.6, z)
       this.shaderLights.set(light, phaser)
     }
     this.shaderLit = objects
