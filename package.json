@@ -9,7 +9,11 @@
         "lint": "eslint .",
         "typecheck": "tsc --noEmit",
         "test:unit": "bun test tests/unit_ts",
-        "og": "node scripts/og_snapshot.mjs"
+        "og": "node scripts/og_snapshot.mjs",
+        "sprites:preview": "bun scripts/sprites/preview.ts",
+        "sprites:palette": "bun scripts/sprites/palette.ts",
+        "sprites:grid": "bun scripts/sprites/grid.ts",
+        "sprites:ai": "bun scripts/sprites/pixellab.ts"
     },
     "dependencies": {
         "@keystatic/core": "^0.6.9",
@@ -28,10 +32,10 @@
         "react-dom": "^19.3.0",
         "react-markdown": "^10.1.0",
         "react-photo-album": "^3.6.1",
-        "tailwind-merge": "^3.7.0",
-        "three": "^0.181.0"
+        "tailwind-merge": "^3.7.0"
     },
     "devDependencies": {
+        "@napi-rs/canvas": "^1.0.13",
         "@playwright/test": "^1.63.0",
         "@tailwindcss/postcss": "^4.3.3",
         "@types/better-sqlite3": "^7.6.13",
@@ -39,7 +43,6 @@
         "@types/node": "^26.6.4",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
-        "@types/three": "^0.181.0",
         "eslint": "^9.39.5",
         "eslint-config-next": "^16.3.8",
         "postcss": "^8.5.28",

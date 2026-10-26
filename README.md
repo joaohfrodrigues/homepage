@@ -15,9 +15,6 @@ the public scoreboards, which live in Upstash Redis.
     - **The house** (`src/game/`, `src/components/house/`) - every page under `src/app/(house)/`
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
-    - **Low-poly house** (`src/app/house-3d/`, `src/components/house3d/`) - a three.js proof of
-      concept of the house in low-poly 3D at `/house-3d` (noindex, not linked), built from Blender
-      scripts. See [Low-poly house (proof of concept)](#low-poly-house-proof-of-concept).
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
       public scoreboards, below), `weather` (Lisbon's current sky from
@@ -197,7 +194,9 @@ dark around them like the lamps. Add `?season=xmas` (or `santos`, `halloween`, `
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/missions.ts` - missions and what
+    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/palette.ts` - the house palette;
+    `src/game/grid-sprite.ts` and `src/game/sprites/` - furniture redrawn as text grids (see
+    [Drawing the house](#drawing-the-house)); `src/game/missions.ts` - missions and what
     they unlock; `src/game/seasons.ts` - which decorations are up;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
     lamps; `src/game/exterior.ts` - the street, roof and gulls outside the balcony;
@@ -224,33 +223,45 @@ pack itself. `bun run og` needs a running dev server and writes `src/assets/og-i
 and commit the PNG whenever the house art changes. It always snapshots the everyday house
 (`?season=none`), so seasonal decorations never need a new one.
 
-### Low-poly house (proof of concept)
+### Drawing the house
 
-`/house-3d` is the first step of rebuilding the house in low-poly 3D (saga
-[#131](https://github.com/joaohfrodrigues/homepage/issues/131)): the living room in three.js, with an
-orthographic camera, click/tap or arrow-key walking on the tile grid, a few interactions (record
-player, lamp, Zeno, TV), day/night and wardrobe colours. It is noindex and not linked from the site;
-the pixel house stays live until the switch-over.
+Furniture is drawn in code, no image files. Two ways to write it:
 
-- `src/app/house-3d/page.tsx` and `src/components/house3d/low-poly-room.tsx` - the page.
-- `scripts/lowpoly/` - Blender Python scripts that build the models. `build_living_room.py`
-    assembles the room from [KayKit](https://kaylousberg.itch.io/) Furniture Bits plus pieces
-    modelled to match, remapped onto the house palette, and writes `public/house3d/living-room.glb`
-    and `living-room.json` (walkable grid and item tiles). `build_character.py` makes João from the
-    KayKit Adventurers Ranger, with a material per role (skin, hair, shirt, ...) so the page can
-    recolour them, and writes `public/house3d/joao.glb` plus the pack's animation files.
-- `assets/kaykit/` - the runtime files of both KayKit packs (gltf models, textures, licence), by Kay
-    Lousberg and CC0; credited in `assets/kaykit/CREDITS.txt`.
+- **Rectangles** in `drawProp` (`src/game/pixels.ts`): most props, as they've always been.
+- **Grid sprites** in `src/game/sprites/props.ts`: one character per pixel, each mapped to a
+    palette swatch such as `'walnut.2'` (`.` is transparent, `,` the drop shadow). A prop listed in
+    `GRID_PROPS` draws from its grid instead of its rectangles; give it several grids and each copy
+    picks one by where it stands, so repeats along a wall differ. Redrawn and new furniture goes
+    here: a grid is easier to shade, review and edit than runs of rectangles.
 
-The GLBs in `public/house3d/` are committed, so page work doesn't need Blender. To rebuild them
-(character first, as the room's preview render imports `joao.glb`):
+Every colour comes from `src/game/palette.ts`: 87 colours in named ramps (`ink`, `walnut`, `oak`,
+`terracotta`, `sky`, ...), dark to light, taken from the existing art. Shade a grid by stepping along
+a ramp, with light from the top left. The unit tests fail on a grid sprite with an off-palette
+swatch, a ragged row or the wrong size.
+
+Tools, in `scripts/sprites/` (they write to `.sprites/`, which is git-ignored):
 
 ```bash
-/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_character.py
-/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_living_room.py
+bun run sprites:preview sofa tv          # contact sheet: 1x on the floor, and magnified with a grid
+bun run sprites:preview sofa --limezu palm,bedTeakGrey   # LimeZu pieces alongside, to match
+bun run sprites:palette                  # props still off the palette; --all lists the colours
+bun run sprites:grid export fridge       # prop → PNG, to edit in a pixel editor
+bun run sprites:grid import some.png     # PNG → GridSprite, snapped to the palette
+bun run sprites:ai "an espresso machine" --size 16x32   # optional AI draft (needs PIXELLAB_API_KEY)
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup \
+    --python scripts/sprites/blender_sprite.py -- model.glb .sprites/model.png --size 32x32
 ```
 
-Both also save a `.blend` and a preview render to `assets/lowpoly-poc/`, which is git-ignored.
+- **Pixel editors**: any that saves PNG. [LibreSprite](https://libresprite.github.io/) and
+    [Pixelorama](https://orama-interactive.itch.io/pixelorama) are free; load
+    `scripts/sprites/house-palette.gpl` (rewritten by `sprites:palette`) to paint with the palette.
+    Export a prop, edit it, import it, and paste the printed grid into `props.ts`.
+- **Blender** (`blender_sprite.py`): renders a 3D model (glb, gltf, obj, fbx or blend) at sprite size,
+    orthographic from the house's three-quarter view, flat-shaded, no anti-aliasing. Good for
+    proportions on awkward shapes; import the PNG to snap it to the palette, then clean it up.
+- **PixelLab** (`sprites:ai`, optional): text to pixel art through
+    [PixelLab's API](https://www.pixellab.ai), held to the palette. Billed per image to your own
+    account. Drafts only: import and clean up like a render.
 
 ## 🏆 Scoreboards API
 
@@ -383,9 +394,6 @@ Vercel then picks up the change on the next deploy.
 
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
-- **[three.js](https://threejs.org/)** - the low-poly 3D house proof of concept (`/house-3d`)
-- **[Blender](https://www.blender.org/)** - builds the low-poly models from Python scripts
-    (`scripts/lowpoly/`)
 - **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
     player's lo-fi loop and the house's sound effects, synthesised in the browser
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
@@ -393,9 +401,10 @@ Vercel then picks up the change on the next deploy.
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
 - **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug,
     bed and trophy-poster art for the house (most furniture is hand-drawn in code)
-- **[KayKit](https://kaylousberg.itch.io/)** Furniture Bits and Adventurers by Kay Lousberg
-    ([kaylousberg.com](https://www.kaylousberg.com), CC0) - furniture, João and his animations for
-    the low-poly house
+- **[@napi-rs/canvas](https://github.com/Brooooooklyn/canvas)** - renders the house's art outside the
+    browser for the sprite tools (`scripts/sprites/`)
+- **[Blender](https://www.blender.org/)** and **[PixelLab](https://www.pixellab.ai)** (both optional) -
+    drafts for new furniture art (see [Drawing the house](#drawing-the-house))
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[Open-Meteo](https://open-meteo.com/)** - Lisbon's current weather for the house (no API key)
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
@@ -405,7 +414,7 @@ Vercel then picks up the change on the next deploy.
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
     poster fallback
 - **[Playwright](https://playwright.dev/)** - End-to-end tests
-- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests for the scoreboards
+- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests (scoreboards, dialogue, sprites)
 - **[pytest](https://pytest.org/)** - ETL pipeline tests
 - **[Ruff](https://docs.astral.sh/ruff/)** - Python linter and formatter
 - **[Vercel](https://vercel.com)** - Deployment platform
@@ -429,8 +438,6 @@ homepage/
 │       ├── dev.yaml         # Linting, testing (pytest, Bun unit tests)
 │       ├── etl.yaml         # Daily photo sync
 │       └── plex-etl.yaml    # Daily watch-items sync
-├── assets/
-│   └── kaykit/              # KayKit packs (CC0) used by scripts/lowpoly/, with CREDITS.txt
 ├── backend/             # Database and ETL (Python)
 │   ├── database.py      # Schema and operations
 │   ├── db_service.py    # Query layer
@@ -448,25 +455,24 @@ homepage/
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
 ├── scripts/             # House asset generators (LimeZu import, world map, share image)
-│   └── lowpoly/             # Blender scripts for the low-poly house models
+│   └── sprites/             # Sprite tools: preview sheet, palette, PNG round trip, Blender, PixelLab
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
-│   │   ├── house-3d/        # Low-poly 3D house proof of concept
 │   │   ├── api/             # photos, watch-poster, scores, weather, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
-│   ├── components/       # React components (house/, house3d/, photography/, writing/, hobby-feed/, ui/)
-│   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, seasons
+│   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
+│   ├── game/             # Phaser scene, floor plan, furniture, palette, characters, missions, seasons
+│   │   └── sprites/          # Furniture as grid sprites
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
-│   ├── house/               # House atlases and world-map outlines
-│   └── house3d/             # Low-poly house GLBs and room grid (built by scripts/lowpoly/)
+│   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue, sun, grid sprites)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -478,7 +484,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, and Lisbon's sun and moon
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, Lisbon's sun and moon, and the palette and grid sprites
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 

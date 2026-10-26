@@ -114,7 +114,7 @@ interface SubmitProps {
 }
 
 /** The opt-in form: nothing is sent until the visitor presses the button. */
-export function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
+function SubmitScore({ board, score, meta, onSubmitted }: SubmitProps) {
   const [name, setName] = useState(lastName)
   const [busy, setBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)

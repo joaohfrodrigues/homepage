@@ -205,7 +205,7 @@ export function metresWalked(stats: VisitorStats): number {
  * Rooms a visitor can walk into from the start. The bathroom only opens with
  * its mission, so it stays out and earlier tours still count.
  */
-export const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
+const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
 
 export interface Achievement {
   id: string

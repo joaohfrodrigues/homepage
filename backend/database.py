@@ -15,11 +15,6 @@ logger = logging.getLogger(__name__)
 DB_PATH = Path(__file__).parent.parent / 'data' / 'photos.db'
 
 
-def get_db_path() -> Path:
-    """Get the database file path"""
-    return DB_PATH
-
-
 @contextmanager
 def get_db_connection():
     """Context manager for database connections"""
@@ -349,14 +344,6 @@ def link_photo_to_collection(
     )
 
 
-def get_photo_count() -> int:
-    """Get total number of photos in database"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM photos')
-        return cursor.fetchone()[0]
-
-
 def get_existing_photos_map(conn: sqlite3.Connection) -> dict[str, str]:
     """Get map of photo_id -> updated_at for all existing photos
 
@@ -366,11 +353,3 @@ def get_existing_photos_map(conn: sqlite3.Connection) -> dict[str, str]:
     cursor = conn.cursor()
     cursor.execute('SELECT id, updated_at FROM photos')
     return {row[0]: row[1] for row in cursor.fetchall()}
-
-
-def get_collection_count() -> int:
-    """Get total number of collections in database"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT COUNT(*) FROM collections')
-        return cursor.fetchone()[0]

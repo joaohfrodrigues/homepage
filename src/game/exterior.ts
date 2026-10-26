@@ -39,7 +39,7 @@ export function isOutdoors(tx: number, ty: number) {
 // Painting
 
 /** Paints the patch onto `ctx`, whose origin is the patch's top-left corner. */
-export function paintExterior(ctx: Ctx) {
+function paintExterior(ctx: Ctx) {
   ctx.imageSmoothingEnabled = false
   ctx.save()
   ctx.translate(-OUTSIDE.x * TILE, -OUTSIDE.y * TILE)

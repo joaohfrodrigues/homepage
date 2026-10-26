@@ -5,7 +5,7 @@ import type { PlayerEffect } from '@/game/bridge'
  * minutes. Kept in memory only, so a reload starts every count again, and
  * separate from the lifetime stats in visitor-stats.ts.
  */
-export class Tally {
+class Tally {
   private times: number[] = []
 
   constructor(readonly windowMs: number) {}

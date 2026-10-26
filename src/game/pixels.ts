@@ -3,11 +3,13 @@
  * the furniture. Everything draws onto plain canvases so it can be baked into
  * Phaser textures (and unit-tested without a WebGL context).
  */
+import { drawGrid } from './grid-sprite'
 import type { FloorKind, WallKind } from './layout'
+import { GRID_PROPS } from './sprites/props'
 
 export type Ctx = CanvasRenderingContext2D
 
-export const PALETTE = {
+const PALETTE = {
   ink: '#2a2233',
   shadow: 'rgba(20, 14, 30, 0.28)',
   // Walnut: dark enough to read against the light oak floors.
@@ -425,7 +427,6 @@ export type PropName =
   | 'boots'
   | 'medalstand'
   | 'guestbook'
-  | 'bookshelf'
   | 'bookshelfside'
   | 'wallmap'
   | 'desk'
@@ -443,7 +444,6 @@ export type PropName =
   | 'chair'
   | 'chairup'
   | 'coffeecounter'
-  | 'stove'
   | 'sink'
   | 'fridge'
   | 'kcounter'
@@ -471,7 +471,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   boots: { w: 16, h: 16 },
   medalstand: { w: 16, h: 32 }, // a freestanding rail: medals and bib above, running shoes at its foot
   guestbook: { w: 16, h: 16 }, // a little stand with the visitors' book open on it
-  bookshelf: { w: 16, h: 32 }, // four of these make 2m of shelving
   bookshelfside: { w: 16, h: 32 }, // 1m of shelving along a side wall, seen from above
   wallmap: { w: 48, h: 32 }, // 1.5m × 1m pin map
   desk: { w: 48, h: 32 }, // 1.4m desk
@@ -489,7 +488,6 @@ export const PROP_SIZES: Record<PropName, { w: number; h: number }> = {
   chair: { w: 16, h: 16 },
   chairup: { w: 16, h: 16 },
   coffeecounter: { w: 16, h: 32 },
-  stove: { w: 16, h: 32 },
   sink: { w: 16, h: 32 },
   fridge: { w: 16, h: 32 },
   kcounter: { w: 16, h: 16 }, // a 60cm unit along a side wall, seen from above
@@ -522,7 +520,6 @@ export const DESK_LEDS = [
   { x: 41, y: 11 },
 ]
 /** Where light comes from, for the scene's warm glows. */
-const BOOK_COLORS = ['#8e2f35', '#2f5f63', '#c9a227', '#3f6b8a', '#6b4a2e', '#4f7a3a', '#d9a99d', '#2a2233']
 const WHITE_GOODS = { body: '#e8e4da', line: '#c9c3b5', steel: '#b8bcc4', steelDark: '#8a9099' }
 
 function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
@@ -592,59 +589,14 @@ function drawChair(ctx: Ctx, ox: number, oy: number, backOnTop: boolean) {
 }
 
 export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
+  const grid = GRID_PROPS[name]
+  if (grid) {
+    const variant = Array.isArray(grid) ? grid[Math.abs(Math.floor(oy / PROP_SIZES[name].h)) % grid.length] : grid
+    return drawGrid(ctx, variant, ox, oy)
+  }
   const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
   switch (name) {
     // --- Entrance hall --------------------------------------------------------
-    case 'console': {
-      // A narrow table along the side wall: a little lamp, the day's post, and a framed plan of the flat.
-      r(1, 0, 14, 31, PALETTE.ink)
-      r(2, 1, 12, 28, PALETTE.wood)
-      r(2, 1, 1, 28, PALETTE.woodHighlight)
-      // The lamp's linen shade from above, the bulb showing through its top.
-      disc(ctx, ox + 8, oy + 4, 3, '#b8a27a')
-      disc(ctx, ox + 8, oy + 4, 2, '#efe3c6')
-      r(7, 3, 2, 2, '#fff4d6')
-      r(4, 8, 9, 7, PALETTE.woodDark)
-      r(5, 9, 7, 4, PALETTE.paper)
-      r(6, 10, 7, 4, '#fbf6ea')
-      r(10, 11, 2, 2, PALETTE.red)
-      r(7, 13, 4, 1, '#b5aa94')
-      r(4, 16, 9, 11, PALETTE.ink)
-      r(5, 17, 7, 9, PALETTE.paper)
-      r(6, 18, 2, 3, '#7f9f88')
-      r(9, 18, 2, 3, '#d9b98c')
-      r(6, 22, 5, 3, '#e7bfb4')
-      r(2, 29, 2, 2, PALETTE.woodDark)
-      r(12, 29, 2, 2, PALETTE.woodDark)
-      break
-    }
-    case 'coatstand': {
-      // A walnut coat stand: the hiking backpack on one hook, a rain jacket on the other.
-      r(7, 2, 2, 27, PALETTE.woodDark)
-      r(4, 2, 8, 2, PALETTE.woodDark)
-      r(4, 2, 8, 1, PALETTE.woodLight)
-      r(2, 5, 7, 14, PALETTE.ink)
-      r(3, 6, 5, 12, '#4f7a3a')
-      r(3, 6, 5, 2, '#62924a')
-      r(4, 12, 3, 4, '#3b5c2b')
-      r(5, 14, 1, 1, PALETTE.tape)
-      r(9, 4, 5, 15, PALETTE.ink)
-      r(10, 5, 3, 13, '#3f6b8a')
-      r(10, 5, 3, 1, '#5a88a8')
-      r(4, 28, 8, 2, PALETTE.woodDark)
-      r(3, 30, 10, 1, PALETTE.shadow)
-      break
-    }
-    case 'boots': {
-      for (const x of [2, 9]) {
-        r(x, 4, 5, 10, PALETTE.ink)
-        r(x + 1, 5, 3, 8, '#6b4a2e')
-        r(x + 1, 6, 3, 1, '#b5835a')
-        r(x, 13, 6, 2, '#2b2b33')
-      }
-      r(1, 15, 14, 1, PALETTE.shadow)
-      break
-    }
     case 'medalstand': {
       // The hall is open to the living room, so the medals hang from a freestanding rail.
       r(2, 2, 2, 26, PALETTE.woodDark)
@@ -696,79 +648,12 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       break
     }
     // --- Study ----------------------------------------------------------------
-    case 'bookshelf': {
-      r(0, 0, 16, 32, PALETTE.ink)
-      r(1, 1, 14, 30, PALETTE.woodDark)
-      r(2, 2, 12, 24, '#3d2a1d')
-      for (let shelf = 0; shelf < 3; shelf++) {
-        const base = 2 + shelf * 8
-        let x = 2
-        let i = shelf * 5 + Math.floor(ox / 16)
-        while (x < 14) {
-          const w = 1 + (i % 2)
-          const h = 4 + ((i * 7) % 3)
-          r(x, base + 6 - h, Math.min(w, 14 - x), h, BOOK_COLORS[i % BOOK_COLORS.length])
-          x += w + (i % 4 === 3 ? 1 : 0)
-          i++
-        }
-        r(2, base + 6, 12, 2, PALETTE.wood)
-      }
-      r(2, 26, 12, 4, PALETTE.wood)
-      r(7, 27, 2, 1, PALETTE.brass)
-      break
-    }
-    case 'bookshelfside': {
-      // Against the east wall, seen from above: the walnut top, and the
-      // spines along its front edge facing into the room.
-      r(3, 0, 13, 32, PALETTE.ink)
-      r(4, 1, 12, 30, PALETTE.wood)
-      r(4, 1, 12, 1, PALETTE.woodLight)
-      let y = 1
-      let i = Math.floor(oy / 16)
-      while (y < 31) {
-        const h = 1 + (i % 2)
-        r(3, y, 3, Math.min(h, 31 - y), BOOK_COLORS[(i * 3) % BOOK_COLORS.length])
-        y += h + (i % 5 === 4 ? 1 : 0)
-        i++
-      }
-      r(3, 10, 3, 1, PALETTE.woodDark)
-      r(3, 21, 3, 1, PALETTE.woodDark)
-      r(8, 4, 6, 3, '#3f6b8a')
-      r(8, 7, 6, 2, PALETTE.paper)
-      disc(ctx, ox + 11, oy + 24, 2, '#4f7a3a')
-      r(2, 31, 14, 1, PALETTE.shadow)
-      break
-    }
     case 'wallmap': {
       r(2, 3, 46, 28, PALETTE.shadow)
       r(1, 2, 46, 28, PALETTE.ink)
       r(2, 3, 44, 26, PALETTE.woodDark)
       r(2, 3, 44, 1, PALETTE.woodHighlight)
       r(MAP_WALL.x, MAP_WALL.y, MAP_WALL.w, MAP_WALL.h, '#7fb0c9')
-      break
-    }
-    case 'desk': {
-      // Monitor against the wall; the Pi and its disk enclosure at the right end.
-      r(12, 1, 22, 14, PALETTE.ink)
-      r(13, 2, 20, 11, '#1f3b4d')
-      for (let i = 0; i < 4; i++) r(15, 4 + i * 2, 4 + ((i * 5) % 11), 1, i % 2 ? '#7fd1b9' : '#e8c95a')
-      r(21, 15, 4, 2, PALETTE.ink)
-      r(38, 8, 8, 9, PALETTE.ink)
-      r(39, 9, 6, 7, '#2a2d35')
-      r(40, 15, 4, 1, '#3a3d46')
-      r(0, 16, 48, 4, PALETTE.wood)
-      r(0, 16, 48, 1, PALETTE.woodHighlight)
-      r(15, 17, 16, 2, '#d8d0c0')
-      r(33, 17, 3, 2, '#d8d0c0')
-      r(38, 17, 6, 2, '#2e8b57')
-      r(39, 17, 1, 1, PALETTE.brass)
-      r(6, 14, 4, 4, PALETTE.red)
-      r(7, 15, 2, 1, '#e05a48')
-      r(0, 20, 48, 9, PALETTE.woodDark)
-      r(34, 22, 12, 5, PALETTE.wood)
-      r(39, 24, 2, 1, PALETTE.brass)
-      r(1, 29, 3, 3, PALETTE.woodDark)
-      r(44, 29, 3, 3, PALETTE.woodDark)
       break
     }
     case 'officechair': {
@@ -859,23 +744,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       }
       r(3, 28, 58, 4, '#8c412a')
       r(3, 28, 58, 1, '#a65234')
-      break
-    }
-    case 'tv': {
-      r(12, 5, 40, 24, PALETTE.ink)
-      r(14, 7, 36, 20, '#26323f')
-      r(16, 9, 9, 2, '#3b4b5c')
-      r(14, 22, 36, 5, '#1d2731')
-      r(20, 31, 24, 2, '#2a2a30')
-      r(0, 33, 64, 13, PALETTE.ink)
-      r(1, 34, 62, 11, PALETTE.woodDark)
-      r(1, 34, 62, 1, PALETTE.woodHighlight)
-      r(3, 36, 18, 7, PALETTE.wood)
-      r(23, 36, 18, 7, '#1b1b20')
-      r(43, 36, 18, 7, PALETTE.wood)
-      r(26, 39, 9, 3, '#e8e8f0')
-      r(33, 40, 1, 1, '#4cd964')
-      r(0, 46, 64, 2, PALETTE.shadow)
       break
     }
     case 'sofa': {
@@ -976,47 +844,11 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(9, 15, 2, 2, PALETTE.paper)
       break
     }
-    case 'stove': {
-      drawKitchenUnit(ctx, ox, oy)
-      r(1, 0, 14, 6, WHITE_GOODS.steel)
-      r(3, 6, 10, 2, WHITE_GOODS.steelDark)
-      r(0, 16, 16, 3, '#2a2a30')
-      r(3, 17, 3, 1, '#55555f')
-      r(10, 17, 3, 1, '#55555f')
-      r(2, 20, 12, 9, '#2a2a30')
-      r(3, 21, 10, 1, WHITE_GOODS.steel)
-      r(4, 23, 8, 4, '#3a3a44')
-      break
-    }
     case 'sink': {
       drawKitchenUnit(ctx, ox, oy)
       r(7, 11, 2, 5, WHITE_GOODS.steel)
       r(3, 16, 10, 3, WHITE_GOODS.steel)
       r(4, 17, 8, 1, WHITE_GOODS.steelDark)
-      break
-    }
-    case 'fridge': {
-      // 1.8m tall: twice the height of the counters beside it. Covered in trip magnets.
-      r(0, 0, 16, 31, PALETTE.ink)
-      r(1, 1, 14, 29, '#dfe3e8')
-      r(1, 1, 14, 1, '#f4f6f8')
-      r(1, 11, 14, 1, WHITE_GOODS.steel)
-      r(12, 4, 1, 5, WHITE_GOODS.steelDark)
-      r(12, 14, 1, 8, WHITE_GOODS.steelDark)
-      for (const [x, y, color] of [
-        [3, 3, PALETTE.red],
-        [6, 5, '#3f6b8a'],
-        [3, 7, PALETTE.tape],
-        [8, 2, '#4f7a3a'],
-        [3, 14, '#c9a227'],
-        [7, 16, '#8e2f35'],
-        [4, 20, '#2f5f63'],
-        [8, 23, '#e07a3a'],
-      ] as const) {
-        r(x, y, 2, 2, color)
-      }
-      r(5, 13, 5, 4, PALETTE.paper)
-      r(0, 31, 16, 1, PALETTE.shadow)
       break
     }
     case 'kcounter':
@@ -1065,20 +897,6 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
       r(5, 0, 6, 4, '#f0d9a0')
       r(5, 0, 6, 1, '#fff1c8')
       r(7, 4, 2, 1, PALETTE.ink)
-      r(2, 15, 12, 1, PALETTE.shadow)
-      break
-    }
-    case 'alarmclock': {
-      r(2, 5, 12, 10, PALETTE.ink)
-      r(3, 6, 10, 8, PALETTE.wood)
-      r(3, 9, 10, 1, PALETTE.woodDark)
-      r(7, 11, 2, 1, PALETTE.brass)
-      r(4, 0, 8, 6, PALETTE.ink)
-      r(5, 1, 6, 4, '#1b1b20')
-      r(5, 2, 2, 1, '#e04434')
-      r(8, 2, 2, 1, '#e04434')
-      r(4, 0, 1, 1, PALETTE.brass)
-      r(11, 0, 1, 1, PALETTE.brass)
       r(2, 15, 12, 1, PALETTE.shadow)
       break
     }
@@ -1301,7 +1119,7 @@ export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
 // ---------------------------------------------------------------------------
 // Interaction cues
 
-export const OUTLINE_COLOR = '#fff3c4'
+const OUTLINE_COLOR = '#fff3c4'
 
 /**
  * Traces the opaque pixels of `src` (anything over half alpha, so soft drop

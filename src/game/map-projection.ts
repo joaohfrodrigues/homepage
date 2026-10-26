@@ -75,7 +75,7 @@ function withAspect(view: MapView, aspect: number): MapView {
 }
 
 /** Keep the view within the zoom limits and inside the world. */
-export function clampView(view: MapView, aspect: number): MapView {
+function clampView(view: MapView, aspect: number): MapView {
   let w = Math.min(1, Math.max(MIN_VIEW_W, view.w))
   let h = w / aspect
   if (h > WORLD_BOTTOM - WORLD_TOP) {
