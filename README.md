@@ -15,9 +15,9 @@ the public scoreboards, which live in Upstash Redis.
     - **The house** (`src/game/`, `src/components/house/`) - every page under `src/app/(house)/`
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
-    - **Low-poly house** (`src/app/house-3d/`, `src/components/house3d/`) - a three.js proof of
-      concept of the house in low-poly 3D at `/house-3d` (noindex, not linked), built from Blender
-      scripts. See [Low-poly house (proof of concept)](#low-poly-house-proof-of-concept).
+    - **Low-poly house** (`src/app/house-3d/`, `src/components/house3d/`, `src/game/house3d/`) -
+      the house being rebuilt in low-poly 3D with three.js at `/house-3d` (noindex, not linked),
+      from one layout file and Blender scripts. See [Low-poly house](#low-poly-house).
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
       public scoreboards, below), `weather` (Lisbon's current sky from
@@ -224,33 +224,66 @@ pack itself. `bun run og` needs a running dev server and writes `src/assets/og-i
 and commit the PNG whenever the house art changes. It always snapshots the everyday house
 (`?season=none`), so seasonal decorations never need a new one.
 
-### Low-poly house (proof of concept)
+### Low-poly house
 
-`/house-3d` is the first step of rebuilding the house in low-poly 3D (saga
-[#131](https://github.com/joaohfrodrigues/homepage/issues/131)): the living room in three.js, with an
-orthographic camera, click/tap or arrow-key walking on the tile grid, a few interactions (record
-player, lamp, Zeno, TV), day/night and wardrobe colours. It is noindex and not linked from the site;
-the pixel house stays live until the switch-over.
+`/house-3d` is the house being rebuilt in low-poly 3D (saga
+[#131](https://github.com/joaohfrodrigues/homepage/issues/131)). It is noindex and not linked from
+the site; the pixel house stays live until the switch-over. So far it is the whole flat as a grey
+box: every room with its floor and wall finishes, doors and windows, and the furnished living room
+from the proof of concept. João arrives in the hall, by the front door, and walks between rooms by
+click/tap (on a path through the doorways), arrow keys/WASD (camera-relative) or the house's touch
+joystick; M or the Rooms button opens a floor plan that teleports him to any room, and the HUD names
+the room he's in. The orthographic camera looks in from the south-west and follows him. The flat's
+outer south and west walls are cut down for good; every inner wall stays full height and drops only
+while it stands between João and the camera. The living room keeps its interactions (record player,
+lamp, Zeno, TV), plus day/night and wardrobe colours.
 
-- `src/app/house-3d/page.tsx` and `src/components/house3d/low-poly-room.tsx` - the page.
-- `scripts/lowpoly/` - Blender Python scripts that build the models. `build_living_room.py`
-    assembles the room from [KayKit](https://kaylousberg.itch.io/) Furniture Bits plus pieces
-    modelled to match, remapped onto the house palette, and writes `public/house3d/living-room.glb`
-    and `living-room.json` (walkable grid and item tiles). `build_character.py` makes João from the
-    KayKit Adventurers Ranger, with a material per role (skin, hair, shirt, ...) so the page can
-    recolour them, and writes `public/house3d/joao.glb` plus the pack's animation files.
+- `src/game/house3d/house-layout.json` - the one hand-edited layout file: rooms (rect, floor and wall
+    finish, teleport spot), wall runs with their doors, openings and windows, furniture (a KayKit
+    model or a bespoke builder, its tiles, rotation, whether it's solid), interactables (with the
+    pixel house's `InteractAction`), the spawn point and Zeno's places. Tiles are 0.5 m; one tile is
+    0.75 units in Blender and three.js.
+- `src/game/house3d/layout.ts` - its types and the walking grid both the page and the tests use:
+    which tiles are floor, which steps a wall blocks, paths, and the boxes a body collides with.
+- `src/app/house-3d/page.tsx`, `src/components/house3d/low-poly-house.tsx` (the scene) and
+    `room-map.tsx` (the room teleport) - the page.
+- `scripts/lowpoly/build_house.py` - builds the flat in Blender from the layout file: floors, walls
+    (each inner wall its own object, so the page can lower it), windows, the balcony railings, and
+    the furniture from [KayKit](https://kaylousberg.itch.io/) Furniture Bits plus pieces modelled to
+    match, remapped onto the house palette. Writes one GLB per room, `public/house3d/house-<room>.glb`.
+- `scripts/lowpoly/build_character.py` - makes João from the KayKit Adventurers Ranger, with a
+    material per role (skin, hair, shirt, ...) so the page can recolour them, and writes
+    `public/house3d/joao.glb`.
+- `scripts/lowpoly/compress.ts` (`bun run house3d:compress`) - meshopt-compresses the GLBs in place
+    and makes `public/house3d/joao-animations.glb` from the pack's animation files, keeping only the
+    clips the page plays. It prints each file's size before and after.
 - `assets/kaykit/` - the runtime files of both KayKit packs (gltf models, textures, licence), by Kay
     Lousberg and CC0; credited in `assets/kaykit/CREDITS.txt`.
 
 The GLBs in `public/house3d/` are committed, so page work doesn't need Blender. To rebuild them
-(character first, as the room's preview render imports `joao.glb`):
+(Blender 5.2; character first, as the house's preview render imports `joao.glb`):
 
 ```bash
 /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_character.py
-/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_living_room.py
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_house.py
+bun run house3d:compress
 ```
 
-Both also save a `.blend` and a preview render to `assets/lowpoly-poc/`, which is git-ignored.
+The build is deterministic: the same layout gives byte-for-byte the same files. Both scripts also
+save a `.blend` and preview renders to `assets/lowpoly-poc/`, which is git-ignored; `build_house.py`
+renders a top-down plan with each room's size (`plan.png`) and the page's camera view
+(`preview.png`).
+
+**Budgets.** The page loads the hall, João and his clips first (about 680 KB) and starts walking
+while the other rooms load in the background. Keep:
+
+- the whole of `public/house3d/` under **2 MB** (now 1.75 MB, down from 3.1 MB for the living room
+  alone before compression), and what loads before the first frame under **750 KB**;
+- a steady **60 fps or better** on a 375×812 phone viewport with Chrome's CPU throttled 4× (now:
+  the display's own rate, with about 2–3 ms of main-thread work a frame). The whole flat is about 83
+  draw calls and 69k triangles. Phones (coarse pointer or a small screen) render at a pixel ratio of
+  at most 1.5, with a 1024² hard-edged sun shadow and no lamp shadow; desktops get 2, 2048² soft
+  shadows and the lamp's shadow.
 
 ## 🏆 Scoreboards API
 
@@ -383,7 +416,9 @@ Vercel then picks up the change on the next deploy.
 
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
-- **[three.js](https://threejs.org/)** - the low-poly 3D house proof of concept (`/house-3d`)
+- **[three.js](https://threejs.org/)** - the low-poly 3D house (`/house-3d`)
+- **[glTF Transform](https://gltf-transform.dev/)** and **[meshoptimizer](https://meshoptimizer.org/)** -
+    compress the low-poly house's GLBs (`bun run house3d:compress`); three.js decodes them
 - **[Blender](https://www.blender.org/)** - builds the low-poly models from Python scripts
     (`scripts/lowpoly/`)
 - **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
@@ -405,7 +440,7 @@ Vercel then picks up the change on the next deploy.
 - **[Plex](https://www.plex.tv/) / [TMDB](https://www.themoviedb.org/)** - Watch history source and
     poster fallback
 - **[Playwright](https://playwright.dev/)** - End-to-end tests
-- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests for the scoreboards
+- **[Bun test](https://bun.sh/docs/cli/test)** - unit tests (scoreboards, dialogue, sun, the low-poly layout)
 - **[pytest](https://pytest.org/)** - ETL pipeline tests
 - **[Ruff](https://docs.astral.sh/ruff/)** - Python linter and formatter
 - **[Vercel](https://vercel.com)** - Deployment platform
@@ -448,25 +483,26 @@ homepage/
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
 ├── scripts/             # House asset generators (LimeZu import, world map, share image)
-│   └── lowpoly/             # Blender scripts for the low-poly house models
+│   └── lowpoly/             # Blender scripts for the low-poly house, and compress.ts for its GLBs
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
-│   │   ├── house-3d/        # Low-poly 3D house proof of concept
+│   │   ├── house-3d/        # Low-poly 3D house (work in progress)
 │   │   ├── api/             # photos, watch-poster, scores, weather, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, house3d/, photography/, writing/, hobby-feed/, ui/)
 │   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, seasons
+│   │   └── house3d/          # The low-poly house's layout file and walking grid
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
 │   ├── house/               # House atlases and world-map outlines
-│   └── house3d/             # Low-poly house GLBs and room grid (built by scripts/lowpoly/)
+│   └── house3d/             # Low-poly house GLBs, one per room plus João (built by scripts/lowpoly/)
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue, Lisbon's sun, the low-poly layout)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -478,7 +514,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, and Lisbon's sun and moon
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, Lisbon's sun and moon, and the low-poly house's layout file
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 
@@ -487,6 +523,9 @@ so no test reaches Open-Meteo; a test can `page.route` its own sky on top.
 
 The e2e tests never need Upstash: the scores API spec only sends requests the server rejects
 before reaching a store.
+
+`tests/e2e/house-3d.spec.ts` covers the low-poly house. Headless Chromium draws it in software at a
+few frames a second, so its tests wait for where João ends up rather than timing his walk.
 
 CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, `pytest`, the scoreboard unit tests
 and `pip-audit`.
