@@ -15,6 +15,9 @@ the public scoreboards, which live in Upstash Redis.
     - **The house** (`src/game/`, `src/components/house/`) - every page under `src/app/(house)/`
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
+    - **Low-poly house** (`src/app/house-3d/`, `src/components/house3d/`) - a three.js proof of
+      concept of the house in low-poly 3D at `/house-3d` (noindex, not linked), built from Blender
+      scripts. See [Low-poly house (proof of concept)](#low-poly-house-proof-of-concept).
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
       public scoreboards, below), `weather` (Lisbon's current sky from
@@ -221,6 +224,34 @@ pack itself. `bun run og` needs a running dev server and writes `src/assets/og-i
 and commit the PNG whenever the house art changes. It always snapshots the everyday house
 (`?season=none`), so seasonal decorations never need a new one.
 
+### Low-poly house (proof of concept)
+
+`/house-3d` is the first step of rebuilding the house in low-poly 3D (saga
+[#131](https://github.com/joaohfrodrigues/homepage/issues/131)): the living room in three.js, with an
+orthographic camera, click/tap or arrow-key walking on the tile grid, a few interactions (record
+player, lamp, Zeno, TV), day/night and wardrobe colours. It is noindex and not linked from the site;
+the pixel house stays live until the switch-over.
+
+- `src/app/house-3d/page.tsx` and `src/components/house3d/low-poly-room.tsx` - the page.
+- `scripts/lowpoly/` - Blender Python scripts that build the models. `build_living_room.py`
+    assembles the room from [KayKit](https://kaylousberg.itch.io/) Furniture Bits plus pieces
+    modelled to match, remapped onto the house palette, and writes `public/house3d/living-room.glb`
+    and `living-room.json` (walkable grid and item tiles). `build_character.py` makes João from the
+    KayKit Adventurers Ranger, with a material per role (skin, hair, shirt, ...) so the page can
+    recolour them, and writes `public/house3d/joao.glb` plus the pack's animation files.
+- `assets/kaykit/` - the runtime files of both KayKit packs (gltf models, textures, licence), by Kay
+    Lousberg and CC0; credited in `assets/kaykit/CREDITS.txt`.
+
+The GLBs in `public/house3d/` are committed, so page work doesn't need Blender. To rebuild them
+(character first, as the room's preview render imports `joao.glb`):
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_character.py
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/lowpoly/build_living_room.py
+```
+
+Both also save a `.blend` and a preview render to `assets/lowpoly-poc/`, which is git-ignored.
+
 ## 🏆 Scoreboards API
 
 `src/app/api/scores/route.ts`, with the logic in `src/lib/scores/`. Boards are listed in
@@ -352,6 +383,9 @@ Vercel then picks up the change on the next deploy.
 
 - **[Next.js](https://nextjs.org/)** 16 / **[React](https://react.dev/)** 19 - App Router framework
 - **[Phaser](https://phaser.io/)** 4 - the house's game engine
+- **[three.js](https://threejs.org/)** - the low-poly 3D house proof of concept (`/house-3d`)
+- **[Blender](https://www.blender.org/)** - builds the low-poly models from Python scripts
+    (`scripts/lowpoly/`)
 - **[Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)** - the record
     player's lo-fi loop and the house's sound effects, synthesised in the browser
 - **[Tailwind CSS](https://tailwindcss.com/)** 4 - styling
@@ -359,6 +393,9 @@ Vercel then picks up the change on the next deploy.
 - **[Keystatic](https://keystatic.com/)** - Git-backed CMS for content
 - **[LimeZu Modern Interiors](https://limezu.itch.io/moderninteriors)** - character, plant, rug,
     bed and trophy-poster art for the house (most furniture is hand-drawn in code)
+- **[KayKit](https://kaylousberg.itch.io/)** Furniture Bits and Adventurers by Kay Lousberg
+    ([kaylousberg.com](https://www.kaylousberg.com), CC0) - furniture, João and his animations for
+    the low-poly house
 - **[Natural Earth](https://www.naturalearthdata.com/)** - land outlines for the world map
 - **[Open-Meteo](https://open-meteo.com/)** - Lisbon's current weather for the house (no API key)
 - **[SQLite](https://www.sqlite.org/)** - Embedded database with FTS5 full-text search
@@ -392,6 +429,8 @@ homepage/
 │       ├── dev.yaml         # Linting, testing (pytest, Bun unit tests)
 │       ├── etl.yaml         # Daily photo sync
 │       └── plex-etl.yaml    # Daily watch-items sync
+├── assets/
+│   └── kaykit/              # KayKit packs (CC0) used by scripts/lowpoly/, with CREDITS.txt
 ├── backend/             # Database and ETL (Python)
 │   ├── database.py      # Schema and operations
 │   ├── db_service.py    # Query layer
@@ -409,19 +448,22 @@ homepage/
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
 ├── scripts/             # House asset generators (LimeZu import, world map, share image)
+│   └── lowpoly/             # Blender scripts for the low-poly house models
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
+│   │   ├── house-3d/        # Low-poly 3D house proof of concept
 │   │   ├── api/             # photos, watch-poster, scores, weather, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
-│   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
+│   ├── components/       # React components (house/, house3d/, photography/, writing/, hobby-feed/, ui/)
 │   ├── game/             # Phaser scene, floor plan, furniture, characters, missions, seasons
 │   ├── lib/              # Data access, utilities
 │   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
-│   └── house/               # House atlases and world-map outlines
+│   ├── house/               # House atlases and world-map outlines
+│   └── house3d/             # Low-poly house GLBs and room grid (built by scripts/lowpoly/)
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
 │   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue)
