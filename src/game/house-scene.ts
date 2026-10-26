@@ -822,15 +822,16 @@ export class HouseScene extends Phaser.Scene {
     if (!sofa) return this.cfg.bridge.game.emit('dozed')
     this.dozing = true
     this.effects.clear()
-    const seat = { x: sofa.x + 1, y: sofa.y + 1 }
+    // The seat is the sofa's top row: it faces the TV, its back to the room.
+    const seat = { x: sofa.x + 1, y: sofa.y }
     this.placeGuest(
       seat,
-      'down',
+      'up',
       () => {
         this.applySky({ ...MORNING, moon: this.sky.moon })
-        // At the corner of the sofa rather than straight in front, so he doesn't hide the guest.
+        // Behind the sofa, a little to one side, so he doesn't hide the guest.
         const beside = [1, -1, 0]
-          .map((dx) => ({ x: seat.x + dx, y: seat.y + 1 }))
+          .map((dx) => ({ x: seat.x + dx, y: seat.y + 2 }))
           .find((t) => this.isWalkable(t.x, t.y, this.npc))
         if (beside) {
           this.npc.tile = beside
