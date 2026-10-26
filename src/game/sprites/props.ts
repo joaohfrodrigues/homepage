@@ -1,8 +1,8 @@
 /**
- * Furniture redrawn as grid sprites (see grid-sprite.ts). A prop listed here
- * draws from its grid instead of its rectangles in pixels.ts; each grid is the
- * prop's full PROP_SIZES box. Light comes from the top left: the left and top
- * edges take the light end of a ramp, the right and bottom the dark end.
+ * The house's furniture as grid sprites (see grid-sprite.ts), drawn by
+ * drawProp in pixels.ts; each grid is the prop's full PROP_SIZES box. Light
+ * comes from the top left: the left and top edges take the light end of a
+ * ramp, the right and bottom the dark end.
  */
 import type { GridSprite } from '../grid-sprite'
 import type { PropName } from '../pixels'
@@ -1894,14 +1894,261 @@ const cafechair: GridSprite = {
   ],
 }
 
+// --- Seasonal (see seasons.ts) -----------------------------------------------
+
+/** A 1.2m Christmas tree in a terracotta pot: a star on top, fairy lights and baubles. */
+const xmastree: GridSprite = {
+  keys: {
+    o: 'ink.1',
+    L: 'green.4',
+    g: 'green.2',
+    D: 'green.0',
+    y: 'brass.2',
+    Y: 'brass.3',
+    c: 'cream.4',
+    r: 'red.2',
+    b: 'blue.4',
+    w: 'walnut.1',
+    T: 'terracotta.4',
+    t: 'terracotta.3',
+    q: 'terracotta.2',
+  },
+  rows: [
+    '.......oYo......',
+    '......oYYyo.....',
+    '.....ooyyyoo....',
+    '......oLLo......',
+    '......oLLo......',
+    '.....oLcDDo.....',
+    '....oLLgrDDo....',
+    '....oLLggcDo....',
+    '...oDDLLDDDDo...',
+    '....ooLLDDoo....',
+    '....oyLggDro....',
+    '...oLLggygDDo...',
+    '...oLLbgggDDo...',
+    '..oLLggggggcDo..',
+    '.oDDDLLggDDDDDo.',
+    '..oooLLggDDooo..',
+    '...ocLgggbDDo...',
+    '..oLLggcgggyDo..',
+    '..oLLgggggcDDo..',
+    '.oLLgrggggggDDo.',
+    '.oLLggggggggcDo.',
+    '.oLLggygrgggDDo.',
+    '.oDDDDDDDDDDDDo.',
+    '..ooooowwooooo..',
+    '....ooowwooo....',
+    '...oTTTTTTTTo...',
+    '...oTttttttqo...',
+    '...oTttttttqo...',
+    '...oTttttttqo...',
+    '...oTqqqqqqqo...',
+    '....oooooooo....',
+    '...,,,,,,,,,,...',
+  ],
+}
+
+/** The bolo-rei, laid on the dining table over its centrepiece: a golden ring studded with candied fruit and sugar. */
+const bolorei: GridSprite = {
+  keys: {
+    o: 'ink.1',
+    n: 'ochre.0',
+    O: 'ochre.1',
+    h: 'ochre.2',
+    w: 'walnut.2',
+    r: 'red.2',
+    g: 'green.4',
+    y: 'brass.2',
+    a: 'cream.3',
+    W: 'white.4',
+  },
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '.....ooooooo....',
+    '....ohhhhOOOo...',
+    '...ohOrOOWgOOo..',
+    '..oOhOOoooOOWOo.',
+    '..oWOOowwwoOyOo.',
+    '..oOgOOoooOOOOo.',
+    '..onOOOWOOOaOno.',
+    '...onyOOrOOOno..',
+    '....onnnnnnno...',
+    '.....ooooooo....',
+  ],
+}
+
+/** Two grilled sardines on a slice of bread, the June way, on the balcony's café table. */
+const sardines: GridSprite = {
+  keys: {
+    o: 'ink.1',
+    k: 'ochre.0',
+    K: 'ochre.1',
+    c: 'oak.4',
+    R: 'steel.2',
+    S: 'steel.4',
+    s: 'steel.3',
+    m: 'ink.2',
+    e: 'ink.0',
+  },
+  rows: [
+    '................',
+    '................',
+    '................',
+    '................',
+    '...ooooooooooR..',
+    '...RRmRRmRRko...',
+    '..eSSSSSSSSRR...',
+    '...ssssssssso...',
+    '...oKcccccckoR..',
+    '...RRmRRmRRko...',
+    '..eSSSSSSSSRR...',
+    '...ssssssssso...',
+    '...oooooooooo...',
+    '................',
+    '................',
+    '................',
+  ],
+}
+
+/** Paper bunting for the Santos and the parties: a string sagging between two nails, flags in arraial colours. */
+const garland: GridSprite = {
+  keys: {
+    c: 'cream.1',
+    n: 'steel.2',
+    R: 'red.3',
+    r: 'red.1',
+    Y: 'brass.2',
+    y: 'brass.0',
+    G: 'green.4',
+    g: 'green.2',
+    B: 'blue.4',
+    b: 'blue.0',
+    P: 'pink.2',
+    p: 'pink.0',
+  },
+  rows: [
+    '................................',
+    'n..............................n',
+    'cc............................cc',
+    '..cccc....................cccc..',
+    '..RRRRrccc............ccccPPPPp.',
+    '...RRr....ccccccccccBBBBb..PPp..',
+    '...Rr...YYYYy.GGGGg..BBb...Pp...',
+    '....r....YYy...GGg...Bb.....p...',
+    '.........Yy....Gg.....b.........',
+    '..........y.....g...............',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+    '................................',
+  ],
+}
+
+/** A jack-o'-lantern for Halloween, its face lit by the candle inside. */
+const pumpkin: GridSprite = {
+  keys: {
+    o: 'ink.1',
+    O: 'terracotta.4',
+    q: 'terracotta.3',
+    Q: 'terracotta.2',
+    h: 'ochre.1',
+    g: 'green.3',
+    G: 'green.1',
+    Y: 'brass.2',
+    y: 'brass.1',
+    L: 'cream.4',
+  },
+  rows: [
+    '................',
+    '........oo......',
+    '.......ogGo.....',
+    '.......ogGo.....',
+    '....oooooooo....',
+    '...ooqOOqOOoo...',
+    '..ohhqOOqOOqQo..',
+    '.oOhyYOOYyOqQQo.',
+    '.oOOYLOOLYOqQQo.',
+    '.oOOOqyOYOOqQQo.',
+    '.oOOYLLLLYOqQQo.',
+    '.oOOOYOYqOOqQQo.',
+    '..oOOqOOqOOqQo..',
+    '...ooqOOqOOoo...',
+    '....oooooooo....',
+    '..,,,,,,,,,,,,..',
+  ],
+}
+
+/** A bunch of birthday balloons tied to a weight on the floor. */
+const balloons: GridSprite = {
+  keys: {
+    o: 'ink.1',
+    s: 'cream.1',
+    R: 'red.3',
+    r: 'red.1',
+    H: 'red.4',
+    B: 'blue.4',
+    b: 'blue.0',
+    J: 'sky.2',
+    Y: 'brass.2',
+    y: 'brass.0',
+    Z: 'brass.3',
+    K: 'ink.3',
+    k: 'ink.2',
+  },
+  rows: [
+    '................',
+    '...ooo..........',
+    '..oRRRo...ooo...',
+    '.oRHHRRo.oBBBo..',
+    '.oRHRRrooBJJBBo.',
+    '.oRRRRrooBJBBbo.',
+    '.oRRRRrooBBBBbo.',
+    '..oRrrooooBBBbo.',
+    '...ooooYYYobbo..',
+    '....ooYZZYYoo...',
+    '....soYZYYyo....',
+    '....soYYYYyo....',
+    '.....oYYYYyo....',
+    '.....soYyyo.....',
+    '.....s.ooos.....',
+    '.....s..o.s.....',
+    '.....s..s.s.....',
+    '.....s..s.s.....',
+    '......s.s.s.....',
+    '......s.ss......',
+    '......s.ss......',
+    '......s.ss......',
+    '......s.ss......',
+    '......s.ss......',
+    '.......ss.......',
+    '.......ss.......',
+    '.....ooooooo....',
+    '.....oKKKKKo....',
+    '.....okkkkko....',
+    '.....ooooooo....',
+    '....,,,,,,,,,...',
+    '................',
+  ],
+}
+
 /**
  * A prop given several grids draws one by where it stands (its y in prop
  * heights), so repeats along a wall don't match.
  */
-export const GRID_PROPS: Partial<Record<PropName, GridSprite | GridSprite[]>> = {
+export const GRID_PROPS: Record<PropName, GridSprite | GridSprite[]> = {
   alarmclock,
+  balloons,
   basin,
   bathmat,
+  bolorei,
   bookshelfside: [bookshelfsideA, bookshelfsideB],
   boots,
   cafechair,
@@ -1920,6 +2167,7 @@ export const GRID_PROPS: Partial<Record<PropName, GridSprite | GridSprite[]>> = 
   drums,
   floorlamp,
   fridge,
+  garland,
   guestbook,
   kcounter: [kcounterA, kcounterB, kcounterC, kcounterB],
   khob,
@@ -1927,7 +2175,9 @@ export const GRID_PROPS: Partial<Record<PropName, GridSprite | GridSprite[]>> = 
   medalstand,
   nightstand,
   officechair,
+  pumpkin,
   recordplayer,
+  sardines,
   shower,
   sink,
   sofa,
@@ -1935,4 +2185,5 @@ export const GRID_PROPS: Partial<Record<PropName, GridSprite | GridSprite[]>> = 
   tv,
   wallmap,
   wardrobeside,
+  xmastree,
 }

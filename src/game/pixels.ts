@@ -16,13 +16,8 @@ const PALETTE = {
   woodDark: '#4a3122',
   wood: '#6b4630',
   woodLight: '#8a5d3f',
-  woodHighlight: '#a2714c',
   brass: '#c9a227',
   brassLight: '#e8c95a',
-  red: '#c0392b',
-  redDark: '#8e2a20',
-  paper: '#f4ecd8',
-  tape: '#e8c33a',
 }
 
 export function rect(ctx: Ctx, x: number, y: number, w: number, h: number, color: string) {
@@ -319,7 +314,15 @@ export const DOOR_FRAME = { w: 32, h: 36 }
 /** The leaf fills the doorway inside its posts and under its lintel. */
 const LEAF = { x: 2, y: 4, w: 28, h: 28 }
 
-const DOOR_PAINT = { face: '#efe7d6', panel: '#e6dcc7', shade: '#cdc2ab', light: '#fbf7ee', gap: '#2f2a3a' }
+const DOOR_PAINT = {
+  face: '#efe7d6',
+  panel: '#e6dcc7',
+  shade: '#cdc2ab',
+  light: '#fbf7ee',
+  gap: '#2f2a3a',
+  steel: '#b8bcc4',
+  steelDark: '#8a9099',
+}
 
 /** A four-panel interior door, painted off-white, hinged on the left with a lever handle on the right. */
 function drawDoorLeaf(ctx: Ctx, ox: number, oy: number, handleDown: boolean) {
@@ -343,16 +346,16 @@ function drawDoorLeaf(ctx: Ctx, ox: number, oy: number, handleDown: boolean) {
     r(x + 8, y + 1, 1, 8, DOOR_PAINT.light)
   }
   // Two hinges on the left stile.
-  r(1, 4, 1, 3, WHITE_GOODS.steelDark)
-  r(1, 20, 1, 3, WHITE_GOODS.steelDark)
+  r(1, 4, 1, 3, DOOR_PAINT.steelDark)
+  r(1, 20, 1, 3, DOOR_PAINT.steelDark)
   // A round rose and a lever reaching towards the hinges, pressed down in a rattle, over a keyhole.
-  r(23, 13, 2, 2, WHITE_GOODS.steelDark)
+  r(23, 13, 2, 2, DOOR_PAINT.steelDark)
   if (handleDown) {
-    r(21, 14, 2, 1, WHITE_GOODS.steel)
-    r(19, 15, 2, 1, WHITE_GOODS.steel)
+    r(21, 14, 2, 1, DOOR_PAINT.steel)
+    r(19, 15, 2, 1, DOOR_PAINT.steel)
   } else {
-    r(19, 13, 4, 1, WHITE_GOODS.steel)
-    r(19, 14, 4, 1, WHITE_GOODS.steelDark)
+    r(19, 13, 4, 1, DOOR_PAINT.steel)
+    r(19, 14, 4, 1, DOOR_PAINT.steelDark)
   }
   r(23, 17, 1, 2, PALETTE.ink)
 }
@@ -519,197 +522,12 @@ export const DESK_LEDS = [
   { x: 43, y: 13 },
   { x: 41, y: 11 },
 ]
-/** Where light comes from, for the scene's warm glows. */
-const WHITE_GOODS = { body: '#e8e4da', line: '#c9c3b5', steel: '#b8bcc4', steelDark: '#8a9099' }
 
-function disc(ctx: Ctx, cx: number, cy: number, r: number, color: string) {
-  for (let dy = -r; dy <= r; dy++) {
-    const half = Math.round(Math.sqrt(r * r - dy * dy))
-    rect(ctx, cx - half, cy + dy, half * 2, 1, color)
-  }
-}
-
-/** A 60cm kitchen unit: wall cabinet and tiled splashback above, counter and doors below. */
-function drawKitchenUnit(ctx: Ctx, ox: number, oy: number) {
-  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
-  r(0, 0, 16, 8, WHITE_GOODS.body)
-  r(0, 7, 16, 1, WHITE_GOODS.line)
-  r(7, 0, 1, 7, WHITE_GOODS.line)
-  r(5, 5, 1, 1, WHITE_GOODS.steelDark)
-  r(9, 5, 1, 1, WHITE_GOODS.steelDark)
-  r(0, 8, 16, 8, '#f2f2ee')
-  for (let x = 3; x < 16; x += 4) r(x, 8, 1, 8, '#dcdcd4')
-  r(0, 12, 16, 1, '#dcdcd4')
-  r(0, 16, 16, 3, '#5f5766')
-  r(0, 16, 16, 1, '#7d7383')
-  r(0, 19, 16, 12, WHITE_GOODS.body)
-  r(7, 19, 1, 12, WHITE_GOODS.line)
-  r(5, 23, 1, 3, WHITE_GOODS.steelDark)
-  r(9, 23, 1, 3, WHITE_GOODS.steelDark)
-  r(0, 31, 16, 1, '#8a8090')
-}
-
-/**
- * A 60cm kitchen unit along the west wall, seen from above: the dark worktop,
- * and the white doors along its front edge. `extra` puts a chopping board (1)
- * or a bowl of oranges (2) on the worktop.
- */
-function drawSideCounter(ctx: Ctx, ox: number, oy: number, extra: number) {
-  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
-  r(0, 0, 12, 16, '#5f5766')
-  r(0, 0, 12, 1, '#7d7383')
-  r(12, 0, 3, 16, WHITE_GOODS.body)
-  r(12, 0, 1, 16, WHITE_GOODS.line)
-  r(12, 15, 3, 1, WHITE_GOODS.line)
-  r(13, 6, 1, 3, WHITE_GOODS.steelDark)
-  r(15, 0, 1, 16, PALETTE.shadow)
-  if (extra === 1) {
-    r(2, 3, 7, 9, PALETTE.woodLight)
-    r(2, 3, 7, 1, PALETTE.woodHighlight)
-    r(4, 6, 4, 1, WHITE_GOODS.steel)
-  } else if (extra === 2) {
-    disc(ctx, ox + 6, oy + 8, 4, '#e8e4da')
-    disc(ctx, ox + 5, oy + 7, 1, '#e07a3a')
-    disc(ctx, ox + 7, oy + 9, 1, '#e07a3a')
-    r(7, 6, 1, 1, '#4f7a3a')
-  }
-}
-
-function drawChair(ctx: Ctx, ox: number, oy: number, backOnTop: boolean) {
-  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
-  r(3, 4, 10, 10, PALETTE.ink)
-  r(4, 5, 8, 8, PALETTE.woodLight)
-  if (backOnTop) {
-    r(3, 1, 10, 4, PALETTE.ink)
-    r(4, 2, 8, 2, PALETTE.wood)
-  } else {
-    r(3, 12, 10, 4, PALETTE.ink)
-    r(4, 13, 8, 2, PALETTE.wood)
-  }
-}
-
+/** Furniture draws from its grid sprite (sprites/props.ts); a prop with several picks one by where it stands. */
 export function drawProp(ctx: Ctx, ox: number, oy: number, name: PropName) {
   const grid = GRID_PROPS[name]
-  if (grid) {
-    const variant = Array.isArray(grid) ? grid[Math.abs(Math.floor(oy / PROP_SIZES[name].h)) % grid.length] : grid
-    return drawGrid(ctx, variant, ox, oy)
-  }
-  const r = (x: number, y: number, w: number, h: number, color: string) => rect(ctx, ox + x, oy + y, w, h, color)
-  switch (name) {
-    // --- Seasonal ----------------------------------------------------------------
-    case 'xmastree': {
-      // Three tiers of fir with a star on top, baubles and a terracotta pot.
-      for (const [y, half, rows] of [
-        [3, 2, 6],
-        [8, 3, 7],
-        [14, 4, 9],
-      ] as const) {
-        for (let i = 0; i < rows; i++) {
-          const w = Math.min(half + Math.floor(i / 2), 7)
-          r(8 - w, y + i, w * 2, 1, i === rows - 1 ? '#1f4a33' : '#2f6b45')
-          r(8 - w, y + i, 1, 1, '#1f4a33')
-        }
-      }
-      r(7, 7, 1, 2, '#4f9a64')
-      r(6, 13, 1, 2, '#4f9a64')
-      for (const [x, y, color] of [
-        [6, 6, PALETTE.red],
-        [10, 10, PALETTE.brassLight],
-        [5, 12, '#6b8aa8'],
-        [9, 16, PALETTE.red],
-        [4, 19, PALETTE.brassLight],
-        [11, 20, '#6b8aa8'],
-        [7, 21, PALETTE.red],
-      ] as const)
-        r(x, y, 1, 1, color)
-      r(7, 0, 2, 3, PALETTE.brass)
-      r(6, 1, 4, 1, PALETTE.brassLight)
-      r(7, 23, 2, 2, PALETTE.woodDark)
-      r(4, 25, 8, 5, '#a8553a')
-      r(4, 25, 8, 1, '#c46a4a')
-      r(3, 30, 10, 1, PALETTE.shadow)
-      break
-    }
-    case 'bolorei': {
-      // The crown-shaped Christmas cake: a golden ring studded with candied fruit.
-      disc(ctx, ox + 8, oy + 12, 5, '#a8692e')
-      disc(ctx, ox + 8, oy + 11, 5, '#d39a4e')
-      disc(ctx, ox + 8, oy + 11, 2, PALETTE.wood)
-      for (const [x, y, color] of [
-        [5, 8, PALETTE.red],
-        [10, 8, '#4f9a64'],
-        [12, 11, '#e8c95a'],
-        [4, 12, '#4f9a64'],
-        [8, 14, PALETTE.red],
-        [11, 14, '#f4ecd8'],
-      ] as const)
-        r(x, y, 1, 1, color)
-      break
-    }
-    case 'sardines': {
-      // Two grilled sardines on a slice of bread, the June way.
-      r(3, 4, 10, 9, '#b5803e')
-      r(4, 5, 8, 7, '#e3b874')
-      for (const y of [5, 9]) {
-        r(2, y, 9, 2, '#a9b4bd')
-        r(2, y, 9, 1, '#5a6672')
-        r(3, y + 1, 1, 1, PALETTE.ink)
-        r(11, y - 1, 2, 1, '#5a6672')
-        r(11, y + 2, 2, 1, '#5a6672')
-        r(6, y, 1, 2, '#3a3340')
-      }
-      break
-    }
-    case 'garland': {
-      // Paper bunting: a string sagging between two nails, flags in arraial colours.
-      const colors = ['#e05a48', '#e8c95a', '#4f9a64', '#6b8aa8', '#d97aa8']
-      for (let x = 0; x < 32; x++) {
-        const y = 2 + Math.round(Math.sin((x / 31) * Math.PI) * 3)
-        r(x, y, 1, 1, '#f4ecd8')
-        if (x % 6 === 2 && x < 30) {
-          const color = colors[(x / 6) % colors.length | 0]
-          r(x, y + 1, 3, 2, color)
-          r(x + 1, y + 3, 1, 1, color)
-        }
-      }
-      break
-    }
-    case 'pumpkin': {
-      r(3, 14, 11, 1, PALETTE.shadow)
-      disc(ctx, ox + 8, oy + 10, 5, '#c4621e')
-      r(4, 6, 8, 9, '#e07a2a')
-      r(7, 6, 2, 9, '#c4621e')
-      r(7, 3, 2, 3, '#4f7a3a')
-      r(9, 3, 2, 1, '#4f7a3a')
-      // A jack-o'-lantern face, lit from inside.
-      r(5, 8, 2, 2, '#ffd56a')
-      r(9, 8, 2, 2, '#ffd56a')
-      r(5, 12, 6, 1, '#ffd56a')
-      r(6, 11, 1, 1, '#ffd56a')
-      r(9, 11, 1, 1, '#ffd56a')
-      break
-    }
-    case 'balloons': {
-      // A bunch of balloons tied to a weight on the floor.
-      for (const [x, y, color, light] of [
-        [5, 4, '#e05a48', '#f08a7a'],
-        [11, 5, '#6b8aa8', '#9cbad4'],
-        [8, 10, '#e8c95a', '#f6e39a'],
-      ] as const) {
-        disc(ctx, ox + x, oy + y, 3, color)
-        r(x - 2, y - 2, 1, 2, light)
-        r(x, y + 4, 1, 1, color)
-      }
-      r(8, 14, 1, 13, '#b5aa94')
-      r(5, 7, 1, 7, '#b5aa94')
-      r(11, 9, 1, 5, '#b5aa94')
-      r(6, 13, 5, 1, '#b5aa94')
-      r(6, 27, 5, 3, PALETTE.ink)
-      r(7, 27, 3, 1, '#4a4458')
-      r(5, 30, 7, 1, PALETTE.shadow)
-      break
-    }
-  }
+  const sprite = Array.isArray(grid) ? grid[Math.abs(Math.floor(oy / PROP_SIZES[name].h)) % grid.length] : grid
+  drawGrid(ctx, sprite, ox, oy)
 }
 
 // ---------------------------------------------------------------------------
