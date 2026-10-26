@@ -194,8 +194,8 @@ dark around them like the lamps. Add `?season=xmas` (or `santos`, `halloween`, `
 Where things live:
 
 - `src/game/layout.ts` - the floor plan and rooms; `src/game/furnishings.ts` - what stands where;
-    `src/game/pixels.ts` - the pixel art drawn in code; `src/game/palette.ts` - the house palette;
-    `src/game/grid-sprite.ts` and `src/game/sprites/` - furniture redrawn as text grids (see
+    `src/game/pixels.ts` - floors, walls, doors and Zeno drawn in code; `src/game/palette.ts` - the
+    house palette; `src/game/grid-sprite.ts` and `src/game/sprites/` - the furniture as text grids (see
     [Drawing the house](#drawing-the-house)); `src/game/missions.ts` - missions and what
     they unlock; `src/game/seasons.ts` - which decorations are up;
     `src/game/house-scene.ts` - the Phaser scene; `src/game/lighting.ts` - daylight and the night's
@@ -225,14 +225,14 @@ and commit the PNG whenever the house art changes. It always snapshots the every
 
 ### Drawing the house
 
-Furniture is drawn in code, no image files. Two ways to write it:
-
-- **Rectangles** in `drawProp` (`src/game/pixels.ts`): most props, as they've always been.
-- **Grid sprites** in `src/game/sprites/props.ts`: one character per pixel, each mapped to a
-    palette swatch such as `'walnut.2'` (`.` is transparent, `,` the drop shadow). A prop listed in
-    `GRID_PROPS` draws from its grid instead of its rectangles; give it several grids and each copy
-    picks one by where it stands, so repeats along a wall differ. Redrawn and new furniture goes
-    here: a grid is easier to shade, review and edit than runs of rectangles.
+Furniture is drawn in code, no image files: every prop is a **grid sprite** in
+`src/game/sprites/props.ts`, one character per pixel, each mapped to a palette swatch such as
+`'walnut.2'` (`.` is transparent, `,` the drop shadow). `drawProp` (`src/game/pixels.ts`) draws a
+prop from its entry in `GRID_PROPS`, which must cover every prop in `PROP_SIZES`; give a prop
+several grids and each copy picks one by where it stands, so repeats along a wall differ (the
+kitchen's side counters get a chopping board or a bowl of oranges that way). Each grid fills its
+prop's `PROP_SIZES` box exactly. Floors, walls, doors and Zeno are still drawn as rectangles in
+`pixels.ts`.
 
 Every colour comes from `src/game/palette.ts`: 87 colours in named ramps (`ink`, `walnut`, `oak`,
 `terracotta`, `sky`, ...), dark to light, taken from the existing art. Shade a grid by stepping along
@@ -244,7 +244,7 @@ Tools, in `scripts/sprites/` (they write to `.sprites/`, which is git-ignored):
 ```bash
 bun run sprites:preview sofa tv          # contact sheet: 1x on the floor, and magnified with a grid
 bun run sprites:preview sofa --limezu palm,bedTeakGrey   # LimeZu pieces alongside, to match
-bun run sprites:palette                  # props still off the palette; --all lists the colours
+bun run sprites:palette                  # props drawing off the palette; --all lists the colours
 bun run sprites:grid export fridge       # prop → PNG, to edit in a pixel editor
 bun run sprites:grid import some.png     # PNG → GridSprite, snapped to the palette
 bun run sprites:ai "an espresso machine" --size 16x32   # optional AI draft (needs PIXELLAB_API_KEY)
