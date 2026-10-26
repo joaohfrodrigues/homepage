@@ -70,7 +70,7 @@ const NOTHING_UNLOCKED: ReadonlySet<UnlockId> = new Set()
  * corridor, where they follow its length.
  */
 export type FloorKind = 'oak' | 'oak-across' | 'hydraulic' | 'bath' | 'balcony'
-export type WallKind = 'warmwhite' | 'azulejo' | 'library' | 'sage' | 'bath' | 'metro' | 'railing'
+export type WallKind = 'warmwhite' | 'azulejo' | 'library' | 'powderblue' | 'bath' | 'metro' | 'railing'
 export type Direction = 'up' | 'down' | 'left' | 'right'
 
 export interface Point {
@@ -142,7 +142,7 @@ export const ROOMS: Room[] = [
     name: 'Bedroom',
     rect: { x: 11, y: 3, w: 6, h: 6 },
     floor: 'oak',
-    wall: 'sage',
+    wall: 'powderblue',
     spawn: { x: 13, y: 7 },
     spawnFacing: 'up',
   },

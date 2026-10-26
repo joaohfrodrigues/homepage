@@ -917,16 +917,16 @@ const chimney: GridSprite = {
   ],
 }
 
-/** The blue three-seater, seen from behind as it faces the TV: seat and back cushions, a mustard cushion, and a striped throw over the back. */
+/** The beige three-seater, seen from behind as it faces the TV: seat and back cushions, a mustard cushion, and a striped throw over the back. */
 const sofa: GridSprite = {
   keys: {
     o: 'ink.1',
-    n: 'navy.2',
-    N: 'navy.3',
-    b: 'blue.0',
-    B: 'blue.2',
-    L: 'blue.3',
-    H: 'sky.1',
+    n: 'oak.0',
+    N: 'oak.1',
+    b: 'oak.3',
+    B: 'oak.4',
+    L: 'cream.2',
+    H: 'cream.3',
     y: 'brass.1',
     Y: 'brass.2',
     u: 'brass.0',

@@ -93,7 +93,7 @@ const ROOM_COLORS: Record<RoomId, string> = {
   living: '#e9c2a6',
   kitchen: '#e4d9b8',
   study: '#7f9f88',
-  bedroom: '#b9c8b2',
+  bedroom: '#c4d8ea',
   bathroom: '#c9dbe3',
   balcony: '#d8d0bd',
 }
