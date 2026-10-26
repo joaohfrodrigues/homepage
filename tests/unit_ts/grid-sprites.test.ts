@@ -22,10 +22,15 @@ describe('house palette', () => {
 })
 
 describe('grid sprites', () => {
-  test.each(Object.entries(GRID_PROPS) as [PropName, GridSprite][])('%s is sound and fills its prop box', (name, sprite) => {
-    expect(gridErrors(sprite)).toEqual([])
-    expect(gridSize(sprite)).toEqual(PROP_SIZES[name])
-  })
+  test.each(Object.entries(GRID_PROPS) as [PropName, GridSprite | GridSprite[]][])(
+    '%s is sound and fills its prop box',
+    (name, grid) => {
+      for (const sprite of [grid].flat()) {
+        expect(gridErrors(sprite)).toEqual([])
+        expect(gridSize(sprite)).toEqual(PROP_SIZES[name])
+      }
+    },
+  )
 
   test('reports ragged rows and missing keys', () => {
     const errors = gridErrors({ keys: { a: 'ink.1' }, rows: ['aa', 'ab', 'a'] })

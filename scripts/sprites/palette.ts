@@ -13,7 +13,7 @@
 import { createCanvas } from '@napi-rs/canvas'
 import { mkdirSync } from 'node:fs'
 import { PALETTE_ENTRIES, PALETTE_HEX, nearestSwatch } from '../../src/game/palette'
-import { PROP_NAMES, opaqueColours, renderProp } from './render'
+import { PROP_NAMES, opaqueColours, renderProp, variantCount } from './render'
 
 const all = process.argv.includes('--all')
 
@@ -39,7 +39,10 @@ PALETTE_ENTRIES.forEach(({ hex }, x) => {
 await Bun.write('.sprites/palette.png', strip.toBuffer('image/png'))
 
 const report = PROP_NAMES.map((name) => {
-  const colours = opaqueColours(renderProp(name))
+  const colours = new Map<string, number>()
+  for (let v = 0; v < variantCount(name); v++) {
+    for (const [hex, n] of opaqueColours(renderProp(name, v))) colours.set(hex, (colours.get(hex) ?? 0) + n)
+  }
   const total = [...colours.values()].reduce((a, b) => a + b, 0)
   const off = [...colours].filter(([hex]) => !PALETTE_HEX.has(hex))
   return { name, share: off.reduce((sum, [, n]) => sum + n, 0) / total, off }

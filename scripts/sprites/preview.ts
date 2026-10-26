@@ -15,7 +15,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import LIMEZU from '../../src/game/limezu-furniture.json'
 import { drawFloor, type PropName } from '../../src/game/pixels'
-import { PROP_NAMES, asCtx, renderProp } from './render'
+import { PROP_NAMES, asCtx, renderProp, variantCount } from './render'
 
 const args = process.argv.slice(2)
 const option = (name: string) => {
@@ -32,7 +32,9 @@ const names = args.length ? (args as PropName[]) : png ? [] : PROP_NAMES
 for (const name of names) if (!PROP_NAMES.includes(name)) throw new Error(`No prop called ${name}`)
 for (const name of limezu) if (!(name in LIMEZU)) throw new Error(`No LimeZu sprite called ${name}`)
 
-const cells: { label: string; art: Canvas }[] = names.map((name) => ({ label: name, art: renderProp(name) }))
+const cells: { label: string; art: Canvas }[] = names.flatMap((name) =>
+  Array.from({ length: variantCount(name) }, (_, v) => ({ label: v ? `${name} #${v + 1}` : name, art: renderProp(name, v) })),
+)
 if (limezu.length || png) {
   const crop = (image: Image, x: number, y: number, w: number, h: number) => {
     const canvas = createCanvas(w, h)
