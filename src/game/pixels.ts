@@ -122,7 +122,7 @@ const WALLPAPER: Record<WallKind, { base: string; accent: string; board: string 
   warmwhite: { base: '#f3ece0', accent: '#e6dccb', board: '#e0d5c2' },
   azulejo: { base: '#f3ece0', accent: '#2f5d9a', board: '#e0d5c2' },
   library: { base: '#3f5a4a', accent: '#37503f', board: '#3a2619' },
-  sage: { base: '#c9d6c3', accent: '#bccab5', board: '#e0d5c2' },
+  powderblue: { base: '#d4e4f0', accent: '#c6d9e8', board: '#e0d5c2' },
   bath: { base: '#e3eef2', accent: '#c9dbe3', board: '#9fc3d6' },
   metro: { base: '#f2f2ee', accent: '#dcdcd4', board: '#8a8090' },
   railing: { base: '#2b2a33', accent: '#4a4858', board: '#2b2a33' },
@@ -167,7 +167,7 @@ function drawWallpaper(ctx: Ctx, ox: number, oy: number, kind: WallKind, part: '
       const offset = kind === 'metro' && row % 2 ? 4 : 0
       for (let x = offset + 3; x < 16; x += kind === 'metro' ? 8 : 4) rect(ctx, ox + x, oy + row * 4, 1, 3, paper.accent)
     }
-  } else if (kind === 'sage') {
+  } else if (kind === 'powderblue') {
     for (let x = 2; x < 16; x += 6) rect(ctx, ox + x, oy, 1, 16, paper.accent)
   } else if (kind === 'warmwhite') {
     if (part === 'upper') rect(ctx, ox, oy + 8, 16, 1, paper.accent)
