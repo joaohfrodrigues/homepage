@@ -152,7 +152,10 @@ dusk the house sinks gradually into blue as the lamps come up, and dawn lifts it
 light catches up with the sun every minute. At night only lamps you can see are on, low and warm
 (the floor lamps, the bedside lamp, a lamp on the hall console and festoon bulbs along the balcony),
 each lighting a soft patch of the dark around it, while the TV and the study's monitor glow and
-throw a cool fan of light down from the screen. The window glass goes dark, with stars and the moon
+throw a cool fan of light down from the screen. With WebGL the lamps and screens are Phaser's
+per-pixel lights, so they brighten the floor, furniture and people they fall on rather than glowing
+over them; the bare bulbs of the festoon string, the alarm clock and the seasonal decorations keep a
+soft tinted glow, as does every light on the Canvas renderer. The window glass goes dark, with stars and the moon
 in its current phase on a clear night. A nap until evening moves the clock on to after the next
 dusk, and sleeping, or waking on the sofa, to the next morning; a reload goes back to Lisbon's real
 time. To preview a time of day, add `?time=21:15` (Lisbon time) to the URL.

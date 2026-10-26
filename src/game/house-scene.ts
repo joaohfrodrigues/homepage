@@ -205,6 +205,7 @@ export class HouseScene extends Phaser.Scene {
   /** The bathroom's door over its doorway: shut, rattling while it's stuck, or swung open. */
   private bathroomDoor?: Phaser.GameObjects.Sprite
   private lighting!: Lighting
+  private houseBase!: Phaser.GameObjects.Image
   private sky: Sky = { night: 0, warmth: 0, moon: 0 }
   private skyTween: Phaser.Tweens.Tween | null = null
   private weather!: WeatherLayer
@@ -330,6 +331,10 @@ export class HouseScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1800, loop: true, callback: () => this.wanderNpc() })
     this.time.addEvent({ delay: ZENO_TICK_MS, loop: true, callback: () => this.tickZeno() })
 
+    const lit = [this.houseBase, this.player.sprite, this.npc.sprite, this.zeno.sprite, this.toy, this.poop]
+    if (this.bathroomDoor) lit.push(this.bathroomDoor)
+    this.lighting.useShaderLights(lit)
+
     this.updateRoom()
     this.updateHint()
     this.cfg.bridge.game.emit('ready')
@@ -384,7 +389,7 @@ export class HouseScene extends Phaser.Scene {
   private bakeHouse() {
     const texture = this.textures.createCanvas('house-base', MAP_WIDTH * TILE, MAP_HEIGHT * TILE)!
     this.paintHouse(texture)
-    this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
+    this.houseBase = this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
   }
 
   /** Draws the plan, as far as missions have opened it, and the furniture onto the base texture. */
