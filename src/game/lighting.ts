@@ -3,7 +3,7 @@ import type { Sky } from '@/lib/sun'
 import type { Weather } from '@/lib/weather'
 import { NIGHT_BOUNDS } from './exterior'
 import type { Decor } from './furnishings'
-import { FLOOR_PLAN, TILE, cellAt, wallPartAt } from './layout'
+import { FLOOR_PLAN, TILE, cellAt, getRoom, wallPartAt } from './layout'
 import { FESTOON_BULBS, type PropName } from './pixels'
 
 /**
@@ -33,6 +33,20 @@ const WARM = 0xffc27a
 /** A screen's fan of light is this share of its full width where it leaves the screen. */
 const SCREEN_SPREAD = 0.45
 const SCREEN = 0x9db8ff
+
+/**
+ * Prototype: `?lights=shader` lights the living room with Phaser's per-pixel
+ * lights instead of tints laid on top, so a lamp brightens what it falls on
+ * and leaves dark pixels dark. The night overlay stays as it is. L flips
+ * between the two to compare.
+ */
+const SHADER_ROOM = getRoom('living').rect
+/** Shader light strength for each unit of a light's `night` tint; a screen's cool light shows less on warm wood. */
+const SHADER_GAIN: Record<Shape, number> = { pool: 3.2, fan: 9, beam: 0 }
+/** How high above the floor each kind of light sits, in px; higher spreads it wider. */
+const SHADER_HEIGHT: Record<Shape, number> = { pool: 22, fan: 70, beam: 0 }
+/** A screen's cone starts at the foot of the screen rather than its top, so it doesn't light the picture itself. */
+const SCREEN_FOOT = 15
 
 type Shape = 'pool' | 'fan' | 'beam'
 
@@ -166,6 +180,10 @@ export class Lighting {
   private wash: Phaser.GameObjects.Rectangle
   private weather: Weather = 'clear'
   private flicker = 1
+  /** The prototype's shader lights, each standing in for one tint while `shaderOn`. */
+  private shaderLights = new Map<Light, Phaser.GameObjects.Light>()
+  private shaderLit: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[] = []
+  private shaderOn = false
 
   constructor(
     private scene: Phaser.Scene,
@@ -216,6 +234,41 @@ export class Lighting {
     this.apply()
   }
 
+  /**
+   * Under `?lights=shader`, lights `objects` with Phaser's lights for the
+   * living room's lamps and screens. Does nothing without WebGL.
+   */
+  useShaderLights(objects: (Phaser.GameObjects.Image | Phaser.GameObjects.Sprite)[]) {
+    const { scene } = this
+    if (new URLSearchParams(window.location.search).get('lights') !== 'shader') return
+    if (scene.sys.renderer.type !== Phaser.WEBGL) return
+    scene.lights.enable().setAmbientColor(0xffffff)
+    for (const light of this.lights) {
+      const tx = light.x / TILE
+      const ty = light.y / TILE
+      // The TV hangs on the north wall, the two rows above the floor.
+      const inRoom = tx >= SHADER_ROOM.x && tx < SHADER_ROOM.x + SHADER_ROOM.w && ty >= SHADER_ROOM.y - 2 && ty < SHADER_ROOM.y + SHADER_ROOM.h
+      if (!inRoom || light.window) continue
+      const z = SHADER_HEIGHT[light.shape]
+      // A screen faces the room, down the map: a cone about as wide as its fan.
+      const spread = 2 * Math.atan(light.w / 2 / light.h)
+      const phaser =
+        light.shape === 'pool'
+          ? scene.lights.addLight(light.x, light.y, light.w * 0.75, light.colour, 0, z)
+          : scene.lights.addConeLight(light.x, light.y + SCREEN_FOOT, light.h * 1.1, light.colour, 0, Math.PI / 2, spread * 1.3, spread * 2.6, z)
+      this.shaderLights.set(light, phaser)
+    }
+    this.shaderLit = objects
+    this.setShader(true)
+    scene.input.keyboard?.on('keydown-L', () => this.setShader(!this.shaderOn))
+  }
+
+  private setShader(on: boolean) {
+    this.shaderOn = on
+    for (const object of this.shaderLit) object.setLighting(on)
+    this.applyTints()
+  }
+
   private apply() {
     const { night, warmth } = this.sky
     this.darkImage.setVisible(night > 0).setAlpha(night)
@@ -234,6 +287,11 @@ export class Lighting {
       const day = light.window ? light.day * DAYLIGHT[this.weather] * (1 + 0.5 * warmth) : light.day
       let alpha = day + (light.night - day) * night
       if (light.flicker) alpha *= this.flicker
+      const shader = this.shaderLights.get(light)
+      if (shader) {
+        shader.setIntensity(this.shaderOn ? alpha * SHADER_GAIN[light.shape] : 0)
+        if (this.shaderOn) alpha = 0
+      }
       image.setAlpha(alpha).setVisible(alpha > 0.002)
     }
   }
