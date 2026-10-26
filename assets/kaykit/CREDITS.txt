@@ -1,0 +1,14 @@
+KayKit asset packs used by the low-poly house (scripts/lowpoly/, /house-3d)
+
+Both packs are by Kay Lousberg (www.kaylousberg.com) and released under
+Creative Commons Zero (CC0): http://creativecommons.org/publicdomain/zero/1.0/
+Credit is not required, but given gladly.
+
+furniture-bits/  KayKit : Furniture Bits 1.0 (SOURCE edition)
+                 gltf/ models, textures/ and License.txt only.
+adventurers/     KayKit : Adventurers 2.0 (FREE)
+                 characters/ (.glb + textures), animations/Rig_Medium/ and
+                 License.txt only.
+
+The .blend sources, fbx, obj and preview images from the original downloads
+are left out; https://kaylousberg.itch.io has the full packs.
