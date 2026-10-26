@@ -230,8 +230,9 @@ Furniture is drawn in code, no image files. Two ways to write it:
 - **Rectangles** in `drawProp` (`src/game/pixels.ts`): most props, as they've always been.
 - **Grid sprites** in `src/game/sprites/props.ts`: one character per pixel, each mapped to a
     palette swatch such as `'walnut.2'` (`.` is transparent, `,` the drop shadow). A prop listed in
-    `GRID_PROPS` draws from its grid instead of its rectangles. Redrawn and new furniture goes here:
-    a grid is easier to shade, review and edit than runs of rectangles.
+    `GRID_PROPS` draws from its grid instead of its rectangles; give it several grids and each copy
+    picks one by where it stands, so repeats along a wall differ. Redrawn and new furniture goes
+    here: a grid is easier to shade, review and edit than runs of rectangles.
 
 Every colour comes from `src/game/palette.ts`: 87 colours in named ramps (`ink`, `walnut`, `oak`,
 `terracotta`, `sky`, ...), dark to light, taken from the existing art. Shade a grid by stepping along
