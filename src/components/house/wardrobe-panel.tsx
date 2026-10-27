@@ -1,26 +1,34 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   CHARACTERS_URL,
   CHAR_H,
   CHAR_W,
-  DEFAULT_OUTFIT,
   OPTIONAL_PARTS,
   PARTS,
   drawCharacter,
   findPiece,
   randomOutfit,
+  type CharacterName,
   type Outfit,
   type PartName,
 } from '@/game/characters'
 import type { Direction } from '@/game/layout'
 import { cn } from '@/lib/utils'
 import { PanelWindow } from './panel-window'
+import * as sfx from './sfx'
+import { readStats, updateStats } from './visitor-stats'
 
 interface Props {
-  outfit: Outfit
-  onChange: (outfit: Outfit) => void
+  looks: Record<CharacterName, Outfit>
+  /** What "Back to the usual" goes back to, for each of them. */
+  usual: Record<CharacterName, Outfit>
+  onChange: (who: CharacterName, look: Outfit) => void
+  /** Makes the current look this browser's usual. */
+  onSetUsual: (who: CharacterName) => void
+  /** Dresses João for every visitor with the owner's pass; resolves with a problem, or null once saved. */
+  onPublish: (pass: string) => Promise<string | null>
   onClose: () => void
 }
 
@@ -32,18 +40,62 @@ const TABS: { part: PartName; label: string }[] = [
   { part: 'skin', label: 'Skin' },
 ]
 const PREVIEW: Direction[] = ['down', 'right', 'up', 'left']
+/** ↑ ↑ ↓ ↓ ← → ← → B A, which opens João's side of the wardrobe. */
+const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']
 
-/** The bedroom wardrobe: dress the visitor from the game's own character pieces. */
-export function WardrobePanel({ outfit, onChange, onClose }: Props) {
+const sameLook = (a: Outfit, b: Outfit) => (Object.keys(PARTS) as PartName[]).every((part) => a[part] === b[part])
+
+/** Listens for the Konami code while the wardrobe is open. */
+function useKonamiCode(onEntered: () => void) {
+  const entered = useRef(onEntered)
+  useEffect(() => {
+    entered.current = onEntered
+  })
+  useEffect(() => {
+    let progress = 0
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable]')) return
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+      if (key === KONAMI[progress]) progress++
+      // A third ↑ still leaves the last two as the start of the code.
+      else if (!(key === 'ArrowUp' && progress === 2)) progress = key === KONAMI[0] ? 1 : 0
+      if (progress === KONAMI.length) {
+        progress = 0
+        entered.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+}
+
+/**
+ * The bedroom wardrobe: dress the visitor from the game's own character pieces.
+ * After the Konami code it dresses João too, and his owner can save that look
+ * for every visitor.
+ */
+export function WardrobePanel({ looks, usual, onChange, onSetUsual, onPublish, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [atlas, setAtlas] = useState<HTMLImageElement | null>(null)
   const [tab, setTab] = useState<PartName>('hair')
+  const [unlocked, setUnlocked] = useState(() => readStats().cheats > 0)
+  const [who, setWho] = useState<CharacterName>('guest')
+  const [saved, setSaved] = useState<CharacterName | null>(null)
+
+  useKonamiCode(() => {
+    sfx.powerUp()
+    updateStats((stats) => stats.cheats++)
+    setUnlocked(true)
+    setWho('joao')
+  })
 
   useEffect(() => {
     const image = new Image()
     image.onload = () => setAtlas(image)
     image.src = CHARACTERS_URL
   }, [])
+
+  const outfit = looks[who]
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d')
@@ -56,17 +108,45 @@ export function WardrobePanel({ outfit, onChange, onClose }: Props) {
   const current = findPiece(tab, outfit[tab])
   const optional = OPTIONAL_PARTS.includes(tab)
   const label = TABS.find((t) => t.part === tab)!.label
+  const isUsual = sameLook(outfit, usual[who])
+
+  const change = (look: Outfit) => {
+    setSaved(null)
+    onChange(who, look)
+  }
 
   /** Switching style keeps the colour slot where the new style has one. */
   const pickStyle = (style: number | null) => {
-    if (style === null) return onChange({ ...outfit, [tab]: null })
+    if (style === null) return change({ ...outfit, [tab]: null })
     const variants = styles[style].variants
-    onChange({ ...outfit, [tab]: (variants[current?.variant ?? 0] ?? variants[0]).id })
+    change({ ...outfit, [tab]: (variants[current?.variant ?? 0] ?? variants[0]).id })
   }
 
   return (
-    <PanelWindow eyebrow="Bedroom · Wardrobe" title="Change outfit" width="narrow" onClose={onClose}>
+    <PanelWindow
+      eyebrow="Bedroom · Wardrobe"
+      title={who === 'joao' ? 'Dress João' : 'Change outfit'}
+      width="narrow"
+      onClose={onClose}
+    >
       <div className="flex flex-col items-center gap-5">
+        {unlocked && (
+          <div role="group" aria-label="Who to dress" className="flex gap-2">
+            {(['guest', 'joao'] as const).map((name) => (
+              <StyleButton
+                key={name}
+                selected={who === name}
+                onClick={() => {
+                  setWho(name)
+                  setSaved(null)
+                }}
+              >
+                {name === 'guest' ? 'You' : 'João'}
+              </StyleButton>
+            ))}
+          </div>
+        )}
+
         <div className="border-4 border-[#2a2233] bg-[#c9d6c3] p-3">
           <canvas
             ref={canvasRef}
@@ -74,7 +154,7 @@ export function WardrobePanel({ outfit, onChange, onClose }: Props) {
             height={CHAR_H}
             className="h-[128px] w-[256px]"
             style={{ imageRendering: 'pixelated' }}
-            aria-label="Preview of your outfit"
+            aria-label={who === 'joao' ? 'Preview of João’s outfit' : 'Preview of your outfit'}
             role="img"
           />
         </div>
@@ -126,7 +206,7 @@ export function WardrobePanel({ outfit, onChange, onClose }: Props) {
                       type="button"
                       aria-label={`${label} colour ${i + 1}`}
                       aria-pressed={current.variant === i}
-                      onClick={() => onChange({ ...outfit, [tab]: variant.id })}
+                      onClick={() => change({ ...outfit, [tab]: variant.id })}
                       className={cn(
                         'h-8 w-8 border-2 border-[#2a2233] outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]',
                         current.variant === i && 'ring-2 ring-[#c9a227] ring-offset-2 ring-offset-[#f6efdf]',
@@ -140,16 +220,88 @@ export function WardrobePanel({ outfit, onChange, onClose }: Props) {
           </div>
         </div>
 
-        <div className="flex w-full flex-wrap gap-2">
-          <button type="button" className="pixel-button" onClick={() => onChange(randomOutfit())}>
-            Surprise me
-          </button>
-          <button type="button" className="pixel-button" onClick={() => onChange(DEFAULT_OUTFIT)}>
-            Back to the usual
-          </button>
+        <div className="w-full">
+          <div className="flex w-full flex-wrap gap-2">
+            <button type="button" className="pixel-button" onClick={() => change(randomOutfit())}>
+              Surprise me
+            </button>
+            <button type="button" className="pixel-button" onClick={() => change(usual[who])} disabled={isUsual}>
+              Back to the usual
+            </button>
+            <button
+              type="button"
+              className="pixel-button"
+              disabled={isUsual}
+              onClick={() => {
+                onSetUsual(who)
+                setSaved(who)
+              }}
+            >
+              Set as new default
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-[#6d6359]" aria-live="polite">
+            {saved === who
+              ? `Saved. This is ${who === 'joao' ? 'João’s' : 'your'} usual in this browser now.`
+              : who === 'joao'
+                ? 'João keeps this look until you leave, unless you set it as his default here.'
+                : null}
+          </p>
         </div>
+
+        {who === 'joao' && <OwnerForm onPublish={onPublish} />}
       </div>
     </PanelWindow>
+  )
+}
+
+/** The owner's pass, to save João's look for everyone. Nothing is sent until the button is pressed. */
+function OwnerForm({ onPublish }: Pick<Props, 'onPublish'>) {
+  const inputId = useId()
+  const [pass, setPass] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+
+  return (
+    <details className="w-full border-t-2 border-dashed border-[#2a2233] pt-3">
+      <summary className="font-pixel cursor-pointer text-sm">Are you João?</summary>
+      <form
+        className="mt-3"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          if (!pass) return
+          setBusy(true)
+          const problem = await onPublish(pass)
+          setBusy(false)
+          if (problem) return setMessage({ ok: false, text: problem })
+          sfx.chime()
+          setPass('')
+          setMessage({ ok: true, text: 'Saved. Every visitor sees João in this look now (give it a minute).' })
+        }}
+      >
+        <label htmlFor={inputId} className="mb-2 block text-sm">
+          Enter the house pass to dress João like this for every visitor.
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <input
+            id={inputId}
+            type="password"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            autoComplete="current-password"
+            placeholder="House pass"
+            aria-invalid={message?.ok === false}
+            className="min-w-0 flex-1 basis-40 border-2 border-[#2a2233] bg-[#fbf6ea] px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]"
+          />
+          <button type="submit" className="pixel-button" disabled={busy || !pass}>
+            {busy ? 'Saving…' : 'Save for everyone'}
+          </button>
+        </div>
+        <p className="mt-2 text-xs text-[#6d6359]" aria-live="polite">
+          {message?.text}
+        </p>
+      </form>
+    </details>
   )
 }
 

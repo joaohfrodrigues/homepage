@@ -62,7 +62,6 @@ import {
   CHAR_H,
   CHAR_HEADROOM,
   CHAR_W,
-  LOOKS,
   drawCharacter,
   type CharacterName,
   type Outfit,
@@ -78,6 +77,8 @@ export interface HouseSceneConfig {
   /** Lisbon's light when the house opens. */
   sky: Sky
   outfit: Outfit
+  /** João's look: the owner's, or one this browser picked in the wardrobe. */
+  joaoLook: Outfit
   /** What missions have opened up already. */
   unlocks: UnlockId[]
   /** Holiday decorations to put up, if any. */
@@ -481,7 +482,7 @@ export class HouseScene extends Phaser.Scene {
     const texture = this.textures.createCanvas('house-chars', frames.length * CHAR_W, who.length * CHAR_H)!
     const ctx = texture.getContext()
     who.forEach((name, row) => {
-      const look = name === 'guest' ? this.cfg.outfit : LOOKS[name]
+      const look = name === 'guest' ? this.cfg.outfit : this.cfg.joaoLook
       frames.forEach((f, col) => {
         drawCharacter(ctx, atlas, col * CHAR_W, row * CHAR_H, look, f.direction, f.anim, f.frame)
         texture.add(`${name}-${f.name}`, 0, col * CHAR_W, row * CHAR_H, CHAR_W, CHAR_H)
@@ -490,20 +491,9 @@ export class HouseScene extends Phaser.Scene {
     texture.refresh()
 
     // Matching outline frames (1px larger each side) for João's focus cue.
-    const OUT_W = CHAR_W + 2
-    const OUT_H = CHAR_H + 2
-    const outlines = this.textures.createCanvas('house-chars-outline', frames.length * OUT_W, OUT_H)!
-    const frame = document.createElement('canvas')
-    frame.width = CHAR_W
-    frame.height = CHAR_H
-    const frameCtx = frame.getContext('2d')!
-    frames.forEach((f, col) => {
-      frameCtx.clearRect(0, 0, CHAR_W, CHAR_H)
-      drawCharacter(frameCtx, atlas, 0, 0, LOOKS.joao, f.direction, f.anim, f.frame)
-      outlines.getContext().drawImage(traceSilhouette(frame).outline, col * OUT_W, 0)
-      outlines.add(`joao-${f.name}`, 0, col * OUT_W, 0, OUT_W, OUT_H)
-    })
-    outlines.refresh()
+    const outlines = this.textures.createCanvas('house-chars-outline', frames.length * (CHAR_W + 2), CHAR_H + 2)!
+    frames.forEach((f, col) => outlines.add(`joao-${f.name}`, 0, col * (CHAR_W + 2), 0, CHAR_W + 2, CHAR_H + 2))
+    this.paintJoaoOutlines(this.cfg.joaoLook)
 
     // A walk cycle covers two steps; the idle loop is a slow breath.
     for (const name of who) {
@@ -851,17 +841,36 @@ export class HouseScene extends Phaser.Scene {
     )
   }
 
-  /** Redraw the visitor's frames in a new outfit from the wardrobe. */
-  private repaintGuest(outfit: Outfit) {
+  /** Redraw someone's frames in a new look from the wardrobe. */
+  private repaintCharacter(name: CharacterName, look: Outfit) {
     const texture = this.textures.get('house-chars') as Phaser.Textures.CanvasTexture
     const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
     const ctx = texture.getContext()
-    // The guest is the first row of the sheet.
-    ctx.clearRect(0, 0, texture.width, CHAR_H)
+    // The guest is the first row of the sheet, João the second.
+    const y = name === 'guest' ? 0 : CHAR_H
+    ctx.clearRect(0, y, texture.width, CHAR_H)
     this.characterFrames().forEach((f, col) => {
-      drawCharacter(ctx, atlas, col * CHAR_W, 0, outfit, f.direction, f.anim, f.frame)
+      drawCharacter(ctx, atlas, col * CHAR_W, y, look, f.direction, f.anim, f.frame)
     })
     texture.refresh()
+    if (name === 'joao') this.paintJoaoOutlines(look)
+  }
+
+  /** Traces João's focus-cue outlines from his look, frame by frame. */
+  private paintJoaoOutlines(look: Outfit) {
+    const outlines = this.textures.get('house-chars-outline') as Phaser.Textures.CanvasTexture
+    const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
+    const frame = document.createElement('canvas')
+    frame.width = CHAR_W
+    frame.height = CHAR_H
+    const frameCtx = frame.getContext('2d')!
+    outlines.getContext().clearRect(0, 0, outlines.width, outlines.height)
+    this.characterFrames().forEach((f, col) => {
+      frameCtx.clearRect(0, 0, CHAR_W, CHAR_H)
+      drawCharacter(frameCtx, atlas, 0, 0, look, f.direction, f.anim, f.frame)
+      outlines.getContext().drawImage(traceSilhouette(frame).outline, col * (CHAR_W + 2), 0)
+    })
+    outlines.refresh()
   }
 
 
@@ -1764,7 +1773,8 @@ export class HouseScene extends Phaser.Scene {
         this.exterior?.setWeather(weather)
         this.lighting.setWeather(weather)
       }),
-      ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
+      ui.on('outfit', (outfit) => this.repaintCharacter('guest', outfit)),
+      ui.on('joaoLook', (look) => this.repaintCharacter('joao', look)),
       ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
       ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),
       ui.on('doze', () => this.doze()),

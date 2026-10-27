@@ -88,7 +88,7 @@ export async function submitScore(request: Request, store: ScoreStore | null): P
   }
 }
 
-function secretMatches(given: string, secret: string): boolean {
+export function secretMatches(given: string, secret: string): boolean {
   const a = Buffer.from(given)
   const b = Buffer.from(secret)
   return a.length === b.length && timingSafeEqual(a, b)

@@ -1,11 +1,11 @@
 /**
  * The house's sound effects: footsteps, a pop when something is used, Zeno's
  * meow, the coffee machine, a chime for new stickers, the trophy poster's
- * rustle and a fanfare for making a top 10, the stuck bathroom door and the
- * cabinet over its sink, the hidden behaviours' heartbeat, beers, snores and
- * morning birds, and the gulls over the roofs. Most are
- * synthesised with the Web Audio API; Zeno, the Super Bock and the coffee
- * machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
+ * rustle and a fanfare for making a top 10, a power-up for the wardrobe's
+ * cheat code, the stuck bathroom door and the cabinet over its sink, the
+ * hidden behaviours' heartbeat, beers, snores and morning birds, and the
+ * gulls over the roofs. Most are synthesised with the Web Audio API; Zeno,
+ * the Super Bock and the coffee machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
  * default but stay silent until the visitor has clicked or pressed a key, and
  * the HUD's sound button turns them off.
@@ -252,6 +252,15 @@ export function bicaResult(result: 'perfect' | 'good' | 'under' | 'over') {
 export function chime() {
   play((audio, t) => {
     ;[72, 76, 79, 84].forEach((n, i) => note(audio, t + i * 0.08, { from: hz(n), length: 0.4, level: 0.06, type: 'triangle' }))
+  })
+}
+
+/** The Konami code taking: a quick 8-bit power-up, climbing two octaves. */
+export function powerUp() {
+  play((audio, t) => {
+    ;[60, 64, 67, 72, 76, 79, 84].forEach((n, i) =>
+      note(audio, t + i * 0.045, { from: hz(n), length: i === 6 ? 0.35 : 0.08, level: 0.04, type: 'square' }),
+    )
   })
 }
 

@@ -29,6 +29,8 @@ export interface VisitorStats {
   scoops: number
   naps: number
   outfits: number
+  /** Times the Konami code was entered at the wardrobe; once is enough to dress João. */
+  cheats: number
   /** Mission steps done, as `mission/step` (see `src/game/missions.ts`). */
   missionSteps: string[]
   /** Times the visitor had so many bicas so fast that they started vibrating. */
@@ -60,6 +62,7 @@ function emptyStats(): VisitorStats {
     scoops: 0,
     naps: 0,
     outfits: 0,
+    cheats: 0,
     missionSteps: [],
     overdoses: 0,
     beers: 0,
@@ -227,6 +230,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'cat-person', title: 'Cat person', hint: 'Pet Zeno five times.', earned: (s) => s.pets >= 5 },
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
+  { id: 'cheat-code', title: 'Cheat code', hint: 'The wardrobe has a secret, if you know the old ways.', earned: (s) => s.cheats >= 1 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
   { id: 'unstuck', title: 'Shoulder to it', hint: 'Get the bathroom door open.', earned: (s) => isMissionComplete(s, 'bathroom') },
   { id: 'sofa-surfer', title: 'Sofa surfer', hint: 'Wake up somewhere you didn’t fall asleep.', earned: (s) => s.dozes >= 1 },

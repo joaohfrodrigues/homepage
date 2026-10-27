@@ -17,7 +17,8 @@ the public scoreboards, which live in Upstash Redis.
       [The House](#-the-house) below.
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
-      public scoreboards, below), `weather` (Lisbon's current sky from
+      public scoreboards, below), `house/joao` (João's look for every visitor, which only the
+      owner can change; see [João's look](#joãos-look)), `weather` (Lisbon's current sky from
       [Open-Meteo](https://open-meteo.com/), cached for 30 minutes) and `keystatic` (the CMS
       backend).
     - **Scoreboards** (`src/lib/scores/`, `src/app/api/scores/`) - shared names and scores for the
@@ -52,8 +53,9 @@ bun run build      # production build
 
 `bun run dev` needs no environment variables. Without the Upstash ones the public
 scoreboards read as offline; set `SCORES_STORE=memory` in `.env.local` to try them with an
-in-memory store, or copy the Upstash variables there to use the real one (see
-[.env.example](./.env.example)).
+in-memory store (João's saved look goes there too), or copy the Upstash variables there to use
+the real one (see [.env.example](./.env.example)). Add `HOUSE_OWNER_SECRET` to try saving João's
+look from the wardrobe.
 
 ## 🏠 The House
 
@@ -82,7 +84,10 @@ site's sections:
     count they signed with and the month ("13/13 · Oct 2026").
 - **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
     drums.
-- **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony.
+- **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony. The
+    Konami code (↑ ↑ ↓ ↓ ← → ← → B A) at the open wardrobe lets the visitor dress João too (and earns
+    the *Cheat code* sticker). *Set as new default* makes either look what *Back to the usual*
+    returns to in this browser; João's changes otherwise last only until the visitor leaves.
 - **Bathroom** - its old panelled door is stuck shut until its mission swings it open. Inside, the mirror cabinet
     over the sink has paracetamol for the morning after (see the beers below).
 
@@ -127,7 +132,7 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, the stuck bathroom door
-rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, a paper rustle at the trophy
+rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, an 8-bit power-up for the wardrobe's Konami code, a paper rustle at the trophy
 poster, a fanfare when a submitted score makes a top 10 and a pen scribble before it when the Hall of
 Fame is signed, plus the hidden behaviours' own: a
 heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
@@ -281,6 +286,20 @@ there, with its score bounds and whether it ranks by score or lists newest first
     `{ board, id, hidden }` - hides an entry (or shows it again). Hidden entries stay hidden if
     their browser submits again. Entries can also be edited in the Upstash console.
 
+### João's look
+
+`src/app/api/house/joao/route.ts`, with the logic in `src/lib/joao-look.ts`, keeps João's look for
+every visitor in the same Upstash Redis (key `house:joao-look`). Without one saved, or without a
+store, João wears `LOOKS.joao` from `src/game/characters.ts`.
+
+- `GET /api/house/joao` - `{ look }`, or `{ look: null }`; cached at the edge for a minute.
+- `PUT /api/house/joao` with `Authorization: Bearer $HOUSE_OWNER_SECRET` and `{ look }` - saves it.
+    Only pieces the wardrobe offers are accepted; without the secret set the route is shut.
+
+In the house, the owner opens the wardrobe, enters the Konami code, dresses João and types the pass
+under *Are you João?*. A browser that set its own default for João keeps it until the owner saves
+from that browser, which clears it.
+
 In the house, nothing is posted until the visitor presses *Submit to the leaderboard* (or *Sign the
 Hall of Fame*); boards are only read, when a game's Top 10 tab or the trophy poster is opened. A
 board that can't be reached shows as offline, and the games play on regardless.
@@ -390,7 +409,7 @@ Vercel then picks up the change on the next deploy.
 3. Add environment variables in the project settings
 4. For the scoreboards, add **Upstash for Redis** from the Vercel Marketplace (Storage → Create
     Database) and connect it to the project, which sets its REST URL and token; then add
-    `SCORES_ADMIN_SECRET` for moderation
+    `SCORES_ADMIN_SECRET` for moderation and `HOUSE_OWNER_SECRET`, the pass for dressing João
 5. Deploy
 
 ## 🛠️ Tech Stack
@@ -462,20 +481,21 @@ homepage/
 ├── src/                 # Next.js app (App Router)
 │   ├── app/
 │   │   ├── (house)/         # Pages rendered inside the house
-│   │   ├── api/             # photos, watch-poster, scores, weather, keystatic
+│   │   ├── api/             # photos, watch-poster, scores, house/joao, weather, keystatic
 │   │   └── keystatic/       # CMS admin UI
 │   ├── assets/           # Imported assets (share image)
 │   ├── components/       # React components (house/, photography/, writing/, hobby-feed/, ui/)
 │   ├── game/             # Phaser scene, floor plan, furniture, palette, characters, missions, seasons
 │   │   └── sprites/          # Furniture as grid sprites
 │   ├── lib/              # Data access, utilities
-│   │   └── scores/           # Scoreboards: boards, validation, store, API handlers, client
+│   │   ├── scores/           # Scoreboards: boards, validation, store, API handlers, client
+│   │   └── joao-look.ts      # João's look for every visitor: store and API handlers
 │   └── proxy.ts          # Hides the CMS in production unless it's configured
 ├── public/              # Static assets served by Next.js
 │   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards, João's dialogue, sun, grid sprites)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's look and dialogue, sun, grid sprites)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections
@@ -487,7 +507,7 @@ homepage/
 
 ```bash
 pytest -v            # ETL/backend tests
-bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's dialogue, Lisbon's sun and moon, and the palette and grid sprites
+bun run test:unit    # Scoreboard unit tests (validation, store, API) on an in-memory store, João's look API, João's dialogue, Lisbon's sun and moon, and the palette and grid sprites
 npx playwright test  # Playwright end-to-end tests (frontend)
 ```
 
@@ -507,6 +527,8 @@ and `pip-audit`.
 - **pip-audit:** Dependency vulnerability scan in CI
 - **Scoreboards:** names and scores are validated server-side, submissions are rate-limited per
     (hashed) IP, and moderation needs `SCORES_ADMIN_SECRET`
+- **João's look:** only `PUT` with `HOUSE_OWNER_SECRET` changes it for everyone; the Konami code
+    alone only changes him in the visitor's own browser
 
 ## 📝 License
 

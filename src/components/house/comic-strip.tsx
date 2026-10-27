@@ -1,14 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHARACTERS_URL, CHAR_W, LOOKS, drawCharacter, type Outfit } from '@/game/characters'
+import { CHARACTERS_URL, CHAR_W, drawCharacter, type CharacterName, type Outfit } from '@/game/characters'
 import type { Direction } from '@/game/layout'
 
 /** The close-ups that cut into a night at the fridge. */
 export type ComicId = 'cheers' | 'doze' | 'wake'
 
 interface Panel {
-  /** A close-up of someone's head; the guest wears their own outfit. */
+  /** A close-up of someone's head, in the look they wear in the house. */
   who?: { character: 'guest' | 'joao'; facing: Direction; eyesClosed?: boolean }
   bubble?: string
   /** Sound-effect lettering across the panel. */
@@ -58,7 +58,7 @@ const HEAD_H = 20
 
 interface Props {
   id: ComicId
-  outfit: Outfit
+  looks: Record<CharacterName, Outfit>
   onDone: () => void
 }
 
@@ -67,7 +67,7 @@ interface Props {
  * on its own. A click or any key shows the rest at once or moves on; Escape
  * skips it. Under reduced motion the panels are simply there.
  */
-export function ComicStrip({ id, outfit, onDone }: Props) {
+export function ComicStrip({ id, looks, onDone }: Props) {
   const strip = STRIPS[id]
   const [still] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const [shown, setShown] = useState(still ? strip.panels.length : 1)
@@ -118,7 +118,7 @@ export function ComicStrip({ id, outfit, onDone }: Props) {
     >
       <div className="grid w-full max-w-3xl grid-cols-3 gap-2 sm:gap-4">
         {strip.panels.map((panel, i) => (
-          <ComicPanel key={i} panel={panel} index={i} visible={i < shown} still={still} atlas={atlas} outfit={outfit} />
+          <ComicPanel key={i} panel={panel} index={i} visible={i < shown} still={still} atlas={atlas} looks={looks} />
         ))}
       </div>
       <p className="font-pixel text-xs text-[#a69cba] sm:text-sm">Click, tap or press a key to continue</p>
@@ -132,14 +132,14 @@ function ComicPanel({
   visible,
   still,
   atlas,
-  outfit,
+  looks,
 }: {
   panel: Panel
   index: number
   visible: boolean
   still: boolean
   atlas: HTMLImageElement | null
-  outfit: Outfit
+  looks: Record<CharacterName, Outfit>
 }) {
   const dark = panel.tone === '#141019'
   // A slight, alternating tilt, like panels pasted onto a page.
@@ -158,7 +158,7 @@ function ComicPanel({
         backgroundSize: '7px 7px',
       }}
     >
-      {panel.who && <Portrait {...panel.who} atlas={atlas} outfit={outfit} />}
+      {panel.who && <Portrait {...panel.who} atlas={atlas} looks={looks} />}
       {panel.bottles && <Bottles />}
       {panel.bubble && (
         <div className="font-pixel absolute inset-x-1.5 top-1.5 border-2 border-[#120e18] bg-[#fffaf0] px-1.5 py-1 text-center text-[10px] leading-tight text-[#2a2233] sm:inset-x-3 sm:top-3 sm:px-2 sm:text-sm">
@@ -189,10 +189,10 @@ function Portrait({
   facing,
   eyesClosed,
   atlas,
-  outfit,
-}: NonNullable<Panel['who']> & { atlas: HTMLImageElement | null; outfit: Outfit }) {
+  looks,
+}: NonNullable<Panel['who']> & { atlas: HTMLImageElement | null; looks: Record<CharacterName, Outfit> }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const look = character === 'guest' ? outfit : LOOKS.joao
+  const look = looks[character]
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d')
