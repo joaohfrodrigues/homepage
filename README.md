@@ -76,7 +76,10 @@ site's sections:
     the visitor hasn't found yet (the bica, the fridge magnets, the study, Zeno...), worked out from
     the guestbook's stats (`joaoTips` in `src/components/house/dialogues.ts`).
 - **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
-    grab a beer). Each game has a Top 10 tab, and after a new personal best offers to put it on the
+    grab a beer). The magnets are five rounds of a photo and a world map: the photo is shown whole,
+    beside the map if it's landscape or in a narrower column if it's portrait, and its description
+    stays hidden until the answer is revealed since it often names the place. Enter confirms a guess
+    and moves on to the next photo. Each game has a Top 10 tab, and after a new personal best offers to put it on the
     public leaderboard under a name of the visitor's choosing (prefilled with the last one used).
 - **Corridor** - the trophy poster opens the leaderboards, a tab per game with the visitor's own
     best, the top 10, and the same opt-in form while that best isn't on the board yet. Its last tab
@@ -133,7 +136,7 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, the stuck bathroom door
 rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, an 8-bit power-up for the wardrobe's Konami code, a paper rustle at the trophy
-poster, a fanfare when a submitted score makes a top 10 and a pen scribble before it when the Hall of
+poster, a magnet clicking onto the fridge map and a note that climbs with each guess's score, a fanfare for a new best at the magnets or when a submitted score makes a top 10 and a pen scribble before it when the Hall of
 Fame is signed, plus the hidden behaviours' own: a
 heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
 clink for the toast, snoring as the guest nods off and birds when they wake, and the call of a gull

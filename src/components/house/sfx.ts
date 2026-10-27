@@ -3,8 +3,8 @@
  * meow, the coffee machine, a chime for new stickers, the trophy poster's
  * rustle and a fanfare for making a top 10, a power-up for the wardrobe's
  * cheat code, the stuck bathroom door and the cabinet over its sink, the
- * hidden behaviours' heartbeat, beers, snores and morning birds, and the
- * gulls over the roofs. Most are synthesised with the Web Audio API; Zeno,
+ * hidden behaviours' heartbeat, beers, snores and morning birds, the
+ * gulls over the roofs, and the fridge magnets' pin and scores. Most are synthesised with the Web Audio API; Zeno,
  * the Super Bock and the coffee machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
  * default but stay silent until the visitor has clicked or pressed a key, and
@@ -292,6 +292,33 @@ export function signature() {
       burst(audio, t + i * 0.07, { length: 0.06, level: 0.025, filter: 'bandpass', cutoff, attack: 0.01 })
     })
     taDaDaa(audio, t + 0.45)
+  })
+}
+
+/** A guess pinned to the fridge map: a magnet clicking onto the door. */
+export function pinDrop() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.03, level: 0.05, filter: 'highpass', cutoff: 2500 })
+    note(audio, t, { from: 320, to: 180, length: 0.07, level: 0.05, type: 'triangle' })
+  })
+}
+
+/**
+ * A fridge-magnet guess revealed: a note that climbs with the points, a bright
+ * double ding for a near hit, a dull clunk for a miss, and the fanfare after
+ * it for a new personal best.
+ */
+export function guessResult(points: number, newBest: boolean) {
+  play((audio, t) => {
+    if (points >= 900) {
+      note(audio, t, { from: hz(84), length: 0.5, level: 0.06, type: 'triangle' })
+      note(audio, t + 0.1, { from: hz(91), length: 0.7, level: 0.05, type: 'triangle' })
+    } else if (points >= 100) {
+      note(audio, t, { from: hz(64 + Math.round((points / 1000) * 20)), length: 0.4, level: 0.06, type: 'triangle' })
+    } else {
+      note(audio, t, { from: 150, to: 110, length: 0.15, level: 0.06, type: 'square' })
+    }
+    if (newBest) taDaDaa(audio, t + 0.6)
   })
 }
 
