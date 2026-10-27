@@ -149,10 +149,16 @@ let shared: ScoreStore | null | undefined
  */
 export function getScoreStore(): ScoreStore | null {
   if (shared !== undefined) return shared
-  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
+  const redis = redisFromEnv()
   if (process.env.SCORES_STORE === 'memory') shared = memoryStore()
-  else if (url && token) shared = redisStore(new Redis({ url, token }))
+  else if (redis) shared = redisStore(redis)
   else shared = null
   return shared
+}
+
+/** The site's Upstash Redis, from either naming of its env vars, or null when there isn't one. */
+export function redisFromEnv(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN
+  return url && token ? new Redis({ url, token }) : null
 }

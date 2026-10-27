@@ -6,7 +6,7 @@ import { BookOpen, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Music
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
 import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
-import { DEFAULT_OUTFIT, cleanOutfit, type Outfit } from '@/game/characters'
+import { DEFAULT_OUTFIT, LOOKS, cleanOutfit, isOutfit, type CharacterName, type Outfit } from '@/game/characters'
 import { currentSeason } from '@/game/seasons'
 import { getHobbyTopic } from '@/game/topics'
 import type { HouseData } from '@/lib/house'
@@ -55,6 +55,8 @@ import { WardrobePanel } from './wardrobe-panel'
 import { WelcomeCard } from './welcome-card'
 
 const OUTFIT_KEY = 'house:outfit'
+/** Looks this browser set as the usual with the wardrobe's "Set as new default". */
+const USUAL_KEYS: Record<CharacterName, string> = { guest: 'house:outfit-usual', joao: 'house:joao-usual' }
 /** Set once a visitor has dismissed the first-visit welcome card. */
 const WELCOMED_KEY = 'house:welcomed'
 
@@ -97,6 +99,28 @@ function readOutfit(): Outfit {
     return saved ? cleanOutfit(JSON.parse(saved)) : DEFAULT_OUTFIT
   } catch {
     return DEFAULT_OUTFIT
+  }
+}
+
+/** A look this browser saved under `key`, or null. */
+function readSavedLook(key: string): Outfit | null {
+  try {
+    const saved = window.localStorage.getItem(key)
+    const look: unknown = saved && JSON.parse(saved)
+    return isOutfit(look) ? look : null
+  } catch {
+    return null
+  }
+}
+
+/** João's look as the site's owner set it for everyone, or null for the one in the code. */
+async function fetchOwnerLook(): Promise<Outfit | null> {
+  try {
+    const response = await fetch('/api/house/joao')
+    const { look } = (await response.json()) as { look: unknown }
+    return isOutfit(look) ? look : null
+  } catch {
+    return null
   }
 }
 
@@ -154,10 +178,25 @@ export function HouseShell({ data, children }: Props) {
   // A nap fades to black on its way to the new light; the clock's own ticks ease in.
   const fadeToSky = useRef(false)
   const [outfit, setOutfit] = useState(() => (typeof window !== 'undefined' ? readOutfit() : DEFAULT_OUTFIT))
+  // What "Back to the usual" goes back to: this browser's own default, else the
+  // owner's look for João, else the code's. João's wardrobe changes only last
+  // the visit unless they're set as the new default.
+  const [ownUsual, setOwnUsual] = useState<Record<CharacterName, Outfit | null>>(() =>
+    typeof window !== 'undefined'
+      ? { guest: readSavedLook(USUAL_KEYS.guest), joao: readSavedLook(USUAL_KEYS.joao) }
+      : { guest: null, joao: null },
+  )
+  const [ownerLook, setOwnerLook] = useState<Outfit | null>(null)
+  const usual = useMemo(
+    () => ({ guest: ownUsual.guest ?? DEFAULT_OUTFIT, joao: ownUsual.joao ?? ownerLook ?? LOOKS.joao }),
+    [ownUsual, ownerLook],
+  )
+  const [joaoLook, setJoaoLook] = useState<Outfit | null>(null)
+  const looks = useMemo(() => ({ guest: outfit, joao: joaoLook ?? usual.joao }), [outfit, joaoLook, usual.joao])
   const [unlocks, setUnlocks] = useState<UnlockId[]>(() => (typeof window !== 'undefined' ? readUnlocks() : []))
   // The holidays go by the visitor's calendar, not Lisbon's; `?season=` previews one.
   const [season] = useState(() => (typeof window !== 'undefined' ? currentSeason(window.location.search) : null))
-  const initialLook = useRef({ sky, outfit, unlocks, season })
+  const initialLook = useRef({ sky, outfit, joaoLook: looks.joao, unlocks, season })
   const [weatherPreview] = useState(() => (typeof window !== 'undefined' ? readWeatherPreview() : null))
   const [weather, setWeather] = useState<Weather>(weatherPreview ?? 'clear')
   // Only read once the game is ready (client-side), so SSR's `false` never reaches the DOM.
@@ -576,7 +615,8 @@ export function HouseShell({ data, children }: Props) {
   }, [])
 
   const changeOutfit = useCallback(
-    (next: Outfit) => {
+    (who: CharacterName, next: Outfit) => {
+      if (who === 'joao') return setJoaoLook(next)
       setOutfit(next)
       bridge.ui.emit('outfit', next)
       updateStats((stats) => stats.outfits++)
@@ -588,6 +628,56 @@ export function HouseShell({ data, children }: Props) {
     },
     [bridge],
   )
+
+  const setUsualLook = useCallback(
+    (who: CharacterName) => {
+      setOwnUsual((own) => ({ ...own, [who]: looks[who] }))
+      try {
+        window.localStorage.setItem(USUAL_KEYS[who], JSON.stringify(looks[who]))
+      } catch {
+        // Private mode: the new default lasts until the tab closes.
+      }
+    },
+    [looks],
+  )
+
+  /** The owner dresses João for everyone; this browser's own default for him makes way. */
+  const publishJoaoLook = useCallback(
+    async (pass: string): Promise<string | null> => {
+      try {
+        const response = await fetch('/api/house/joao', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pass}` },
+          body: JSON.stringify({ look: looks.joao }),
+        })
+        if (!response.ok) return ((await response.json().catch(() => ({}))) as { error?: string }).error ?? 'That didn’t save.'
+      } catch {
+        return 'The house can’t reach the server right now.'
+      }
+      setOwnerLook(looks.joao)
+      setOwnUsual((own) => ({ ...own, joao: null }))
+      try {
+        window.localStorage.removeItem(USUAL_KEYS.joao)
+      } catch {
+        // Private mode: nothing was saved.
+      }
+      return null
+    },
+    [looks.joao],
+  )
+
+  // João's owner-set look arrives once the house is up; until then he wears the code's (or this browser's).
+  useEffect(() => {
+    let cancelled = false
+    void fetchOwnerLook().then((look) => !cancelled && setOwnerLook(look))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (ready) bridge.ui.emit('joaoLook', looks.joao)
+  }, [bridge, ready, looks.joao])
 
   function choose(choice: DialogueChoice) {
     switch (choice.kind) {
@@ -754,7 +844,14 @@ export function HouseShell({ data, children }: Props) {
         />
       )}
       {panel === 'wardrobe' && (
-        <WardrobePanel outfit={outfit} onChange={changeOutfit} onClose={() => setPanel(null)} />
+        <WardrobePanel
+          looks={looks}
+          usual={usual}
+          onChange={changeOutfit}
+          onSetUsual={setUsualLook}
+          onPublish={publishJoaoLook}
+          onClose={() => setPanel(null)}
+        />
       )}
       {panel === 'bica' && (
         <BicaPanel onResult={bicaResult} onPull={pulledBica} onClose={() => setPanel(null)} />
@@ -765,7 +862,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
-      {comic && <ComicStrip key={comic} id={comic} outfit={outfit} onDone={finishComic} />}
+      {comic && <ComicStrip key={comic} id={comic} looks={looks} onDone={finishComic} />}
       <StickerToast onOpen={() => setPanel('guestbook')} />
 
       <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>

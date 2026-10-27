@@ -75,6 +75,15 @@ export function cleanOutfit(saved: unknown): Outfit {
   return outfit
 }
 
+/** A complete look made only of pieces the wardrobe offers, as the owner's saved look for João must be. */
+export function isOutfit(value: unknown): value is Outfit {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const look = value as Record<string, unknown>
+  return (Object.keys(PARTS) as PartName[]).every((part) =>
+    look[part] === null ? OPTIONAL_PARTS.includes(part) : typeof look[part] === 'string' && findPiece(part, look[part]) !== null,
+  )
+}
+
 /** A random look; optional parts are left off about half the time. */
 export function randomOutfit(random = Math.random): Outfit {
   const pick = <T,>(items: T[]) => items[Math.floor(random() * items.length)]

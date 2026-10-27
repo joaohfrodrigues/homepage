@@ -102,6 +102,8 @@ interface UiEvents {
   /** Lisbon's sky through the windows and on the balcony. */
   weather: Weather
   outfit: Outfit
+  /** João in a new look: the owner's, or one picked in the wardrobe after the Konami code. */
+  joaoLook: Outfit
   /** Everything missions have opened so far; anything left out is (or goes back to being) shut. */
   unlocks: UnlockId[]
   /** Start (or, with null, end) an effect on the guest. */
