@@ -265,10 +265,13 @@ export function buildDialogue(
       }
     case 'bathroom': {
       const damp = house.weather === 'rain' || house.weather === 'storm'
+      // The stats already count this try, so the third one is where João comes up.
+      const nudge = house.stats.doorTries >= 3 ? 'Maybe João knows a trick.' : 'Maybe it just needs another go.'
       return {
         lines: [
           'The handle turns, but the door doesn’t budge. It’s stuck fast in its frame.',
-          damp ? 'All this rain can’t be helping.' : 'Maybe João knows a trick.',
+          ...(damp ? ['All this rain can’t be helping.'] : []),
+          nudge,
         ],
         choices: [{ label: 'Leave it', kind: 'close' }],
       }

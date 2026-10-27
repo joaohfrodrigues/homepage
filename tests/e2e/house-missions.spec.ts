@@ -14,20 +14,19 @@ async function interact(page: Page, id: DialogueId) {
 
 const dialogue = (page: Page) => page.getByRole('dialog', { name: /^(Talking to|Notice)/ })
 
-/** Reads through the dialogue's lines until `label` is on offer, then picks it. */
-async function pick(page: Page, label: string | RegExp) {
+/** Reads through the dialogue's lines until `label` is on offer. */
+async function readUntil(page: Page, label: string | RegExp) {
   const choice = dialogue(page).getByRole('button', { name: label })
   await expect(async () => {
     if (!(await choice.isVisible())) await dialogue(page).click()
     await expect(choice).toBeVisible({ timeout: 250 })
   }).toPass({ timeout: 10_000 })
-  await choice.click()
 }
 
-async function tryDoor(page: Page) {
-  await interact(page, 'bathroom')
-  await pick(page, 'Leave it')
-  await expect(dialogue(page)).not.toBeVisible()
+/** Reads through the dialogue's lines until `label` is on offer, then picks it. */
+async function pick(page: Page, label: string | RegExp) {
+  await readUntil(page, label)
+  await dialogue(page).getByRole('button', { name: label }).click()
 }
 
 const doorTiles = ['13,13', '14,13', '13,14', '14,14']
@@ -67,12 +66,18 @@ test.describe('Missions', () => {
     await expect(missions).toContainText('???')
     await page.keyboard.press('Escape')
 
-    // 1. Three tries of the handle start the mission (and earn the running joke's sticker).
-    for (let i = 0; i < 3; i++) await tryDoor(page)
+    // 1. Three tries of the handle start the mission. Only the third points the guest at João.
+    for (let i = 1; i <= 3; i++) {
+      await interact(page, 'bathroom')
+      await readUntil(page, 'Leave it')
+      if (i < 3) await expect(dialogue(page)).not.toContainText('João')
+      else await expect(dialogue(page)).toContainText('Maybe João knows a trick.')
+      await pick(page, 'Leave it')
+      await expect(dialogue(page)).not.toBeVisible()
+    }
     await page.keyboard.press('g')
     await expect(missions).toContainText('The stuck door')
     await expect(missions).toContainText('1 of 5')
-    await expect(guestbook.getByText('Stuck again (earned)')).toBeVisible()
     await page.keyboard.press('Escape')
 
     // 2. João knows the knack, for a price.

@@ -225,7 +225,6 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'couch-to-1k', title: 'Couch to 1K', hint: 'Walk a kilometre around the flat.', earned: (s) => metresWalked(s) >= 1000 },
   { id: 'chatterbox', title: 'Chatterbox', hint: 'Talk to João five times.', earned: (s) => s.chats >= 5 },
   { id: 'cat-person', title: 'Cat person', hint: 'Pet Zeno five times.', earned: (s) => s.pets >= 5 },
-  { id: 'stuck-again', title: 'Stuck again', hint: 'Try the bathroom door three times.', earned: (s) => s.doorTries >= 3 },
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
