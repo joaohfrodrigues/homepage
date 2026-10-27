@@ -10,7 +10,8 @@ interface Props {
   title: string
   eyebrow: string
   onClose: () => void
-  width?: 'narrow' | 'wide'
+  /** `game` gives a kitchen game most of a desktop screen. */
+  width?: 'narrow' | 'wide' | 'game'
   /** A game's leaderboard: adds Play and Top 10 tabs around the children. */
   board?: { id: BoardId; best: number; offer: boolean }
   children: React.ReactNode
@@ -56,7 +57,7 @@ export function PanelWindow({ title, eyebrow, onClose, width = 'wide', board, ch
         aria-labelledby="panel-title"
         className={cn(
           'pixel-window relative max-h-[90dvh] w-full overflow-y-auto p-5 sm:p-7',
-          width === 'wide' ? 'max-w-3xl' : 'max-w-lg',
+          { narrow: 'max-w-lg', wide: 'max-w-3xl', game: 'max-w-6xl' }[width],
         )}
         onClick={(e) => e.stopPropagation()}
       >
