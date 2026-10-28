@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 import { furnishHouse } from '../../src/game/furnishings'
 import { TILE, type Point } from '../../src/game/layout'
 
@@ -193,13 +193,15 @@ test.describe('Trophy poster', () => {
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the corridor' }).click()
-    // Let the camera settle on the corridor and the house take input again.
     await expect(page.getByText('Corridor', { exact: true })).toBeVisible()
-    await page.waitForTimeout(500)
-    const { x, y } = await screenPointOf(page, poster.tiles[0])
-    await page.mouse.click(x, y)
+    // Click the poster until it opens: the camera may still be settling on the
+    // corridor, and the house only takes input again once the directory is gone.
     const panel = page.getByRole('dialog', { name: 'Leaderboards' })
-    await expect(panel).toBeVisible()
+    await expect(async () => {
+      const { x, y } = await screenPointOf(page, poster.tiles[0])
+      await page.mouse.click(x, y)
+      await expect(panel).toBeVisible({ timeout: 500 })
+    }).toPass({ timeout: 10_000 })
     await expect(panel.getByRole('list', { name: /Fridge magnets top/ }).getByRole('listitem')).toHaveCount(3)
     await expect(panel.getByText('Your best: 3100 pts')).toBeVisible()
     // Not good enough for the top three, but not on the board yet either, so it can still go up.
@@ -210,9 +212,11 @@ test.describe('Trophy poster', () => {
     await expect(panel.getByText('Not played yet: the game is at the coffee machine in the kitchen.')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(panel).toBeHidden()
-    await page.waitForTimeout(500)
-    // The guest is still facing the poster.
-    await page.keyboard.press('e')
+    // The guest is still facing the poster, so E opens it again once the house takes input back.
+    await expect(async () => {
+      await page.keyboard.press('e')
+      await expect(panel).toBeVisible({ timeout: 500 })
+    }).toPass({ timeout: 10_000 })
     await expect(panel.getByRole('tab', { name: 'Bica streak' })).toHaveAttribute('aria-selected', 'true')
   })
 

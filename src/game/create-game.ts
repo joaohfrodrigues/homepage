@@ -22,8 +22,9 @@ export function createHouseGame(parent: HTMLElement, config: HouseSceneConfig): 
     banner: false,
   })
   game.scene.add('house', HouseScene, true, config)
-  if (process.env.NODE_ENV === 'development') {
-    // Handy for poking at the scene from the devtools console.
+  if (process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_E2E === '1') {
+    // Handy for poking at the scene from the devtools console; the e2e build
+    // (NEXT_PUBLIC_E2E=1, see playwright.config.ts) reads the scene through it too.
     ;(window as unknown as { __house?: Phaser.Game }).__house = game
   }
   return game

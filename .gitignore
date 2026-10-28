@@ -213,6 +213,7 @@ data/*.db-wal
 
 # Next.js
 .next/
+next-env.d.ts
 out/
 node_modules/
 tsconfig.tsbuildinfo

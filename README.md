@@ -47,6 +47,22 @@ npx playwright test  # end-to-end (tests/e2e); never touches Upstash or Open-Met
 pytest               # pipelines and database (tests/unit_tests)
 ```
 
+Playwright builds the site (`next build`) and serves it with `next start` on port 3100, so it
+never reuses the dev server on 3000. It runs in parallel on half the CPU cores, in Chromium's
+new headless mode, which draws the house's WebGL canvas on the GPU. The full suite takes
+about 45 s. Useful variations:
+
+```bash
+npx playwright test tests/e2e/house-beer.spec.ts  # one spec
+E2E_DEV=1 npx playwright test                     # against `next dev` instead, for debugging
+E2E_PORT=3200 npx playwright test                 # another port
+npx playwright test --workers=1                   # one test at a time
+```
+
+A server already listening on the port is reused, so stop a stale one after changing app code.
+The e2e build sets `NEXT_PUBLIC_E2E=1`, which exposes the game as `window.__house` for the house
+specs (`next dev` always does), and dummy Keystatic GitHub values when none are set.
+
 CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, pytest, the Bun unit tests and
 `pip-audit`.
 

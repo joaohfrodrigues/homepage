@@ -1,9 +1,9 @@
 import { test, expect, type Page } from './fixtures'
 
-/** Sits at the workstation, as the scene does when the guest uses the desk (via the dev-only `__house`). */
+/** Sits at the workstation, as the scene does when the guest uses the desk (via `__house`, exposed in dev and in the e2e build). */
 async function openTerminal(page: Page) {
   await page.goto('/')
-  await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
   await page.waitForFunction(() => (window as unknown as { __house?: unknown }).__house)
   await page.evaluate(() => {
     const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
