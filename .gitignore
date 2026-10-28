@@ -230,3 +230,7 @@ yarn-error.log*
 
 # Sprite previews and scratch (scripts/sprites/)
 /.sprites/
+
+# Local session keys
+.sesskey
+.DS_Store

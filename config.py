@@ -17,12 +17,11 @@ logger = logging.getLogger(__name__)
 # Unsplash configuration
 UNSPLASH_ACCESS_KEY = os.getenv('UNSPLASH_ACCESS_KEY')
 UNSPLASH_USERNAME = os.getenv('UNSPLASH_USERNAME', 'joaohfrodrigues')
-CACHE_DURATION_MINUTES = int(os.getenv('CACHE_DURATION_MINUTES', '30'))
 
 # Which fetch mode to use for Unsplash photo retrieval.
 # 'batch' returns up to 30 photos in a single call; 'details' requests full
-# metadata for each photo via `/photos/{id}`. Default to 'details' now that
-# the daily ETL runs with increased API limits.
+# metadata for each photo via `/photos/{id}`. The CLI and the daily workflow
+# default to 'batch'; this fallback only applies when the provider is used directly.
 FETCH_MODE = os.getenv('FETCH_MODE', 'details')
 
 # When true, provider validation failures raise an exception during ETL runs.
@@ -44,6 +43,5 @@ DEFAULT_USER_NAME = 'Unknown'
 # Log configuration status
 logger.info(f'Unsplash configured: {bool(UNSPLASH_ACCESS_KEY)}')
 logger.info(f'Unsplash username: {UNSPLASH_USERNAME}')
-logger.info(f'Cache duration: {CACHE_DURATION_MINUTES} minutes')
 logger.info(f'Unsplash fetch mode: {FETCH_MODE}')
 logger.info(f'ETL strict validation: {ETL_STRICT_VALIDATION}')
