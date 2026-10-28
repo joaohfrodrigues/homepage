@@ -52,9 +52,9 @@ stack:
   - group: Cloud
     items: AWS, Terraform, ECS, Glue, Lambda, Kinesis, S3, CI/CD, Docker
   - group: AI
-    items: AI agents, LangGraph, embeddings and semantic search
+    items: AI agents, embeddings and semantic search
   - group: Leadership
-    items: Team scaling, Technical hiring, Mentoring, Scrum and LeSS, Roadmap and backlog ownership
+    items: Team scaling, Mentoring, Scrum and LeSS, Roadmap and backlog ownership
   - group: Web
     items: TypeScript, Next.js, Supabase
 projects:
