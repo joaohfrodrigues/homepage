@@ -1,4 +1,4 @@
-import { config, collection, fields } from '@keystatic/core'
+import { config, collection, fields, singleton } from '@keystatic/core'
 
 // Use local file storage during development so the admin UI reads and writes
 // the repo's content directly. Only switch to GitHub-backed storage in
@@ -202,6 +202,62 @@ export default config({
             itemLabel: (props) => props.fields.caption.value || 'Tile',
           }
         ),
+      },
+    }),
+  },
+
+  singletons: {
+    // The Work page (/work): the professional version of About, for anyone hiring.
+    work: singleton({
+      label: 'Work',
+      path: 'content/work',
+      schema: {
+        headline: fields.text({ label: 'Headline', description: 'One line under the title, e.g. "Data Engineer · Lisbon"' }),
+        summary: fields.text({ label: 'Summary', multiline: true, description: 'Two or three sentences: role, domain, strengths' }),
+        availability: fields.text({
+          label: 'Availability',
+          description: 'Shown as a badge, e.g. "Open to senior data engineering roles". Leave empty to hide it.',
+        }),
+        cvUrl: fields.text({ label: 'CV link', description: 'A path under public/ (e.g. /files/cv.pdf) or a full URL. Empty hides the button.' }),
+        email: fields.text({ label: 'Email', description: 'Empty leaves contact to LinkedIn and GitHub' }),
+        experience: fields.array(
+          fields.object({
+            role: fields.text({ label: 'Role' }),
+            company: fields.text({ label: 'Company' }),
+            period: fields.text({ label: 'Period', description: 'e.g. "2022 – now"' }),
+            current: fields.checkbox({ label: 'Current job', defaultValue: false }),
+            outcome: fields.text({ label: 'What I did', multiline: true }),
+          }),
+          { label: 'Experience', itemLabel: (props) => props.fields.role.value || 'Role' }
+        ),
+        stack: fields.array(
+          fields.object({
+            group: fields.text({ label: 'Group', description: 'e.g. "Data", "Cloud"' }),
+            items: fields.text({ label: 'Tools', description: 'Comma-separated' }),
+          }),
+          { label: 'Stack', itemLabel: (props) => props.fields.group.value || 'Group' }
+        ),
+        projects: fields.array(
+          fields.object({
+            title: fields.text({ label: 'Title' }),
+            blurb: fields.text({ label: 'What’s interesting', multiline: true }),
+            href: fields.text({ label: 'Link' }),
+          }),
+          { label: 'Selected projects', itemLabel: (props) => props.fields.title.value || 'Project' }
+        ),
+        education: fields.array(
+          fields.object({
+            degree: fields.text({ label: 'Degree' }),
+            school: fields.text({ label: 'School' }),
+            period: fields.text({ label: 'Period' }),
+            note: fields.text({ label: 'Note', multiline: true }),
+          }),
+          { label: 'Education', itemLabel: (props) => props.fields.degree.value || 'Degree' }
+        ),
+        certifications: fields.array(fields.text({ label: 'Certification' }), {
+          label: 'Certifications',
+          itemLabel: (props) => props.value || 'Certification',
+        }),
       },
     }),
   },
