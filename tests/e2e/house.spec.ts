@@ -609,11 +609,17 @@ test.describe('Welcome card', () => {
     await page.goto('/')
     const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
     await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
+    // It asks who's visiting; the curious get the shortcuts, and can go back.
+    const who = card.getByRole('group', { name: 'Who’s visiting?' })
+    await expect(who.getByRole('link', { name: 'Here to hire' })).toHaveAttribute('href', '/work')
+    await who.getByRole('button', { name: 'Just curious' }).click()
     await expect(card.getByRole('link', { name: 'Films & series' })).toHaveAttribute('href', '/hobbies/watching')
+    await card.getByRole('button', { name: 'Back' }).click()
+    await expect(who).toBeVisible()
     // The house waits behind the card: M doesn't open the directory yet.
     await page.keyboard.press('m')
     await expect(page.getByRole('dialog', { name: 'What are you after?' })).not.toBeVisible()
-    await card.getByRole('button', { name: 'Explore the house' }).click()
+    await who.getByRole('button', { name: 'I’m a friend' }).click()
     await expect(card).not.toBeVisible()
     await page.keyboard.press('m')
     await expect(page.getByRole('dialog', { name: 'What are you after?' })).toBeVisible()
@@ -635,6 +641,7 @@ test.describe('Welcome card', () => {
   test('a shortcut opens its page and closing it returns to the house without the card', async ({ page }) => {
     await page.goto('/')
     const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    await card.getByRole('button', { name: 'Just curious' }).click()
     await card.getByRole('link', { name: 'About' }).click()
     const about = page.getByRole('dialog', { name: 'About João' })
     await expect(about).toBeVisible()
