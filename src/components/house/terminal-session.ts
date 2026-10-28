@@ -6,10 +6,10 @@ export interface SitePage {
   title: string
 }
 
-/** What the workstation's terminal knows about, from the Work page and the site's content. */
+/** What the workstation's terminal knows about, from the Work content and the rest of the site. */
 export interface WorkstationInfo {
   headline: string
-  /** The current role, e.g. "Senior Data Engineer at Critical TechWorks, since Jul 2025". */
+  /** The current role, e.g. "Senior Data Engineer at Critical TechWorks since May 2021, in this role since Jul 2025". */
   now: string | null
   projects: { name: string; href: string }[]
   cvUrl: string
@@ -60,7 +60,7 @@ export function workstationSession(info: WorkstationInfo): TerminalEntry[] {
     {
       host: 'desk',
       command: 'ssh pi',
-      output: [{ kind: 'text', text: 'Raspberry Pi 5 · media center, VPN gateway and secure tunnel. Written up in ~/projects/home-server.' }],
+      output: [{ kind: 'text', text: 'Raspberry Pi 5 · media center, VPN gateway and secure tunnel. Shared in ~/projects/home-server.' }],
     },
     { host: SESSION_HOST, command: 'whoami', output: [{ kind: 'text', text: `${AUTHOR_NAME}: ${info.headline}` }] },
   ]
@@ -76,9 +76,9 @@ export function workstationSession(info: WorkstationInfo): TerminalEntry[] {
   return session
 }
 
-/** The Work page, and the CV when there is one. */
+/** The About page (where the work lives), and the CV when there is one. */
 export function workLinks(info: WorkstationInfo): TerminalLink[] {
-  const work: TerminalLink[] = [{ label: 'work.html: experience, projects, stack', href: '/work' }]
+  const work: TerminalLink[] = [{ label: 'work.html: experience, projects, stack', href: '/about' }]
   if (info.cvUrl) work.push({ label: info.cvUrl.split('/').pop()!, href: info.cvUrl, download: true })
   return work
 }

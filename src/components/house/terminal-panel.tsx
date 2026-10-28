@@ -96,7 +96,7 @@ function MatrixRain({ onDone }: { onDone: () => void }) {
 
 /**
  * The study workstation: a terminal on the desk monitor, logged into the Pi at
- * the end of the desk. The session João left on screen links the Work page;
+ * the end of the desk. The session João left on screen links the About page;
  * from there the visitor can `ls`, `cd` and `open` their way round the site,
  * run the home server series' commands, or look for what `help` leaves out.
  */
@@ -276,9 +276,9 @@ export function TerminalPanel({ info, weather, onClose }: Props) {
         Type <kbd>help</kbd> to look around, <kbd>exit</kbd> or Escape to step away.
       </p>
       <div className="mt-4 flex justify-center">
-        <Link href="/work" scroll={false} className="pixel-button pointer-coarse:min-h-11">
+        <Link href="/about" scroll={false} className="pixel-button pointer-coarse:min-h-11">
           <Briefcase size={14} />
-          Open the Work page
+          Experience and projects
         </Link>
       </div>
     </PanelWindow>

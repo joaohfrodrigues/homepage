@@ -22,7 +22,7 @@ function hasFile(url: string): boolean {
   return fs.existsSync(path.join(process.cwd(), 'public', url))
 }
 
-/** The Work page's content, edited as the Keystatic `work` singleton (content/work.yaml). */
+/** João's work (shown on /about), edited as the Keystatic `work` singleton (content/work.yaml). */
 export async function getWork(): Promise<Work | null> {
   const work = await reader.singletons.work.read()
   if (!work) return null

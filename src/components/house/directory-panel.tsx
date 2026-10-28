@@ -119,7 +119,8 @@ export function DirectoryPanel({ currentRoom, night, unlocks, onTeleport, onVisi
     const t = TOPICS.find((candidate) => candidate.id === id)!
     return { key: t.id, title: t.title, room: t.room, item: t.item, target: t.id, href: t.href }
   }
-  const about: Entry = { key: 'about', title: 'About João', room: 'living', item: 'João', target: 'joao', href: '/about' }
+  // About and Work are one page, so it gets one entry, at João rather than the workstation.
+  const about: Entry = { key: 'about', title: 'About & work', room: 'living', item: 'João', target: 'joao', href: '/about' }
   const contact: Entry = { key: 'contact', title: 'Contact', room: 'hall', item: 'The post', target: 'letterbox', open: onContact }
   const geoguess: Entry = {
     key: 'geoguess',
@@ -165,7 +166,7 @@ export function DirectoryPanel({ currentRoom, night, unlocks, onTeleport, onVisi
 
   const subjects: Entry[] = [
     about,
-    ...TOPICS.map((t) => topic(t.id)),
+    ...TOPICS.filter((t) => t.id !== 'work').map((t) => topic(t.id)),
     contact,
     geoguess,
     bica,

@@ -119,7 +119,7 @@ export function siteHome(info: WorkstationInfo): FsNode & { kind: 'dir' } {
       {
         kind: 'dir',
         name: 'work',
-        href: '/work',
+        href: '/about',
         children: [
           ...(info.now ? [{ kind: 'file', name: 'now', text: info.now } as FsNode] : []),
           page('work.html', work.href!),

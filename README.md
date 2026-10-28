@@ -9,9 +9,11 @@ pixel-art Lisbon flat you walk around, and each room leads to part of the site.
     `content/` as Markdown/YAML, edited through Keystatic CMS at `/keystatic`.
 - **The house** (`src/game/`, `src/components/house/`) — a Phaser scene with React panels on top.
     Every page under `src/app/(house)/` opens inside it. See [docs/house.md](./docs/house.md).
-- **Work page** (`/work`) — the CV-style page for recruiters, edited as the Keystatic `work`
-    singleton (`content/work.yaml`). The CV button appears only when
-    `public/files/joao-rodrigues-cv.pdf` exists.
+- **About page** (`/about`) — who João is and his work, in one page (`/work` redirects there).
+    The work half is the Keystatic `work` singleton (`content/work.yaml`); the rest is
+    `content/pages/about.md`. Roles in a row at one company show as one stay, dated from joining.
+    The CV and email are off while `cvUrl` and `email` are empty; the CV only shows if its file
+    exists under `public/`.
 - **Data pipelines** (`backend/`) — Python jobs that run daily in GitHub Actions and commit their
     output: Unsplash photos into `data/photos.db`, Plex watch history into `content/watch-items/`.
     The site never calls those APIs at request time. See [backend/README.md](./backend/README.md).

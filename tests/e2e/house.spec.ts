@@ -111,7 +111,7 @@ test.describe('House', () => {
     await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
-    await directory.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: /^About João/ }).click()
+    await directory.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: /^About & work/ }).click()
     const about = page.getByRole('dialog', { name: 'About João' })
     await expect(about).toBeVisible()
     await expect(directory).not.toBeVisible()
@@ -560,7 +560,7 @@ test.describe('Back closes what is open over the house', () => {
 
   test('a page opened from the directory takes its place in history', async ({ page }) => {
     await page.keyboard.press('m')
-    await subjects(page).getByRole('link', { name: /^About João/ }).click()
+    await subjects(page).getByRole('link', { name: /^About & work/ }).click()
     const about = page.getByRole('dialog', { name: 'About João' })
     await expect(about).toBeVisible()
     await page.goBack()
@@ -611,7 +611,10 @@ test.describe('Welcome card', () => {
     await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
     // It asks who's visiting; the curious get the shortcuts, and can go back.
     const who = card.getByRole('group', { name: 'Who’s visiting?' })
-    await expect(who.getByRole('link', { name: 'Here to hire' })).toHaveAttribute('href', '/work')
+    // Anyone hiring picks the About page or the tour.
+    await who.getByRole('button', { name: 'Here to hire' }).click()
+    await expect(card.getByRole('link', { name: 'Just read about me' })).toHaveAttribute('href', '/about')
+    await card.getByRole('button', { name: 'Back' }).click()
     await who.getByRole('button', { name: 'Just curious' }).click()
     await expect(card.getByRole('link', { name: 'Films & series' })).toHaveAttribute('href', '/hobbies/watching')
     await card.getByRole('button', { name: 'Back' }).click()
@@ -657,6 +660,45 @@ test.describe('Welcome card', () => {
     await expect(card.getByRole('button', { name: /^Close/ })).toBeFocused({ timeout: 15_000 })
     await page.goBack()
     await expect(page).toHaveURL(BLANK)
+  })
+
+  test('the tour walks the guest round the study to João and ends with LinkedIn and GitHub', async ({ page }) => {
+    await page.goto('/')
+    const card = page.getByRole('dialog', { name: 'Hi, I’m João' })
+    await card.getByRole('button', { name: 'Here to hire' }).click()
+    await card.getByRole('button', { name: /Show me around/ }).click()
+    await expect(card).not.toBeVisible()
+
+    const tour = page.getByRole('dialog', { name: 'The day job' })
+    await expect(tour).toBeVisible()
+    await expect(page.getByText('Study', { exact: true })).toBeVisible()
+    for (const next of ['The home server', 'Acultura-te', 'The house itself']) {
+      await page.getByRole('button', { name: 'Next stop' }).click()
+      await expect(page.getByRole('dialog', { name: next })).toBeVisible()
+    }
+    await expect(page.getByText('Living room', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Finish' }).click()
+
+    const goodbye = page.getByRole('dialog', { name: 'Thanks for coming round' })
+    const contact = goodbye.getByRole('navigation', { name: 'Contact' })
+    await expect(contact.getByRole('link', { name: /LinkedIn/ })).toBeVisible()
+    await expect(contact.getByRole('link', { name: /GitHub/ })).toBeVisible()
+    // The CV and email stay off the tour, out of reach of scrapers.
+    await expect(goodbye.locator('a[href^="mailto:"], a[href$=".pdf"]')).toHaveCount(0)
+    await expect(page.getByRole('status').filter({ hasText: 'Hired?' })).toBeVisible()
+    // Back closes it like any other layer.
+    await page.goBack()
+    await expect(goodbye).not.toBeVisible()
+    await expect(page).toHaveURL('/')
+  })
+
+  test('the About page offers the tour, which starts once the page closes', async ({ page }) => {
+    await page.goto('/about')
+    await page.getByRole('button', { name: /Show me around/ }).click()
+    await expect(page).toHaveURL('/')
+    await expect(page.getByRole('dialog', { name: 'The day job' })).toBeVisible({ timeout: 15_000 })
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'The day job' })).not.toBeVisible()
   })
 
   test('a deep link skips the card', async ({ page }) => {

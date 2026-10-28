@@ -22,6 +22,8 @@ import { DirectoryPanel } from './directory-panel'
 import { GeoGuessPanel } from './geoguess-panel'
 import { GuestbookPanel } from './guestbook-panel'
 import { HouseNavigationContext, openPage, useHistoryLayer } from './house-navigation'
+import { InterviewCard, InterviewContext } from './interview-card'
+import { tourStops } from './interview'
 import { HALL } from './leaderboard'
 import { saveTab, ScoresPanel } from './scores-panel'
 import {
@@ -166,6 +168,9 @@ export function HouseShell({ data, children }: Props) {
   const [panel, setPanel] = useState<PanelId | null>(null)
   // Between a directory pick and the guest reaching its item, which then opens a page or panel.
   const [visiting, setVisiting] = useState(false)
+  // The recruiters' tour: which stop (the stops' length is the goodbye), and whether the guest is there yet.
+  const [interview, setInterview] = useState<{ step: number; here: boolean } | null>(null)
+  const stops = useMemo(() => (data.interview ? tourStops(data.interview) : []), [data.interview])
   const [showControls, setShowControls] = useState(true)
   // The sky and outfit only matter once the game has booted client-side, so
   // reading the clock and localStorage in the initializers can't cause a
@@ -213,7 +218,7 @@ export function HouseShell({ data, children }: Props) {
   const { on: soundOn } = useSound()
 
   const overlayOpen = pathname !== '/'
-  const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome
+  const inputEnabled = !overlayOpen && dialogue === null && comic === null && panel === null && !welcome && interview === null
 
   // A page opening (from the directory, say) takes the place of any panel, so
   // closing the page goes straight back to the house.
@@ -224,6 +229,7 @@ export function HouseShell({ data, children }: Props) {
       setPanel(null)
       setDialogue(null)
       setWelcome(false)
+      setInterview(null)
     }
   }
 
@@ -233,10 +239,11 @@ export function HouseShell({ data, children }: Props) {
   // Back closes the panel or dialogue instead of leaving the house. The
   // welcome card has no entry of its own: it is the page the visitor landed
   // on, so Back from it leaves like Back from any first page.
-  useHistoryLayer(dialogue !== null || panel !== null || visiting, () => {
+  useHistoryLayer(dialogue !== null || panel !== null || visiting || interview !== null, () => {
     setPanel(null)
     setDialogue(null)
     setVisiting(false)
+    setInterview(null)
     pendingVisit.current = null
   })
 
@@ -441,7 +448,8 @@ export function HouseShell({ data, children }: Props) {
   useEffect(() => {
     const shortcuts: Record<string, PanelId> = { m: 'directory', g: 'guestbook' }
     function onKey(e: KeyboardEvent) {
-      if (overlayOpen || welcome || dialogue !== null || (panel !== null && panel !== 'directory' && panel !== 'guestbook')) return
+      if (overlayOpen || welcome || dialogue !== null || interview !== null) return
+      if (panel !== null && panel !== 'directory' && panel !== 'guestbook') return
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable]')) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
       const target = shortcuts[e.key.toLowerCase()]
@@ -452,7 +460,7 @@ export function HouseShell({ data, children }: Props) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [overlayOpen, welcome, dialogue, panel])
+  }, [overlayOpen, welcome, dialogue, interview, panel])
 
   const teleport = useCallback(
     (target: RoomId) => {
@@ -482,6 +490,53 @@ export function HouseShell({ data, children }: Props) {
       bridge.ui.emit('visit', target)
     },
     [bridge],
+  )
+
+  /** Takes the guest to a stop of the tour (unless they're already stood there) and shows its card. */
+  const showStop = useCallback(
+    (step: number) => {
+      const target = stops[step]?.target
+      const arrive = () => {
+        setInterview({ step, here: true })
+        if (step < stops.length) return sfx.pageTurn()
+        sfx.fanfare()
+        // After the fanfare, so a first finish's sticker chime doesn't land on top of it.
+        window.setTimeout(() => updateStats((stats) => stats.interviews++), 900)
+      }
+      if (target && target !== stops[step - 1]?.target) {
+        setInterview({ step, here: false })
+        visit(target, arrive)
+      } else arrive()
+    },
+    [stops, visit],
+  )
+
+  const startInterview = useCallback(() => {
+    setDialogue(null)
+    setPanel(null)
+    showStop(0)
+  }, [showStop])
+
+  // The About page's "Show me around" closes the page, and the tour starts once the house is back in
+  // view and booted (on a deep link to /about it may not be yet, and nothing would answer the visit).
+  const interviewQueued = useRef(false)
+  const startInterviewFromPage = useCallback(() => {
+    interviewQueued.current = true
+    leaveTo('/')
+  }, [leaveTo])
+  useEffect(() => {
+    if (!interviewQueued.current || overlayOpen || !ready) return
+    interviewQueued.current = false
+    startInterview()
+  }, [overlayOpen, ready, startInterview])
+
+  /** A link on a tour card ends the tour and opens its page in place of the tour's history entry. */
+  const leaveInterviewFor = useCallback(
+    (href: string) => {
+      setInterview(null)
+      openPage(router, href)
+    },
+    [router],
   )
 
   const changeNight = useCallback(
@@ -716,6 +771,9 @@ export function HouseShell({ data, children }: Props) {
       case 'close':
         closeDialogue()
         break
+      case 'interview':
+        startInterview()
+        break
       case 'mission': {
         const step = choice.step
         if (step === undefined) {
@@ -771,9 +829,9 @@ export function HouseShell({ data, children }: Props) {
               >
                 {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
               </button>
-              <Link href="/work" scroll={false} className="pixel-button pointer-events-auto max-sm:hidden" aria-label="Work">
+              <Link href="/about" scroll={false} className="pixel-button pointer-events-auto max-sm:hidden" aria-label="About & work">
                 <Briefcase size={14} />
-                <span className="hidden sm:inline">Work</span>
+                <span className="hidden sm:inline">About</span>
               </Link>
               <button
                 type="button"
@@ -840,7 +898,32 @@ export function HouseShell({ data, children }: Props) {
         />
       )}
 
-      {ready && welcome && <WelcomeCard onClose={dismissWelcome} />}
+      {ready && welcome && (
+        <WelcomeCard
+          onClose={dismissWelcome}
+          onInterview={
+            stops.length > 0
+              ? () => {
+                  dismissWelcome()
+                  startInterview()
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {/* A panel opened from the HUD mid-tour sits over the card until it closes. */}
+      {interview?.here && !overlayOpen && panel === null && (
+        <InterviewCard
+          stop={stops[interview.step] ?? null}
+          index={interview.step}
+          count={stops.length}
+          contacts={data.contactLinks.filter((link) => link.label === 'LinkedIn' || link.label === 'GitHub')}
+          onNext={() => showStop(interview.step + 1)}
+          onLink={leaveInterviewFor}
+          onClose={() => setInterview(null)}
+        />
+      )}
 
       {panel === 'directory' && (
         <DirectoryPanel
@@ -878,7 +961,9 @@ export function HouseShell({ data, children }: Props) {
       {comic && <ComicStrip key={comic} id={comic} looks={looks} onDone={finishComic} />}
       <StickerToast onOpen={() => setPanel('guestbook')} />
 
-      <HouseNavigationContext.Provider value={leaveTo}>{children}</HouseNavigationContext.Provider>
+      <HouseNavigationContext.Provider value={leaveTo}>
+        <InterviewContext.Provider value={stops.length > 0 ? startInterviewFromPage : null}>{children}</InterviewContext.Provider>
+      </HouseNavigationContext.Provider>
     </div>
   )
 }

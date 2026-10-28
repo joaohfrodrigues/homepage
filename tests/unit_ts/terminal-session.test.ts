@@ -38,12 +38,12 @@ describe('The workstation terminal', () => {
     expect(links(INFO, 'ls ~/projects')).toContainEqual({ label: 'home-server/', href: '/writing/projects/raspberry-pi' })
   })
 
-  test('ends on a link to the Work page, and the CV when there is one', () => {
+  test('ends on a link to the About page, and the CV when there is one', () => {
     expect(links(INFO, 'open ~/work')).toEqual([
-      { label: 'work.html: experience, projects, stack', href: '/work' },
+      { label: 'work.html: experience, projects, stack', href: '/about' },
       { label: 'cv.pdf', href: '/files/cv.pdf', download: true },
     ])
-    expect(links({ ...INFO, cvUrl: '' }, 'open ~/work').map((link) => link.href)).toEqual(['/work'])
+    expect(links({ ...INFO, cvUrl: '' }, 'open ~/work').map((link) => link.href)).toEqual(['/about'])
   })
 
   test('skips what it does not know', () => {

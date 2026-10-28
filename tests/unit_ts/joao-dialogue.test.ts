@@ -4,7 +4,7 @@ import { buildDialogue, joaoTips } from '../../src/components/house/dialogues'
 import type { VisitorStats } from '../../src/components/house/visitor-stats'
 import type { HouseData } from '../../src/lib/house'
 
-const DATA: HouseData = { trips: [], geoPhotos: [], contactLinks: [], workstation: null }
+const DATA: HouseData = { trips: [], geoPhotos: [], contactLinks: [], workstation: null, interview: null }
 
 function stats(change: Partial<VisitorStats> = {}): VisitorStats {
   return {
@@ -34,6 +34,7 @@ function stats(change: Partial<VisitorStats> = {}): VisitorStats {
     paracetamols: 0,
     terminalEggs: [],
     incidents: 0,
+    interviews: 0,
     ...change,
   }
 }
@@ -57,6 +58,18 @@ describe('João', () => {
       'More about me',
       'See you around',
     ])
+  })
+
+  test('asked about work, offers the tour when there is one, and otherwise sends you to the page', () => {
+    const work = (data: HouseData) =>
+      buildDialogue('joao', data, { night: false, stats: stats({ chats: 1 }) }).choices.find((c) => c.label === 'What do you do for work?')
+    expect(work(DATA)).toEqual({ label: 'What do you do for work?', kind: 'link', href: '/about' })
+    const current = { role: 'Data Engineer', company: 'Somewhere', joined: 'May 2021', roleSince: 'Jul 2025' }
+    const interview = { headline: 'Data engineer', current, stack: [], projects: [] }
+    expect(work({ ...DATA, interview })).toMatchObject({ kind: 'next', id: 'joao-work' })
+    const reply = buildDialogue('joao-work', { ...DATA, interview }, { night: false, stats: stats() })
+    expect(reply.lines[0]).toBe('I’m a Data Engineer at Somewhere. Been there since May 2021.')
+    expect(reply.choices.map((choice) => choice.kind)).toEqual(['interview', 'link', 'close'])
   })
 
   test('skips the introduction on later chats and gives a tip instead', () => {

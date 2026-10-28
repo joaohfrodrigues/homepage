@@ -207,7 +207,7 @@ export default config({
   },
 
   singletons: {
-    // The Work page (/work): the professional version of About, for anyone hiring.
+    // The work half of /about (experience, projects, stack), and the recruiters' tour.
     work: singleton({
       label: 'Work',
       path: 'content/work',
@@ -218,7 +218,7 @@ export default config({
           label: 'Availability',
           description: 'Shown as a badge, e.g. "Open to senior data engineering roles". Leave empty to hide it.',
         }),
-        cvUrl: fields.text({ label: 'CV link', description: 'A path under public/ (e.g. /files/cv.pdf) or a full URL. Empty hides the button.' }),
+        cvUrl: fields.text({ label: 'CV link', description: 'A path under public/ (e.g. /files/cv.pdf) or a full URL. Left empty, the CV stays off the site.' }),
         email: fields.text({ label: 'Email', description: 'Empty leaves contact to LinkedIn and GitHub' }),
         experience: fields.array(
           fields.object({

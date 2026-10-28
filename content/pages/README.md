@@ -1,8 +1,9 @@
 # Static pages
 
 Each `.md` file here is a page read by `getPage(slug)` in `src/lib/pages.ts` and rendered with
-`react-markdown`. Today that's only `about.md` (`/about`). These files aren't in Keystatic, so edit
-them directly. The Work page is not one of these; it's the Keystatic `work` singleton.
+`react-markdown`. Today that's only `about.md`, the "Outside work" part of `/about`. These files
+aren't in Keystatic, so edit them directly. The work on that page comes from the Keystatic `work`
+singleton instead.
 
 Frontmatter: `title` and `description` are used; `url` is ignored.
 

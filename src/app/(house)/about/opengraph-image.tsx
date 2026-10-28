@@ -14,7 +14,7 @@ const ROOF = '#c0392b'
 const LIGHT = '#e8c95a'
 
 /**
- * The /work link preview (LinkedIn, Slack, WhatsApp): name and role first, so
+ * The /about link preview (LinkedIn, Slack, WhatsApp): name and role first, so
  * it reads as a profile, with a window onto the house so it still looks like
  * this site. Every other page keeps the plain house snapshot.
  */
@@ -37,7 +37,7 @@ export default async function Image() {
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 26, color: '#a69cba', marginTop: 48 }}>joaohfrodrigues.com/work</div>
+          <div style={{ fontSize: 26, color: '#a69cba', marginTop: 48 }}>joaohfrodrigues.com/about</div>
         </div>
         <div style={{ display: 'flex', flex: 1, padding: '48px 48px 48px 0' }}>
           <div style={{ display: 'flex', flex: 1, border: `8px solid ${PAPER}`, overflow: 'hidden' }}>

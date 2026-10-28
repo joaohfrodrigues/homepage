@@ -4,7 +4,7 @@ import type { ProjectSummary } from '@/lib/projects'
 
 /*
  * Pixel centrepieces for the study's writing: the bookshelves (the /writing
- * index) and the desk monitor (a project page, and the Work page). Like the
+ * index) and the desk monitor (a project page, and the workstation). Like the
  * travel map, they sit above the existing article lists rather than replacing them.
  */
 
@@ -73,7 +73,7 @@ export function Bookshelf({
   )
 }
 
-/** The desk monitor's frame and stand, for a terminal session; the Work page uses it too. */
+/** The desk monitor's frame and stand, for a terminal session. */
 export function Terminal({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto max-w-2xl">

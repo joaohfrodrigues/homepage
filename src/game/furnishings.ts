@@ -269,7 +269,7 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   // the map and the desk.
   topicItem('trips', prop('wallmap', 16, 9))
   // The workstation: its terminal is logged into the Pi at the end of the desk
-  // and links the Work page (the directory's Work entry walks here too). The
+  // and links the About page, where the work lives. The
   // home server series itself lives on the bookshelves.
   interactables.push({
     id: 'work',

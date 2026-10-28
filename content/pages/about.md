@@ -1,13 +1,11 @@
 ---
 title: 'About | João Rodrigues'
-description: 'Data Engineer and hobbyist photographer based in Lisbon, Portugal'
+description: 'Senior data engineer and product owner in Lisbon: experience, side projects and stack, and the photography, films and drums outside work.'
 url: 'https://joaohfrodrigues.com/about'
 ---
 
-I am a Data Engineer based in Lisbon, Portugal, with expertise in building
-scalable data pipelines, cloud technologies, and real-time data processing.
-
-Beyond my professional life, my favorite hobbies are photography, film and music
- (I am also an amateur drummer).
+My favourite hobbies are photography, film and music (I am also an amateur
+drummer). I also like sharing my side projects and creative ideas: this
+house is one of them.
 
 ![João Rodrigues](/static/images/2024_profile_about.jpg)

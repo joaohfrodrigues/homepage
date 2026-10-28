@@ -4,7 +4,8 @@
  * rustle and a fanfare for making a top 10, a power-up for the wardrobe's
  * cheat code, the stuck bathroom door and the cabinet over its sink, the
  * hidden behaviours' heartbeat, beers, snores and morning birds, the
- * workstation's keyboard and its terminal bell, the
+ * workstation's keyboard and its terminal bell, a page turning at each stop of
+ * the recruiters' tour, the
  * gulls over the roofs, and the fridge magnets' pin and scores. Most are synthesised with the Web Audio API; Zeno,
  * the Super Bock, the coffee machine and the gulls are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
@@ -296,6 +297,15 @@ export function rustle() {
   })
 }
 
+/** A page turned over: a soft swish of paper rising in pitch, and a little flap as it lands. */
+export function pageTurn() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.16, level: 0.03, filter: 'bandpass', cutoff: 1800, attack: 0.05 })
+    burst(audio, t + 0.09, { length: 0.1, level: 0.025, filter: 'bandpass', cutoff: 3200, attack: 0.03 })
+    burst(audio, t + 0.2, { length: 0.04, level: 0.03, filter: 'lowpass', cutoff: 900 })
+  })
+}
+
 const taDaDaa: Sound = (audio, t) => {
   note(audio, t, { from: hz(67), length: 0.12, level: 0.04, type: 'square' })
   note(audio, t + 0.12, { from: hz(72), length: 0.12, level: 0.04, type: 'square' })
@@ -303,7 +313,7 @@ const taDaDaa: Sound = (audio, t) => {
   note(audio, t + 0.24, { from: hz(64), length: 0.5, level: 0.025, type: 'triangle' })
 }
 
-/** Ta-da-daa: a submitted score made a top 10. */
+/** Ta-da-daa: a submitted score made a top 10, or the recruiters' tour reached its end. */
 export function fanfare() {
   play(taDaDaa)
 }

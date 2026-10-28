@@ -31,7 +31,7 @@ export const TOPICS: Topic[] = [
     item: 'Workstation',
     title: 'Work',
     look: 'A wide monitor with a terminal open on the Raspberry Pi blinking away at the end of the desk, and a mug gone cold beside it.',
-    href: '/work',
+    href: '/about',
   },
   {
     id: 'trips',
@@ -46,7 +46,7 @@ export const TOPICS: Topic[] = [
     room: 'study',
     item: 'Bookshelves',
     title: 'Writing & projects',
-    look: 'Shelves of notebooks and printouts: articles, and the side projects behind them.',
+    look: 'Shelves of notebooks and printouts: side projects and the ideas behind them.',
     href: '/writing',
   },
   {

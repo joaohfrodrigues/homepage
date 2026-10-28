@@ -15,8 +15,13 @@ Back always closes the top layer. Pages have real URLs, and panels, dialogue and
 push a history entry while open (`useHistoryLayer` in `house-navigation.tsx`).
 
 A first visit opens a welcome card asking who's visiting: a friend goes straight in, the curious
-get shortcuts, and *Here to hire* opens the Work page. It's skipped on deep links and remembered
-once dismissed.
+get shortcuts, and *Here to hire* offers the About page or the interview. It's skipped on deep links
+and remembered once dismissed.
+
+The interview is an optional one-minute tour for recruiters, also offered on the About page and by
+João when asked about work. It moves the guest to four stops (the desk, the Pi, the bookshelves,
+João), each with a card built from the Work content (`interview.ts`); a stop whose project isn't
+in `content/work.yaml` drops out. It ends on LinkedIn and GitHub only, never the CV or email.
 
 ## Rooms
 
@@ -26,7 +31,7 @@ once dismissed.
 | Living room | TV (film and series), João, and a record player with a synthesised lo-fi loop |
 | Kitchen | Bica machine, and the fridge: a photo-location guessing game, and beer |
 | Corridor | Trophy poster: leaderboards and the Hall of Fame |
-| Study | Workstation terminal (leads to Work and the CV), wall map (photography), bookshelves (writing), camera, drums |
+| Study | Workstation terminal (leads to About & work), wall map (photography), bookshelves (writing), camera, drums |
 | Bedroom | Wardrobe (outfits), bed (nap), balcony |
 | Bathroom | Locked until its mission is done; the cabinet holds paracetamol |
 
