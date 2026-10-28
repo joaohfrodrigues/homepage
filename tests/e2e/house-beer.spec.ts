@@ -175,6 +175,12 @@ test.describe('Beers from the fridge', () => {
     await water.click()
     await expect(wake).toHaveCount(0)
 
+    // The table and the rest of the sofa hem the seat in, but the cushions take a step: off you get.
+    await page.keyboard.press('ArrowLeft')
+    await expect.poll(() => scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x, y: sofa.y })
+    await page.keyboard.press('ArrowUp')
+    await expect.poll(() => scene(page, (s) => ({ ...s.player.tile }))).toEqual({ x: sofa.x, y: sofa.y - 1 })
+
     await page.keyboard.press('g')
     const guestbook = page.getByRole('dialog', { name: 'Guestbook' })
     await expect(guestbook.getByRole('region', { name: 'Odds and ends' })).toContainText('7beers from the fridge')

@@ -85,7 +85,8 @@ this, and the scene then:
 
 On a GPU nothing changes.
 
-Playwright's headless Chromium uses SwiftShader, so the e2e tests run this software path.
+The e2e suite (`channel: 'chromium'`) renders on the GPU where there is one. To try the software
+path, open the house in Playwright's default headless shell, which uses SwiftShader.
 
 ## Where things live
 
