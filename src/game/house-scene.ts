@@ -24,6 +24,7 @@ import { LAND_URL, renderMap, type LandData } from './world-map'
 import { WeatherLayer } from './weather-layer'
 import { Exterior } from './exterior'
 import { Lighting } from './lighting'
+import { isSoftwareRenderer } from './software-render'
 import { isNight, type Sky } from '@/lib/sun'
 import {
   MAP_WALL,
@@ -140,6 +141,13 @@ const JITTER_MS = 70
 /** Pace of a drunk vignette's breathing and of the view sliding in and out of focus (ms per radian). */
 const VIGNETTE_BREATH_MS = 700
 const BLUR_DRIFT_MS = 1100
+/**
+ * Frame caps where the house is drawn on the CPU (see software-render.ts): a
+ * steady 30 rather than an uneven 40, and a trickle while a page or panel
+ * covers it. A GPU draws every frame.
+ */
+const SOFTWARE_FPS = 30
+const SOFTWARE_COVERED_FPS = 5
 /** People leave chairs to visitors and cats; João stays off them. */
 const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
 
@@ -203,6 +211,8 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
+  /** Drawn on the CPU (software WebGL or canvas), where frames, the lit shader and the blur's passes are dear. */
+  private softwareRender = false
   /** The bathroom's door over its doorway: shut, rattling while it's stuck, or swung open. */
   private bathroomDoor?: Phaser.GameObjects.Sprite
   private lighting!: Lighting
@@ -263,6 +273,8 @@ export class HouseScene extends Phaser.Scene {
 
   create() {
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    this.softwareRender = isSoftwareRenderer(this.game.renderer)
+    if (this.softwareRender) this.game.loop.setFPSLimit(SOFTWARE_FPS)
     this.bakeHouse()
     this.addBathroomDoor()
     this.bakeCharacters()
@@ -334,7 +346,8 @@ export class HouseScene extends Phaser.Scene {
 
     const lit = [this.houseBase, this.player.sprite, this.npc.sprite, this.zeno.sprite, this.toy, this.poop]
     if (this.bathroomDoor) lit.push(this.bathroomDoor)
-    this.lighting.useShaderLights(lit)
+    // The lit shader is most of a frame's cost on the CPU; there the lamps keep their tints instead.
+    if (!this.softwareRender) this.lighting.useShaderLights(lit)
 
     this.updateRoom()
     this.updateHint()
@@ -780,7 +793,12 @@ export class HouseScene extends Phaser.Scene {
       // Never below full size, or the view's edges would show past it.
       style.transform = `scale(${(1.04 - 0.04 * breath).toFixed(3)})`
     }
-    if (combined.blur) this.blur ??= camera.filters?.external.addBlur(0, 2, 2, 0) ?? null
+    // On the CPU one wide pass stands in for four narrow ones, which halved the frame rate there.
+    if (combined.blur) {
+      this.blur ??= (this.softwareRender
+        ? camera.filters?.external.addBlur(0, 4, 4, 0, 0xffffff, 1)
+        : camera.filters?.external.addBlur(0, 2, 2, 0)) ?? null
+    }
     if (this.blur) {
       const focus = this.reducedMotion ? 0.35 : Math.max(0, Math.sin(time / BLUR_DRIFT_MS)) ** 2
       this.blur.active = !!combined.blur
@@ -1789,6 +1807,9 @@ export class HouseScene extends Phaser.Scene {
         this.padDirection = direction
       }),
       ui.on('tapAt', ({ x, y }) => this.handleTouchTap(x, y)),
+      ui.on('covered', (covered) => {
+        if (this.softwareRender) this.game.loop.setFPSLimit(covered ? SOFTWARE_COVERED_FPS : SOFTWARE_FPS)
+      }),
       ui.on('inputEnabled', (enabled) => {
         this.inputEnabled = enabled
         this.input.keyboard!.enabled = enabled

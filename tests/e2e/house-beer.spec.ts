@@ -115,7 +115,8 @@ test.describe('Beers from the fridge', () => {
     await expect(cheers.getByRole('img', { name: 'João' })).toBeVisible()
     await cheers.click()
     await expect(cheers).toHaveCount(0)
-    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 3, vignette: 0.2, tinted: true })
+    // The scene takes the effect on at its next frame.
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 3, vignette: 0.2, tinted: true })
     expect((await guestEffect(page)).drift).toBeUndefined()
 
     await grabBeer(page)
@@ -123,7 +124,7 @@ test.describe('Beers from the fridge', () => {
     await grabBeer(page)
     await expect(page.getByRole('dialog', { name: 'Notice' })).toContainText('The floor tilts')
     await closeDialogue(page)
-    expect(await guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 6, drift: 0.15, vignette: 0.5, blur: 0.7 })
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 6, drift: 0.15, vignette: 0.5, blur: 0.7 })
     // The edges breathe and the focus comes and goes, rather than sitting still.
     const filters = () => scene(page, (s) => `${s.vignette?.style.opacity} ${s.blur?.strength.toFixed(3)}`)
     const before = await filters()
@@ -228,8 +229,8 @@ test.describe('Beers from the fridge', () => {
       if (i === 2) await expect(page.getByRole('dialog', { name: 'Comic: Saúde!' }).getByText('CLINK!')).toBeVisible()
       await closeDialogue(page)
     }
+    await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['beer'], vignette: 0.5, blur: 0.7, tinted: true })
     const effect = await guestEffect(page)
-    expect(effect).toMatchObject({ sources: ['beer'], vignette: 0.5, blur: 0.7, tinted: true })
     expect(effect.sway).toBeUndefined()
     expect(effect.drift).toBeUndefined()
     const filters = () =>
