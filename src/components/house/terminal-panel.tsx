@@ -109,6 +109,7 @@ export function TerminalPanel({ info, weather, onClose }: Props) {
   // Commands typed so far, oldest first, starting with João's own; ↑ and ↓ step through them.
   const [history, setHistory] = useState(() => [...PLANTED_HISTORY, ...workstationSession(info).map((entry) => entry.command)])
   const [recall, setRecall] = useState<number | null>(null)
+  const [draft, setDraft] = useState('')
   const [matrix, setMatrix] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const screenRef = useRef<HTMLDivElement>(null)
@@ -169,20 +170,54 @@ export function TerminalPanel({ info, weather, onClose }: Props) {
       setInput(complete(shell, input, home))
       return
     }
+    // Ctrl+L clears the screen, Ctrl+C abandons the line and Ctrl+U wipes it, as in bash.
+    // Ctrl+C still copies while text is selected.
+    if (e.ctrlKey && !e.metaKey && !e.altKey) {
+      const key = e.key.toLowerCase()
+      if (key === 'l') {
+        e.preventDefault()
+        return setEntries([])
+      }
+      if (key === 'c' && !window.getSelection()?.toString()) {
+        e.preventDefault()
+        setEntries((previous) => [
+          ...previous,
+          { host: shell.host, cwd: cwdLabel(shell.cwd), vim: shell.vim, command: `${input}^C`, output: [] },
+        ])
+        setInput('')
+        setRecall(null)
+        return
+      }
+      if (key === 'u') {
+        e.preventDefault()
+        return setInput('')
+      }
+    }
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     e.preventDefault()
     if (history.length === 0) return
     const step = e.key === 'ArrowUp' ? -1 : 1
     const next = Math.min(history.length, Math.max(0, (recall ?? history.length) + step))
+    // Keep what was being typed, and give it back on stepping past the newest command.
+    if (recall === null) setDraft(input)
     setRecall(next)
-    setInput(history[next] ?? '')
+    setInput(next === history.length ? (recall === null ? input : draft) : history[next])
   }
 
   return (
     <PanelWindow title="Workstation" eyebrow="Study" onClose={onClose}>
       <Terminal>
         <div className="relative">
-          <div ref={screenRef} className="max-h-[50dvh] overflow-y-auto" onClick={() => inputRef.current?.focus()}>
+          {/* A fixed height, so the window holds still and the output scrolls under it like a real screen.
+              `relative` keeps the prompt's screen-reader label inside the scroll, not overflowing the window. */}
+          <div
+            ref={screenRef}
+            className="relative h-[min(24rem,45dvh)] overflow-y-auto overscroll-contain [scrollbar-color:#3d5a4a_transparent] [scrollbar-width:thin]"
+            onClick={() => {
+              // Leave a selection alone, so output can be copied.
+              if (!window.getSelection()?.toString()) inputRef.current?.focus({ preventScroll: true })
+            }}
+          >
             <div role="log" aria-label="Terminal output" aria-live="polite">
               {entries.map((entry, i) => (
                 <div key={i} className="mb-3">
@@ -219,7 +254,11 @@ export function TerminalPanel({ info, weather, onClose }: Props) {
                 ref={inputRef}
                 id="terminal-input"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value)
+                  // Typing brings a screen scrolled back through the output down to the prompt.
+                  screenRef.current?.scrollTo({ top: screenRef.current.scrollHeight })
+                }}
                 onKeyDown={onKeyDown}
                 autoComplete="off"
                 autoCapitalize="off"

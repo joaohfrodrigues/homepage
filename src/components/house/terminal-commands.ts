@@ -93,7 +93,7 @@ const FORTUNES = [
 
 const HELP = [
   'Get around:   ls [dir]   cd <dir>   pwd   cat <file>   open <file or dir>',
-  'At the shell: whoami   history   clear   exit',
+  'At the shell: whoami   history   clear (or Ctrl+L)   exit',
   'On the Pi:    uptime   docker ps   df -h   wg show   tailscale status   lsblk',
   'Try:  cd writing   then   ls   then   open <a name>.  Tab completes names, ↑ recalls commands.',
 ]
