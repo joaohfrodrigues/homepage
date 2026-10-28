@@ -24,12 +24,6 @@ export async function getHobbyFeed(): Promise<HobbyFeedEntry[]> {
   ].sort((a, b) => b.dateAdded.localeCompare(a.dateAdded))
 }
 
-export function getFeedEntryImage(entry: HobbyFeedEntry): { key: string; src: string; alt: string } | null {
-  return entry.item.photo
-    ? { key: `${entry.kind}-${entry.item.slug}`, src: entry.item.photo, alt: entry.item.name }
-    : null
-}
-
 export type HobbyFilterCategory = { slug: string; label: string }
 
 /**

@@ -59,10 +59,6 @@ export async function getProjectArticles(projectSlug: string): Promise<ArticleSu
   return articles.filter((a) => a.project === projectSlug)
 }
 
-export async function getAllSlugs(): Promise<string[]> {
-  return reader.collections.articles.list()
-}
-
 export async function getStandaloneSlugs(): Promise<string[]> {
   const entries = await reader.collections.articles.all()
   return entries.filter((e) => !e.entry.project).map((e) => e.slug)

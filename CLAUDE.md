@@ -23,35 +23,37 @@ Draw new or redrawn furniture as a grid sprite in
 `bun run sprites:preview <prop>` (and LimeZu pieces alongside with `--limezu`) before and after
 each change, and check it in the running house. Blender renders and PixelLab drafts are starting
 points only: snap them with `bun run sprites:grid import` and clean them up by hand. The tools need
-no paid software; don't add steps that need Aseprite. See "Drawing the house" in the README.
+no paid software; don't add steps that need Aseprite. See [docs/drawing-the-house.md](./docs/drawing-the-house.md).
+
+## Writing documentation
+
+Docs are for people skimming, so keep them short and readable:
+
+- **Summarise.** Say what a thing is, why it exists and how to use it. Leave out what the code
+    already says plainly (every sticker, every sound, every prop); point to the file instead.
+- **Keep a detail only if it changes what the reader does**: a non-obvious rule, a trap, a
+    command, a required variable, a limit.
+- **Say it once.** Each fact has one home; other docs link to it rather than repeat it.
+- **One topic per doc.** The root README is a short overview and index. Feature guides live in
+    `docs/`, and a folder's own README covers only that folder.
+- **Prefer lists, tables and code blocks** to long paragraphs, and plain words to jargon.
 
 ## Documentation pass before every Pull Request
 
-Before creating any Pull Request, do a documentation pass and update every doc the branch's changes
-affect. Commit the doc updates on the same branch so they land in the same PR.
+Before creating any Pull Request, update every doc the branch's changes affect, on the same branch.
+Follow "Writing documentation" above: correct or delete statements the change made wrong rather
+than adding to them, and put new detail in the doc that owns the topic.
 
-Start with the root [README.md](./README.md), which is the main entry point and the doc most likely
-to drift. Check that it still matches the code for:
+| Doc | Covers |
+| --- | --- |
+| [README.md](./README.md) | Overview, quick start, testing, deploying, project structure, tech stack, docs index |
+| [docs/house.md](./docs/house.md) | The house's rooms, systems, URL previews and asset scripts |
+| [docs/drawing-the-house.md](./docs/drawing-the-house.md) | Grid sprites, the palette and art tools |
+| [docs/scoreboards.md](./docs/scoreboards.md) | Scoreboard and João's-look APIs |
+| [backend/README.md](./backend/README.md) | Pipelines, their CLI flags and workflows, the database |
+| [content/pages/README.md](./content/pages/README.md) | Adding a static page |
+| [tests/unit_tests/fixtures/README.md](./tests/unit_tests/fixtures/README.md) | Unsplash fixtures |
+| [.env.example](./.env.example) | Every environment variable |
+| This file | How work in the repo is done |
 
-- **Overview and Architecture** — what the site is and how its parts fit together (new pages,
-    routes, features such as the house, new data sources).
-- **Quick Start and setup steps** — commands, prerequisites and environment variables (keep
-    [.env.example](./.env.example) in sync with any new or removed variable).
-- **ETL pipelines and Automated Sync** — CLI flags, behaviour and the workflows in
-    `.github/workflows/`.
-- **Tech Stack** — libraries, services and asset packs added or removed.
-- **Project Structure** — the directory tree must reflect real paths (new folders such as
-    `scripts/`, moved or deleted files).
-- **Testing** — how to run each test suite.
-- **Documentation** — the index of other docs, including any new README.
-
-Then check the other docs that cover the touched area:
-
-- [backend/README.md](./backend/README.md) — database schema, ETL pipelines, `backend/` layout.
-- [content/pages/README.md](./content/pages/README.md) — how static content pages are added.
-- [data/README.md](./data/README.md) — files in `data/`.
-- [tests/unit_tests/fixtures/README.md](./tests/unit_tests/fixtures/README.md) — test fixtures.
-- This file, if the change alters how work in the repo should be done.
-
-Remove or correct statements the change made wrong rather than only adding new text. If nothing
-needs updating, say so in the PR description.
+If nothing needs updating, say so in the PR description.
