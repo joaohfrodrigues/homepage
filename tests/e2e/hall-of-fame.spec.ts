@@ -23,6 +23,8 @@ const FULL: Partial<VisitorStats> = {
   dozes: 1,
   paracetamols: 1,
   overdoses: 1,
+  cheats: 1,
+  terminalEggs: ['sudo', 'zeno', 'lisbon'],
 }
 
 /** One sticker short: never overdosed on bicas. */

@@ -2,10 +2,10 @@ import Link from 'next/link'
 import { HouseShell } from '@/components/house/house-shell'
 import { getHouseData } from '@/lib/house'
 
-export default function HouseLayout({ children }: { children: React.ReactNode }) {
+export default async function HouseLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <HouseShell data={getHouseData()}>{children}</HouseShell>
+      <HouseShell data={await getHouseData()}>{children}</HouseShell>
       <noscript>
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#141019] p-6 text-[#f4ecd8]">
           <div className="max-w-md text-center">

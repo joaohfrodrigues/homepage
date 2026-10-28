@@ -40,11 +40,14 @@ async function openCabinet(page: Page) {
   })
 }
 
-/** Opens the fridge and takes a beer; returns the dialogue that follows. */
+/**
+ * Opens the fridge and takes a beer, clicking past the line as it types: under
+ * the hangover's blur a headless browser draws slowly enough that waiting for
+ * it to finish runs the long test out of time.
+ */
 async function grabBeer(page: Page) {
   await page.keyboard.press('e')
-  const fridge = page.getByRole('dialog', { name: 'Notice' })
-  await fridge.getByRole('button', { name: 'Grab a Super Bock' }).click()
+  await choose(page.getByRole('dialog', { name: 'Notice' }), 'Grab a Super Bock')
 }
 
 /** Naps until evening, or wakes up, from the directory's bed entry. */

@@ -40,6 +40,10 @@ export interface VisitorStats {
   dozes: number
   /** Paracetamol from the bathroom cabinet, taken for a hangover. */
   paracetamols: number
+  /** Secrets found at the workstation's terminal (see `TerminalEgg`). */
+  terminalEggs: string[]
+  /** Times `sudo` was tried once too often, and so reported. */
+  incidents: number
 }
 
 function emptyStats(): VisitorStats {
@@ -68,6 +72,8 @@ function emptyStats(): VisitorStats {
     beers: 0,
     dozes: 0,
     paracetamols: 0,
+    terminalEggs: [],
+    incidents: 0,
   }
 }
 
@@ -89,6 +95,7 @@ function load(): VisitorStats {
         bicas: { ...stats.bicas, ...parsed.bicas },
         rooms: { ...parsed.rooms },
         missionSteps: Array.isArray(parsed.missionSteps) ? parsed.missionSteps : [],
+        terminalEggs: Array.isArray(parsed.terminalEggs) ? parsed.terminalEggs : [],
       })
     }
   } catch {
@@ -236,4 +243,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'sofa-surfer', title: 'Sofa surfer', hint: 'Wake up somewhere you didn’t fall asleep.', earned: (s) => s.dozes >= 1 },
   { id: 'never-again', title: 'Never again', hint: 'Find something for the morning after.', earned: (s) => s.paracetamols >= 1 },
   { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
+  { id: 'root-access', title: 'Root access', hint: 'The workstation answers more than help lets on. Find three of its secrets.', earned: (s) => s.terminalEggs.length >= 3 },
 ]

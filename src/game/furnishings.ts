@@ -18,6 +18,11 @@ export interface Interactable {
   action: InteractAction
   /** Gone once this is unlocked, like the handle of a door that now stands open. */
   until?: UnlockId
+  /**
+   * The part of the furniture to light up, in pixels from its top-left, when the
+   * thing is one of several on the same piece (the post on the hall console).
+   */
+  cue?: { x: number; y: number; w: number; h: number }
 }
 
 export interface Furnishings {
@@ -157,12 +162,14 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     label: 'Post on the console — get in touch',
     tiles: [{ x: 7, y: 13 }],
     action: { type: 'dialogue', id: 'letterbox' },
+    cue: { x: 4, y: 9, w: 9, h: 6 },
   })
   interactables.push({
     id: 'directory',
     label: 'Floor plan — house directory',
     tiles: [{ x: 7, y: 14 }],
     action: { type: 'panel', panel: 'directory' },
+    cue: { x: 4, y: 16, w: 9, h: 11 },
   })
   topicItem('hiking', [...prop('coatstand', 9, 13), ...prop('boots', 9, 15)])
   interactables.push({
@@ -258,11 +265,15 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   // Entered from the end of the corridor, so its whole north wall is free for
   // the map and the desk.
   topicItem('trips', prop('wallmap', 16, 9))
-  // The desk is two things: the monitor half is the workstation, the Pi and
-  // its disk enclosure at the right end are the home server.
-  const desk = prop('desk', 19, 10)
-  topicItem('work', desk.filter((tile) => tile.x < 21))
-  topicItem('home-server', desk.filter((tile) => tile.x === 21))
+  // The workstation: its terminal is logged into the Pi at the end of the desk
+  // and links the Work page (the directory's Work entry walks here too). The
+  // home server series itself lives on the bookshelves.
+  interactables.push({
+    id: 'work',
+    label: getTopic('work').item,
+    tiles: prop('desk', 19, 10),
+    action: { type: 'panel', panel: 'terminal' },
+  })
   prop('officechair', 20, 12, false)
   topicItem('writing', [...prop('bookshelfside', 21, 13), ...prop('bookshelfside', 21, 15)])
   prop('floorlamp', 16, 13)

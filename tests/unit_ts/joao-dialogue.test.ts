@@ -4,7 +4,7 @@ import { buildDialogue, joaoTips } from '../../src/components/house/dialogues'
 import type { VisitorStats } from '../../src/components/house/visitor-stats'
 import type { HouseData } from '../../src/lib/house'
 
-const DATA: HouseData = { trips: [], geoPhotos: [], contactLinks: [] }
+const DATA: HouseData = { trips: [], geoPhotos: [], contactLinks: [], workstation: null }
 
 function stats(change: Partial<VisitorStats> = {}): VisitorStats {
   return {
@@ -32,6 +32,8 @@ function stats(change: Partial<VisitorStats> = {}): VisitorStats {
     beers: 0,
     dozes: 0,
     paracetamols: 0,
+    terminalEggs: [],
+    incidents: 0,
     ...change,
   }
 }
@@ -51,8 +53,8 @@ describe('João', () => {
     expect(dialogue.lines.some((line) => line.includes('front door'))).toBe(true)
     expect(dialogue.choices.map((choice) => choice.label)).toEqual([
       'What should I check out?',
-      'What do you do for work? →',
-      'More about me →',
+      'What do you do for work?',
+      'More about me',
       'See you around',
     ])
   })

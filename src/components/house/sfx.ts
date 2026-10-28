@@ -4,6 +4,7 @@
  * rustle and a fanfare for making a top 10, a power-up for the wardrobe's
  * cheat code, the stuck bathroom door and the cabinet over its sink, the
  * hidden behaviours' heartbeat, beers, snores and morning birds, the
+ * workstation's keyboard and its terminal bell, the
  * gulls over the roofs, and the fridge magnets' pin and scores. Most are synthesised with the Web Audio API; Zeno,
  * the Super Bock and the coffee machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
@@ -121,6 +122,29 @@ export function step() {
 /** Something used: a panel opening, a page, a light switch. */
 export function pop() {
   play((audio, t) => note(audio, t, { from: 420, to: 760, length: 0.09, level: 0.09 }))
+}
+
+/** A few keys tapped on the study's keyboard, as the workstation's terminal wakes up. */
+export function keys() {
+  play((audio, t) => {
+    ;[0, 0.07, 0.12, 0.21, 0.27, 0.38].forEach((offset, i) => {
+      burst(audio, t + offset, { length: 0.025, level: 0.03, filter: 'highpass', cutoff: i % 2 ? 2600 : 3200, attack: 0.001 })
+      note(audio, t + offset, { from: 180, length: 0.02, level: 0.015 })
+    })
+  })
+}
+
+/** One key and Enter, as a command goes in at the workstation; quiet, since it comes with every command. */
+export function keystroke() {
+  play((audio, t) => {
+    burst(audio, t, { length: 0.02, level: 0.02, filter: 'highpass', cutoff: 3000, attack: 0.001 })
+    burst(audio, t + 0.08, { length: 0.03, level: 0.025, filter: 'highpass', cutoff: 2200, attack: 0.001 })
+  })
+}
+
+/** The terminal bell: a command it doesn't know, or one it won't run. */
+export function bell() {
+  play((audio, t) => note(audio, t, { from: 220, length: 0.12, level: 0.035, type: 'square' }))
 }
 
 /** Someone starts talking. */

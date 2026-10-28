@@ -17,7 +17,8 @@ the public scoreboards, which live in Upstash Redis.
       [The House](#-the-house) below.
     - **Work page** (`/work`) - the professional version of About for anyone hiring: summary,
       availability, CV, experience, selected projects, stack, education and certifications, edited
-      as the Keystatic `work` singleton (`content/work.yaml`, read by `src/lib/work.ts`). Empty
+      as the Keystatic `work` singleton (`content/work.yaml`, read by `src/lib/work.ts`), and
+      linked from the study workstation's terminal (below). Empty
       fields and sections are hidden, and so is the CV button until its file is in `public/` (it
       links `public/files/joao-rodrigues-cv.pdf`, a version without the phone number). It has its own link-preview image (`src/app/(house)/work/opengraph-image.tsx`: name,
       role, a few tools and a window onto the house), and its content fills the `Person` structured
@@ -96,9 +97,22 @@ site's sections:
     best, the top 10, and the same opt-in form while that best isn't on the board yet. Its last tab
     is the Hall of Fame: visitors who collected every sticker, newest first, each with the sticker
     count they signed with and the month ("13/13 · Oct 2026").
-- **Study** - the workstation (the Work page) and, at the right end of the same desk, the
-    Raspberry Pi (home server series); the wall map (photography by trip), bookshelves (writing),
-    camera and drums.
+- **Study** - the workstation: a terminal on the desk monitor (`TerminalPanel`), logged into the
+    Raspberry Pi at the end of the desk, with a session already on screen (`ssh pi`, `whoami`, the
+    current job, the projects as folders) that ends on `open ~/work`, linking the Work page and the
+    CV. The home server series isn't an object of its own: it's on the bookshelves, and the
+    terminal's `home-server/` folder links it. The session comes from the Work content
+    (`src/components/house/terminal-session.ts`), and then the prompt takes commands
+    (`terminal-commands.ts`): the site is the home directory, so `ls`, `cd`, `cat` and `open` get
+    round `writing/` (each project a folder of its articles), `photography/` (a folder per trip),
+    `hobbies/`, `work/` and `about.md`, and `open` takes the page over the panel's history entry like
+    any link out of a panel. On the Pi, `uptime`, `docker ps`, `df -h`, `wg show`, `tailscale status`
+    and `lsblk` answer as the home server series built it and link the part they come from; `exit`
+    logs out to the desk, and a second `exit` (or Escape, or Back) closes the panel. ↑/↓ recall
+    commands, starting with a few notes João left in the history; Tab completes names. `help`
+    doesn't list everything: a handful of other commands are secrets (`sudo`, three times, is
+    reported, and the guestbook counts the incident), and finding three earns the *Root access*
+    sticker. Also the wall map (photography by trip), bookshelves (writing), camera and drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony. The
     Konami code (↑ ↑ ↓ ↓ ← → ← → B A) at the open wardrobe lets the visitor dress João too (and earns
     the *Cheat code* sticker). *Set as new default* makes either look what *Back to the usual*
@@ -149,7 +163,7 @@ and right arrows also move, is the volume of the whole house, music and sound ef
 
 The house also has sound effects (`src/components/house/sfx.ts`), mostly synthesised the same way:
 quiet footsteps, a pop when something is used, a blip when someone talks, the stuck bathroom door
-rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, a chime for each new sticker, an 8-bit power-up for the wardrobe's Konami code, a paper rustle at the trophy
+rattling and then cracking free, the bathroom cabinet and a paracetamol going down, Zeno's meow, the coffee machine, keys tapped as the workstation's terminal wakes (a quieter tap for each command, and a terminal bell for one it won't run), a chime for each new sticker, an 8-bit power-up for the wardrobe's Konami code, a paper rustle at the trophy
 poster, a magnet clicking onto the fridge map and a note that climbs with each guess's score, a fanfare for a new best at the magnets or when a submitted score makes a top 10 and a pen scribble before it when the Hall of
 Fame is signed, plus the hidden behaviours' own: a
 heartbeat with each thump of a caffeine overdose, a bottle opening (and a hiccup once dizzy), a
@@ -513,7 +527,7 @@ homepage/
 │   └── house/               # House atlases and world-map outlines
 ├── tests/               # Test suites
 │   ├── unit_tests/       # Pytest (ETL, database)
-│   ├── unit_ts/          # Bun unit tests (scoreboards, João's look and dialogue, sun, grid sprites)
+│   ├── unit_ts/          # Bun unit tests (scoreboards, João's look and dialogue, the workstation's shell, sun, grid sprites)
 │   ├── local_tests/      # Manual checks against the live Unsplash API
 │   └── e2e/               # Playwright (frontend)
 ├── keystatic.config.ts  # CMS collections

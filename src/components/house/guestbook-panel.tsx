@@ -252,6 +252,9 @@ export function GuestbookPanel({ onReset, onHallOfFame, onClose }: Props) {
             <Stat value={stats.naps} label="naps until evening" />
             <Stat value={stats.outfits} label="outfit changes" />
             <Stat value={stats.beers} label={stats.beers === 1 ? 'beer from the fridge' : 'beers from the fridge'} />
+            {stats.incidents > 0 && (
+              <Stat value={stats.incidents} label={stats.incidents === 1 ? 'sudo incident reported' : 'sudo incidents reported'} />
+            )}
           </div>
         </Section>
       </div>
