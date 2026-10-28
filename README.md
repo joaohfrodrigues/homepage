@@ -97,13 +97,13 @@ site's sections:
     best, the top 10, and the same opt-in form while that best isn't on the board yet. Its last tab
     is the Hall of Fame: visitors who collected every sticker, newest first, each with the sticker
     count they signed with and the month ("13/13 · Oct 2026").
-- **Study** - the workstation: a terminal on the desk monitor (`TerminalPanel`) with a session
-    already on screen (`whoami`, the current job, the projects as folders) that ends on `open
-    ~/work`, linking the Work page and the CV. The session comes from the Work content and is
-    built as data in `src/components/house/terminal-session.ts`, ready to take commands later. At
-    the right end of the same desk, the Raspberry Pi opens the home server series (its own
-    terminal); each lights up only its half of the desk. Also the wall map (photography by trip),
-    bookshelves (writing), camera and drums.
+- **Study** - the workstation: a terminal on the desk monitor (`TerminalPanel`), logged into the
+    Raspberry Pi at the end of the desk, with a session already on screen (`ssh pi`, `whoami`, the
+    current job, the projects as folders) that ends on `open ~/work`, linking the Work page and the
+    CV. The home server series isn't an object of its own: it's on the bookshelves, and the
+    terminal's `home-server/` folder links it. The session comes from the Work content and is built
+    as data in `src/components/house/terminal-session.ts`, ready to take commands later. Also the
+    wall map (photography by trip), bookshelves (writing), camera and drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony. The
     Konami code (↑ ↑ ↓ ↓ ← → ← → B A) at the open wardrobe lets the visitor dress João too (and earns
     the *Cheat code* sticker). *Set as new default* makes either look what *Back to the usual*

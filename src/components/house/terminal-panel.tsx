@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Briefcase } from 'lucide-react'
 import { PanelWindow } from './panel-window'
-import { workstationSession, type WorkstationInfo } from './terminal-session'
+import { SESSION_HOST, workstationSession, type WorkstationInfo } from './terminal-session'
 import { Prompt, Terminal } from './writing-centerpieces'
 
 const LINK = 'underline-offset-4 hover:text-[#f4ecd8] hover:underline focus-visible:text-[#f4ecd8] focus-visible:underline'
@@ -14,9 +14,9 @@ interface Props {
 }
 
 /**
- * The study workstation: a terminal session on the desk monitor, with the
- * Work page one link away. The Pi at the end of the desk has its own terminal
- * (the home server series).
+ * The study workstation: a terminal on the desk monitor, logged into the Pi at
+ * the end of the desk, with the Work page one link away and the home server
+ * series (on the bookshelves) one folder away.
  */
 export function TerminalPanel({ info, onClose }: Props) {
   return (
@@ -24,7 +24,7 @@ export function TerminalPanel({ info, onClose }: Props) {
       <Terminal>
         {workstationSession(info).map((entry) => (
           <div key={entry.command} className="mb-3">
-            <Prompt host="desk" command={entry.command} />
+            <Prompt host={entry.host} command={entry.command} />
             {entry.output.map((output, i) =>
               output.kind === 'text' ? (
                 <p key={i} className="text-[#c9d6c3]">
@@ -48,7 +48,7 @@ export function TerminalPanel({ info, onClose }: Props) {
             )}
           </div>
         ))}
-        <Prompt host="desk" />
+        <Prompt host={SESSION_HOST} />
       </Terminal>
       <div className="mt-5 flex justify-center">
         <Link href="/work" scroll={false} className="pixel-button pointer-coarse:min-h-11">

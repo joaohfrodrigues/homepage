@@ -7,6 +7,7 @@ const INFO: WorkstationInfo = {
   now: 'Senior Data Engineer at Somewhere, since 2025',
   projects: [
     { name: 'acultura-te', href: '/writing/projects/acultura-te' },
+    { name: 'home-server', href: '/writing/projects/raspberry-pi' },
     { name: 'this-site', href: '/writing/how-this-site-works' },
   ],
   cvUrl: '/files/cv.pdf',
@@ -18,11 +19,20 @@ const links = (info: WorkstationInfo, command: string) =>
     .output.flatMap((output) => (output.kind === 'links' ? output.links : []))
 
 describe('The workstation terminal', () => {
-  test('introduces João, his current job and his projects', () => {
+  test('logs into the Pi, then introduces João, his current job and his projects', () => {
     const session = workstationSession(INFO)
-    expect(session.map((entry) => entry.command)).toEqual(['whoami', 'cat ~/work/now', 'ls ~/projects', 'open ~/work'])
-    expect(session[0].output).toEqual([{ kind: 'text', text: 'João Rodrigues: Senior Data Engineer · Lisbon' }])
-    expect(links(INFO, 'ls ~/projects').map((link) => link.label)).toEqual(['acultura-te/', 'this-site/'])
+    expect(session.map((entry) => `${entry.host}$ ${entry.command}`)).toEqual([
+      'desk$ ssh pi',
+      'pi$ whoami',
+      'pi$ cat ~/work/now',
+      'pi$ ls ~/projects',
+      'pi$ open ~/work',
+    ])
+    expect(session[1].output).toEqual([{ kind: 'text', text: 'João Rodrigues: Senior Data Engineer · Lisbon' }])
+  })
+
+  test('links the home server series on the bookshelves as a project, not a dedicated object', () => {
+    expect(links(INFO, 'ls ~/projects')).toContainEqual({ label: 'home-server/', href: '/writing/projects/raspberry-pi' })
   })
 
   test('ends on a link to the Work page, and the CV when there is one', () => {
@@ -35,6 +45,6 @@ describe('The workstation terminal', () => {
 
   test('skips what it does not know', () => {
     const commands = workstationSession({ ...INFO, now: null, projects: [] }).map((entry) => entry.command)
-    expect(commands).toEqual(['whoami', 'open ~/work'])
+    expect(commands).toEqual(['ssh pi', 'whoami', 'open ~/work'])
   })
 })

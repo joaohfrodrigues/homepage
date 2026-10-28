@@ -265,23 +265,14 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   // Entered from the end of the corridor, so its whole north wall is free for
   // the map and the desk.
   topicItem('trips', prop('wallmap', 16, 9))
-  // The desk is two things: the monitor half is the workstation, whose terminal
-  // links the Work page (the directory's Work entry walks here too), and the Pi
-  // and its disk enclosure at the right end are the home server.
-  const desk = prop('desk', 19, 10)
+  // The workstation: its terminal is logged into the Pi at the end of the desk
+  // and links the Work page (the directory's Work entry walks here too). The
+  // home server series itself lives on the bookshelves.
   interactables.push({
     id: 'work',
     label: getTopic('work').item,
-    tiles: desk.filter((tile) => tile.x < 21),
+    tiles: prop('desk', 19, 10),
     action: { type: 'panel', panel: 'terminal' },
-    cue: { x: 12, y: 1, w: 22, h: 16 },
-  })
-  interactables.push({
-    id: 'home-server',
-    label: getTopic('home-server').item,
-    tiles: desk.filter((tile) => tile.x === 21),
-    action: topicAction('home-server'),
-    cue: { x: 37, y: 8, w: 11, h: 11 },
   })
   prop('officechair', 20, 12, false)
   topicItem('writing', [...prop('bookshelfside', 21, 13), ...prop('bookshelfside', 21, 15)])
