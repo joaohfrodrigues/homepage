@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
   // Require better-sqlite3 at runtime (native module, not bundled) under both
   // Turbopack and webpack.
   serverExternalPackages: ['better-sqlite3'],
+  // About and Work were merged into /about; old links and search results land there.
+  async redirects() {
+    return [{ source: '/work', destination: '/about', permanent: true }]
+  },
   images: {
     remotePatterns: [
       {

@@ -7,7 +7,7 @@ summary: >-
   work I keep building: an AI-native cultural events platform, a self-hosted
   home server, and this site.
 availability: ''
-cvUrl: /files/joao-rodrigues-cv.pdf
+cvUrl: ''
 email: ''
 experience:
   - role: Senior Data Engineer & Product Owner
@@ -69,7 +69,7 @@ projects:
   - title: Home server
     blurb: >-
       A Raspberry Pi 5 as media center, VPN gateway and secure tunnel, built to
-      set and forget, and written up as a five-part series.
+      set and forget, and shared as a five-part series.
     href: /writing/projects/raspberry-pi
   - title: This site
     blurb: >-

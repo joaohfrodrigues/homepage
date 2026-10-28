@@ -44,6 +44,8 @@ export interface VisitorStats {
   terminalEggs: string[]
   /** Times `sudo` was tried once too often, and so reported. */
   incidents: number
+  /** Times the recruiters' guided tour was followed to the end. */
+  interviews: number
 }
 
 function emptyStats(): VisitorStats {
@@ -74,6 +76,7 @@ function emptyStats(): VisitorStats {
     paracetamols: 0,
     terminalEggs: [],
     incidents: 0,
+    interviews: 0,
   }
 }
 
@@ -244,4 +247,5 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'never-again', title: 'Never again', hint: 'Find something for the morning after.', earned: (s) => s.paracetamols >= 1 },
   { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
   { id: 'root-access', title: 'Root access', hint: 'The workstation answers more than help lets on. Find three of its secrets.', earned: (s) => s.terminalEggs.length >= 3 },
+  { id: 'hired', title: 'Hired?', hint: 'Let João show you round his work, start to finish.', earned: (s) => s.interviews >= 1 },
 ]

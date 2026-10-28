@@ -10,6 +10,7 @@ import type { VisitorStats } from './visitor-stats'
 export type DialogueKey =
   | DialogueId
   | 'joao-tip'
+  | 'joao-work'
   | 'caffeine-overdose'
   | 'beer'
   | 'sofa-wake'
@@ -34,6 +35,8 @@ export type DialogueChoice =
   | { label: string; kind: 'beer' }
   | { label: string; kind: 'paracetamol' }
   | { label: string; kind: 'close' }
+  /** Starts the recruiters' guided tour (`interview.ts`). */
+  | { label: string; kind: 'interview' }
   /** Does a mission's step (see `mission-dialogues.ts`), or with no step asks João for a hint. */
   | { label: string; kind: 'mission'; mission: MissionId; step?: string }
 
@@ -119,6 +122,10 @@ export function buildDialogue(
     kind: 'external',
     href: link.href,
   }))
+  // With the Work content, João offers to show the visitor round rather than just sending them to the page.
+  const workChoice: DialogueChoice = data.interview
+    ? { label: 'What do you do for work?', kind: 'next', id: 'joao-work' }
+    : { label: 'What do you do for work?', kind: 'link', href: '/about' }
   // Every turn of the wake-up conversation can end it with the glass of water.
   const morningAfter: DialogueChoice[] = [{ label: 'Water, thanks', kind: 'close' }]
 
@@ -141,7 +148,7 @@ export function buildDialogue(
           ],
           choices: [
             { label: 'What should I check out?', kind: 'next', id: 'joao-tip' },
-            { label: 'What do you do for work?', kind: 'link', href: '/work' },
+            workChoice,
             { label: 'More about me', kind: 'link', href: '/about' },
             { label: GOODBYES[0], kind: 'close' },
           ],
@@ -162,10 +169,7 @@ export function buildDialogue(
         choices: [
           ...(tips.length > 1 ? [{ label: rotate(['Any other tips?', 'What else is there?'], chats), kind: 'next', id: 'joao-tip' } as const] : []),
           rotate<DialogueChoice>(
-            [
-              { label: 'What do you do for work?', kind: 'link', href: '/work' },
-              { label: 'More about me', kind: 'link', href: '/about' },
-            ],
+            [workChoice, { label: 'More about me', kind: 'link', href: '/about' }],
             chats,
           ),
           { label: rotate(GOODBYES, chats), kind: 'close' },
@@ -186,6 +190,21 @@ export function buildDialogue(
         ],
       }
     }
+    case 'joao-work':
+      return {
+        speaker: 'João',
+        lines: [
+          data.interview?.current
+            ? `I’m a ${data.interview.current.role} at ${data.interview.current.company}. Been there since ${data.interview.current.joined}.`
+            : 'I build data pipelines.',
+          'Got a minute? I can show you round my desk, or you can read it all on my About page.',
+        ],
+        choices: [
+          { label: 'Show me around', kind: 'interview' },
+          { label: 'I’ll just read it', kind: 'link', href: '/about' },
+          { label: 'Maybe later', kind: 'close' },
+        ],
+      }
     case 'caffeine-overdose':
       return {
         speaker: 'João',

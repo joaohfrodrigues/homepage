@@ -31,13 +31,19 @@ test.describe('SEO', () => {
   })
 
   test('pages without a cover share the fingerprinted house snapshot', async ({ page, request }) => {
-    await page.goto('/about')
+    await page.goto('/hobbies')
     const image = page.locator('meta[property="og:image"]')
     await expect(image).toHaveAttribute('content', /\/_next\/static\/media\/og-image\.[^/]+\.png$/)
     const path = new URL((await image.getAttribute('content'))!).pathname
     const response = await request.get(path)
     expect(response.status()).toBe(200)
     expect(response.headers()['content-type']).toContain('image/png')
+  })
+
+  test('/work moved to /about, which has its own profile preview', async ({ page }) => {
+    await page.goto('/work')
+    await expect(page).toHaveURL('/about')
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/about\/opengraph-image/)
   })
 
   test('favicon route responds with a PNG', async ({ request }) => {

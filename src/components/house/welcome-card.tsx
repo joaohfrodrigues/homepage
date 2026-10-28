@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Briefcase, Camera, Clapperboard, Home, PenLine, Sparkles, User } from 'lucide-react'
+import { ArrowLeft, Briefcase, Camera, Clapperboard, Footprints, Home, PenLine, Sparkles, User } from 'lucide-react'
 import { PanelWindow } from './panel-window'
 
 const SHORTCUTS = [
@@ -17,20 +17,23 @@ const PRIMARY = `${BUTTON} bg-[#8e2a20] hover:bg-[#a5372b] focus-visible:bg-[#a5
 
 interface Props {
   onClose: () => void
+  /** Starts the recruiters' guided tour; without it, hiring goes straight to the About page. */
+  onInterview?: () => void
 }
 
 /**
  * A first visit's hello from João, which asks who's visiting: friends go
  * straight into the house, the curious get the shortcuts most visitors are
- * after, and anyone hiring goes to the Work page.
+ * after, and anyone hiring picks the About page or a minute's guided tour.
  */
-export function WelcomeCard({ onClose }: Props) {
+export function WelcomeCard({ onClose, onInterview }: Props) {
   const [curious, setCurious] = useState(false)
+  const [hiring, setHiring] = useState(false)
 
   return (
     <PanelWindow eyebrow="Welcome" title="Hi, I’m João" width="narrow" onClose={onClose}>
       <p className="text-sm leading-relaxed">
-        I’m a data engineer in Lisbon who takes photos, writes now and then and watches a lot of films.
+        I’m a data engineer in Lisbon who takes photos, likes sharing side projects and creative ideas, and watches a lot of films.
         This is my flat, drawn tile by tile.
       </p>
       {curious ? (
@@ -53,6 +56,23 @@ export function WelcomeCard({ onClose }: Props) {
             </button>
           </div>
         </>
+      ) : hiring && onInterview ? (
+        <>
+          <p className="font-pixel mt-5 text-sm">Two ways in:</p>
+          <div className="mt-3 grid gap-3">
+            <button type="button" onClick={onInterview} className={PRIMARY}>
+              <Footprints size={14} />
+              Show me around (1 min)
+            </button>
+            <Link href="/about" scroll={false} onClick={onClose} className={BUTTON}>
+              <Briefcase size={14} />
+              Just read about me
+            </Link>
+          </div>
+          <button type="button" onClick={() => setHiring(false)} className={`${BUTTON} mt-3`} aria-label="Back">
+            <ArrowLeft size={14} />
+          </button>
+        </>
       ) : (
         <>
           <p className="font-pixel mt-5 text-sm" id="welcome-who">
@@ -67,10 +87,17 @@ export function WelcomeCard({ onClose }: Props) {
               <Sparkles size={14} />
               Just curious
             </button>
-            <Link href="/work" scroll={false} onClick={onClose} className={BUTTON}>
-              <Briefcase size={14} />
-              Here to hire
-            </Link>
+            {onInterview ? (
+              <button type="button" onClick={() => setHiring(true)} className={BUTTON}>
+                <Briefcase size={14} />
+                Here to hire
+              </button>
+            ) : (
+              <Link href="/about" scroll={false} onClick={onClose} className={BUTTON}>
+                <Briefcase size={14} />
+                Here to hire
+              </Link>
+            )}
           </div>
         </>
       )}
