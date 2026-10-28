@@ -867,7 +867,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onHallOfFame={openHallOfFame} onClose={() => setPanel(null)} />}
       {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
-      {panel === 'terminal' && data.workstation && <TerminalPanel info={data.workstation} onClose={() => setPanel(null)} />}
+      {panel === 'terminal' && data.workstation && <TerminalPanel info={data.workstation} weather={weather} onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
       {comic && <ComicStrip key={comic} id={comic} looks={looks} onDone={finishComic} />}

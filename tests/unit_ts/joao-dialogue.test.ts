@@ -32,6 +32,8 @@ function stats(change: Partial<VisitorStats> = {}): VisitorStats {
     beers: 0,
     dozes: 0,
     paracetamols: 0,
+    terminalEggs: [],
+    incidents: 0,
     ...change,
   }
 }

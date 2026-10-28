@@ -11,6 +11,9 @@ const INFO: WorkstationInfo = {
     { name: 'this-site', href: '/writing/how-this-site-works' },
   ],
   cvUrl: '/files/cv.pdf',
+  writing: { projects: [], articles: [] },
+  trips: [],
+  hobbies: [],
 }
 
 const links = (info: WorkstationInfo, command: string) =>

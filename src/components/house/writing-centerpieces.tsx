@@ -85,12 +85,12 @@ export function Terminal({ children }: { children: React.ReactNode }) {
   )
 }
 
-/** A shell prompt on `host`, then the command typed, or a blinking cursor without one. */
-export function Prompt({ host, command }: { host: string; command?: string }) {
+/** A shell prompt on `host` in `cwd`, then the command typed, or a blinking cursor without one. */
+export function Prompt({ host, cwd = '~', command }: { host: string; cwd?: string; command?: string }) {
   return (
     <p>
       <span className="text-[#e8c95a]">joao@{host}</span>
-      <span className="text-[#a69cba]">:~$ </span>
+      <span className="text-[#a69cba]">:{cwd}$ </span>
       {command ?? <span className="inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-[#7fd1b9]" aria-hidden />}
     </p>
   )

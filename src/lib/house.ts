@@ -3,6 +3,9 @@ import { getGeoPhotos, getTrips, type GeoPhoto, type Trip } from './photos'
 import { isOnMap } from '@/game/map-projection'
 import { GITHUB_URL, LINKEDIN_URL, UNSPLASH_URL } from './site-config'
 import { getWork } from './work'
+import { getPublishedArticles } from './articles'
+import { getHobbies } from './hobbies'
+import { getProjects } from './projects'
 import type { WorkstationInfo } from '@/components/house/terminal-session'
 
 export interface ContactLink {
@@ -21,10 +24,12 @@ export interface HouseData {
 }
 
 export async function getHouseData(): Promise<HouseData> {
-  const work = await getWork()
+  const [work, articles, projects, hobbies] = await Promise.all([getWork(), getPublishedArticles(), getProjects(), getHobbies()])
   const now = work?.experience.find((job) => job.current)
+  const trips = getTrips()
+  const page = ({ slug, title }: { slug: string; title: string }) => ({ slug, title })
   return {
-    trips: getTrips(),
+    trips,
     geoPhotos: getGeoPhotos().filter((photo) => photo.url && isOnMap(photo.lat, photo.lon)),
     contactLinks: [
       { label: 'LinkedIn', href: LINKEDIN_URL },
@@ -37,6 +42,15 @@ export async function getHouseData(): Promise<HouseData> {
       // "This site" lists as this-site/, like a folder.
       projects: work.projects.map(({ title, href }) => ({ name: title.toLowerCase().replace(/\s+/g, '-'), href })),
       cvUrl: work.cvUrl,
+      writing: {
+        projects: projects.map((project) => ({
+          ...page(project),
+          articles: articles.filter((article) => article.project === project.slug).map(page),
+        })),
+        articles: articles.filter((article) => !article.project).map(page),
+      },
+      trips: trips.map(page),
+      hobbies: hobbies.map(page),
     },
   }
 }
