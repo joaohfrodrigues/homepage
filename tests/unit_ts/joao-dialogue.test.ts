@@ -51,6 +51,7 @@ describe('João', () => {
     expect(dialogue.lines.some((line) => line.includes('front door'))).toBe(true)
     expect(dialogue.choices.map((choice) => choice.label)).toEqual([
       'What should I check out?',
+      'What do you do for work? →',
       'More about me →',
       'See you around',
     ])
@@ -60,8 +61,9 @@ describe('João', () => {
     const dialogue = buildDialogue('joao', DATA, { night: false, stats: stats({ chats: 2 }) })
     expect(dialogue.lines.join(' ')).not.toContain("I'm João")
     expect(dialogue.lines.join(' ')).not.toContain('front door')
-    expect(dialogue.lines.at(-1)).toBe(joaoTips(stats(), false)[0])
-    expect(dialogue.choices[0].label).toBe('Any other tips?')
+    const tips = joaoTips(stats(), false)
+    expect(dialogue.lines.at(-1)).toBe(tips[2 % tips.length])
+    expect(dialogue.choices[0].kind).toBe('next')
   })
 
   test('the follow-up tip is not the one he just gave', () => {
@@ -69,7 +71,25 @@ describe('João', () => {
     const greeting = buildDialogue('joao', DATA, { night: false, stats: later })
     const followUp = buildDialogue('joao-tip', DATA, { night: false, stats: later })
     expect(followUp.lines[0]).not.toBe(greeting.lines.at(-1)!)
-    expect(followUp.lines[0]).toBe(joaoTips(later, false)[1])
+  })
+
+  test('a later chat opens on a different tip, greeting and goodbye than the one before', () => {
+    const say = (chats: number) => buildDialogue('joao', DATA, { night: false, stats: stats({ chats }) })
+    for (const chats of [2, 3, 4, 5]) {
+      const before = say(chats)
+      const after = say(chats + 1)
+      expect(after.lines[0]).not.toBe(before.lines[0])
+      expect(after.lines.at(-1)).not.toBe(before.lines.at(-1))
+      expect(after.choices.at(-1)!.label).not.toBe(before.choices.at(-1)!.label)
+    }
+  })
+
+  test('mentions the season on the first chat and now and then, not every time', () => {
+    const say = (chats: number) =>
+      buildDialogue('joao', DATA, { night: false, season: 'xmas', stats: stats({ chats }) }).lines.join(' ')
+    expect(say(1)).toContain('Feliz Natal')
+    expect(say(2)).not.toContain('Feliz Natal')
+    expect(say(5)).toContain('Feliz Natal')
   })
 
   test('tips drop out once done, and the balcony one only shows at night', () => {
@@ -79,10 +99,11 @@ describe('João', () => {
     expect(joaoTips(stats(noBalcony), true)).toHaveLength(1)
   })
 
-  test('with nothing left to point at, he just says so and offers no more tips', () => {
-    const dialogue = buildDialogue('joao', DATA, { night: false, stats: stats({ ...SEEN_IT_ALL, chats: 5 }) })
-    expect(dialogue.lines.at(-1)).toContain('Make yourself at home')
-    expect(dialogue.choices.some((choice) => choice.kind === 'next')).toBe(false)
+  test('with nothing left to point at, he makes small talk and offers no more tips', () => {
+    const say = (chats: number) => buildDialogue('joao', DATA, { night: false, stats: stats({ ...SEEN_IT_ALL, chats }) })
+    expect(say(4).lines.at(-1)).toContain('Make yourself at home')
+    expect(say(5).lines.at(-1)).not.toBe(say(4).lines.at(-1))
+    expect(say(5).choices.some((choice) => choice.kind === 'next')).toBe(false)
   })
 })
 

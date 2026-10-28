@@ -1,0 +1,90 @@
+headline: Senior Data Engineer & Product Owner · Lisbon
+summary: >-
+  I'm a senior data engineer and technical lead with 5+ years delivering
+  cloud-native data pipelines in regulated banking and the automotive industry.
+  At Critical TechWorks (BMW Group) I helped grow our product from one team to
+  three, led technical hiring, and now own its roadmap as Product Owner. Outside
+  work I keep building: an AI-native cultural events platform, a self-hosted
+  home server, and this site.
+availability: ''
+cvUrl: /files/joao-rodrigues-cv.pdf
+email: ''
+experience:
+  - role: Senior Data Engineer & Product Owner
+    company: Critical TechWorks · BMW Group
+    period: Jul 2025 – now
+    current: true
+    outcome: >-
+      Lead product planning with BMW stakeholders, turning business requirements
+      into clear engineering deliverables and setting the architecture for new
+      API-first data surfaces. Mentor engineers on code quality and brought AI
+      agents into the team's daily work, automating technical documentation and
+      speeding up tech-debt fixes.
+  - role: Senior Data Engineer & Scrum Master
+    company: Critical TechWorks · BMW Group
+    period: May 2024 – Jul 2025
+    current: false
+    outcome: >-
+      Scaled the product from one to three cross-functional feature teams with
+      Large-Scale Scrum (LeSS). Led technical interviews for data engineering
+      hires, standardised onboarding, and taught internal Academy modules on
+      DevOps, CI/CD and GenAI.
+  - role: Data Engineer
+    company: Critical TechWorks · BMW Group
+    period: May 2021 – May 2024
+    current: false
+    outcome: >-
+      Migrated decades of legacy data to an AWS streaming lakehouse (ECS, Glue,
+      Kinesis, Iceberg), reusing infrastructure through Terraform modules and
+      cutting costs significantly.
+  - role: Data Engineer / Data Analyst
+    company: BNP Paribas
+    period: 2019 – 2021
+    current: false
+    outcome: >-
+      Built ETL pipelines in a strictly regulated banking environment, in full
+      compliance with the European Banking Authority's stress-testing
+      frameworks. Processed large risk datasets with PySpark and Hive, and built
+      automated dashboards that put compliance KPIs in front of executives.
+stack:
+  - group: Data
+    items: Python, SQL, PySpark, Apache Iceberg, Hive, Dagster, PostgreSQL
+  - group: Cloud
+    items: AWS, Terraform, ECS, Glue, Lambda, Kinesis, S3, CI/CD, Docker
+  - group: AI
+    items: AI agents, LangGraph, embeddings and semantic search
+  - group: Leadership
+    items: Team scaling, Technical hiring, Mentoring, Scrum and LeSS, Roadmap and backlog ownership
+  - group: Web
+    items: TypeScript, Next.js, Supabase
+projects:
+  - title: Acultura-te
+    blurb: >-
+      A "Letterboxd for culture" in Portugal, built AI-native with spec-driven
+      development. A Dagster pipeline scrapes, translates and embeds events from
+      dozens of venues for semantic search, and a LangGraph agent swarm on
+      Telegram runs the back-office, with every change gated on human
+      confirmation.
+    href: /writing/projects/acultura-te
+  - title: Home server
+    blurb: >-
+      A Raspberry Pi 5 as media center, VPN gateway and secure tunnel, built to
+      set and forget, and written up as a five-part series.
+    href: /writing/projects/raspberry-pi
+  - title: This site
+    blurb: >-
+      The flat you're standing in: Next.js and Phaser, hand-drawn sprites,
+      synthesised sound, daily Python ETLs from Unsplash and Plex, and shared
+      scoreboards on Redis.
+    href: /writing/how-this-site-works
+education:
+  - degree: M.Sc. Electrical and Computer Engineering
+    school: Instituto Superior Técnico
+    period: 2014 – 2019
+    note: >-
+      Grade 16/20. Exchanges at Université Catholique de Louvain (Erasmus) and
+      Télécom ParisTech (ATHENS).
+certifications:
+  - Professional Scrum Master I & II (Scrum.org)
+  - Neural Networks and Deep Learning (Coursera)
+  - Azure Data Fundamentals (Microsoft)

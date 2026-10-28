@@ -53,6 +53,17 @@ const SEASON_GREETINGS: Record<Season, string> = {
 }
 
 /**
+ * One of a few ways of saying the same thing, moving on by one with each chat,
+ * so a returning visitor doesn't hear João repeat himself.
+ */
+function rotate<T>(options: T[], turn: number): T {
+  return options[turn % options.length]
+}
+
+/** How João ends a chat, varied the same way. */
+const GOODBYES = ['See you around', 'Catch you later', 'Até já!']
+
+/**
  * João's pointers to whatever the visitor hasn't found yet, most worth seeing
  * first. Each one drops out once its stat says it's been done.
  */
@@ -63,18 +74,29 @@ export function joaoTips(stats: VisitorStats, night: boolean): string[] {
     ...(stats.geoRounds === 0
       ? ['Every magnet on the fridge is from one of my trips. Bet you can’t guess where they were taken.']
       : []),
-    ...(!stats.rooms.study ? ['The study has a map with every trip I’ve photographed. My drums are in there too.'] : []),
+    ...(!stats.rooms.study
+      ? ['The study has a map with every trip I’ve photographed, my drums, and the workstation where the day job happens.']
+      : []),
     ...(stats.pets === 0 ? ['Have you met Zeno? Tuxedo cat. He’ll act like he doesn’t want a scratch.'] : []),
     ...(!stats.rooms.bedroom ? ['There’s a wardrobe in the bedroom if you fancy a change of clothes.'] : []),
     ...(night && !stats.rooms.balcony ? ['Step out on the balcony while it’s dark. Someone downhill usually sings fado.'] : []),
   ]
 }
 
-/** What João says once there's nothing left to point at. */
+/** What João says once there's nothing left to point at: a bit of small talk, different each chat. */
 function nothingLeft(stats: VisitorStats): string {
-  return isMissionComplete(stats, 'bathroom')
-    ? 'Thanks for sorting the bathroom door, by the way. It’ll stick again next time it rains, but now you know the knack.'
-    : 'You’ve seen pretty much everything. Make yourself at home.'
+  return rotate(
+    [
+      ...(isMissionComplete(stats, 'bathroom')
+        ? ['Thanks for sorting the bathroom door, by the way. It’ll stick again next time it rains, but now you know the knack.']
+        : []),
+      'You’ve seen pretty much everything. Make yourself at home.',
+      'Nothing left to show you, honestly. The sofa’s yours if you want it.',
+      'Still here? You might as well have another go at the fridge magnets.',
+      'Zeno’s taken a liking to you. Don’t tell him I said so.',
+    ],
+    stats.chats,
+  )
 }
 
 export function buildDialogue(
@@ -105,7 +127,8 @@ export function buildDialogue(
       // The chat is counted as it opens, so the first one already reads 1.
       const firstMeeting = house.stats.chats <= 1
       const buzzing = house.buzzing ? ['…you’re buzzing a bit. How many bicas was that?'] : []
-      const seasonal = house.season ? [SEASON_GREETINGS[house.season]] : []
+      // The decorations get a mention on the first chat and every few after, not every time.
+      const seasonal = house.season && house.stats.chats % 4 === 1 ? [SEASON_GREETINGS[house.season]] : []
       if (firstMeeting) {
         return {
           speaker: 'João',
@@ -118,38 +141,48 @@ export function buildDialogue(
           ],
           choices: [
             { label: 'What should I check out?', kind: 'next', id: 'joao-tip' },
+            { label: 'What do you do for work? →', kind: 'link', href: '/work' },
             { label: 'More about me →', kind: 'link', href: '/about' },
-            { label: 'See you around', kind: 'close' },
+            { label: GOODBYES[0], kind: 'close' },
           ],
         }
       }
+      const { chats } = house.stats
       const tips = joaoTips(house.stats, house.night)
-      const greetings = ['Back again!', 'Oh, hey.', 'Hey, you.']
       const greeting =
         (house.beers ?? 0) >= 3
           ? 'Easy on the Super Bock, yeah?'
           : house.night
-            ? 'Still up? Me too.'
-            : greetings[house.stats.chats % greetings.length]
+            ? rotate(['Still up? Me too.', 'Late one, eh?', 'Can’t sleep either?'], chats)
+            : rotate(['Back again!', 'Oh, hey.', 'Hey, you.', 'There you are.', 'Olá! Good timing, Zeno was getting bored of me.'], chats)
       return {
         speaker: 'João',
-        lines: [greeting, ...seasonal, ...buzzing, tips[0] ?? nothingLeft(house.stats)],
+        // Each chat starts on the next tip, so the same one doesn't open every chat until it's done.
+        lines: [greeting, ...seasonal, ...buzzing, tips.length > 0 ? rotate(tips, chats) : nothingLeft(house.stats)],
         choices: [
-          ...(tips.length > 1 ? [{ label: 'Any other tips?', kind: 'next', id: 'joao-tip' } as const] : []),
-          { label: 'More about me →', kind: 'link', href: '/about' },
-          { label: 'See you around', kind: 'close' },
+          ...(tips.length > 1 ? [{ label: rotate(['Any other tips?', 'What else is there?'], chats), kind: 'next', id: 'joao-tip' } as const] : []),
+          rotate<DialogueChoice>(
+            [
+              { label: 'What do you do for work? →', kind: 'link', href: '/work' },
+              { label: 'More about me →', kind: 'link', href: '/about' },
+            ],
+            chats,
+          ),
+          { label: rotate(GOODBYES, chats), kind: 'close' },
         ],
       }
     }
     case 'joao-tip': {
       // Picks up after the tip the greeting already gave, if it gave one.
-      const given = house.stats.chats <= 1 ? 0 : 1
+      const { chats } = house.stats
+      const tips = joaoTips(house.stats, house.night)
+      const tip = tips.length === 0 ? nothingLeft(house.stats) : chats <= 1 ? tips[0] : rotate(tips, chats + 1)
       return {
         speaker: 'João',
-        lines: [joaoTips(house.stats, house.night)[given] ?? nothingLeft(house.stats)],
+        lines: [tip],
         choices: [
           { label: 'More about me →', kind: 'link', href: '/about' },
-          { label: 'Thanks!', kind: 'close' },
+          { label: rotate(['Thanks!', 'Good shout', 'On it'], chats), kind: 'close' },
         ],
       }
     }
@@ -364,7 +397,7 @@ function balconyView(night: boolean, weather: Weather): string[] {
       return night
         ? [
             'No stars tonight: the clouds sit low over the rooftops, orange with the city’s light.',
-            'Somewhere downhill, someone is singing fado.',
+            'A scooter whines up the hill, then the street goes quiet again.',
           ]
         : [
             'A grey lid of cloud sits over the city, and the Tejo has gone the colour of pewter.',

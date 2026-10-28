@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
+import { BookOpen, Briefcase, Cloud, CloudLightning, CloudRain, Map as MapIcon, Moon, Music, Sun, Volume2, VolumeX } from 'lucide-react'
 import { HouseBridge, type Hint, type InteractAction, type PanelId, type VisitTarget } from '@/game/bridge'
 import { getRoom, type RoomId, type UnlockId } from '@/game/layout'
 import { completeStep, missionEvent, unlocksOf } from '@/game/missions'
@@ -763,6 +764,10 @@ export function HouseShell({ data, children }: Props) {
               >
                 {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
               </button>
+              <Link href="/work" scroll={false} className="pixel-button pointer-events-auto max-sm:hidden" aria-label="Work">
+                <Briefcase size={14} />
+                <span className="hidden sm:inline">Work</span>
+              </Link>
               <button
                 type="button"
                 className="pixel-button pointer-events-auto"

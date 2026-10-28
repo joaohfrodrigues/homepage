@@ -1,7 +1,8 @@
 # Static Content Pages
 
 This directory contains markdown files for static pages that don't require dynamic data. Today
-that's `about.md`, shown at `/about`.
+that's `about.md`, shown at `/about`. The Work page (`/work`) is not one of these: it is structured
+content edited as the Keystatic `work` singleton in `content/work.yaml`.
 
 ## Structure
 

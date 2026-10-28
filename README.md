@@ -15,6 +15,13 @@ the public scoreboards, which live in Upstash Redis.
     - **The house** (`src/game/`, `src/components/house/`) - every page under `src/app/(house)/`
       renders inside the house: a Phaser scene with React panels and dialogue on top. See
       [The House](#-the-house) below.
+    - **Work page** (`/work`) - the professional version of About for anyone hiring: summary,
+      availability, CV, experience, selected projects, stack, education and certifications, edited
+      as the Keystatic `work` singleton (`content/work.yaml`, read by `src/lib/work.ts`). Empty
+      fields and sections are hidden, and so is the CV button until its file is in `public/` (it
+      links `public/files/joao-rodrigues-cv.pdf`, a version without the phone number). It has its own link-preview image (`src/app/(house)/work/opengraph-image.tsx`: name,
+      role, a few tools and a window onto the house), and its content fills the `Person` structured
+      data (`src/components/person-jsonld.tsx`) on `/work` and `/about`.
     - **API routes** (`src/app/api/`) - `photos` (paginated/searchable photos from the database),
       `watch-poster` (proxies Plex thumbnails, adding `PLEX_TOKEN` server-side), `scores` (the
       public scoreboards, below), `house/joao` (João's look for every visitor, which only the
@@ -71,10 +78,14 @@ site's sections:
 
 - **Entrance hall** - running and hiking kit.
 - **Living room** - the TV (film & TV), João himself, and a record player that puts on a short
-    lo-fi loop. On the first chat João introduces himself and points at the contact note on the
-    console by the front door; after that he skips the introduction and gives a tip about something
-    the visitor hasn't found yet (the bica, the fridge magnets, the study, Zeno...), worked out from
-    the guestbook's stats (`joaoTips` in `src/components/house/dialogues.ts`).
+    lo-fi loop. On the first chat João introduces himself, points at the contact note on the
+    console by the front door and offers the Work and About pages; after that he skips the
+    introduction and gives a tip about something the visitor hasn't found yet (the bica, the fridge
+    magnets, the study, Zeno...), worked out from the guestbook's stats (`joaoTips` in
+    `src/components/house/dialogues.ts`). So a returning visitor doesn't hear him repeat himself,
+    each chat moves on by one (`rotate`): a different tip, greeting and goodbye, small talk once
+    there's nothing left to point at, and the season's greeting only on the first chat and every
+    fourth after.
 - **Kitchen** - pull a bica, or open the fridge to guess where the magnet photos were taken (or
     grab a beer). The magnets are five rounds of a photo and a world map: the photo is shown whole,
     beside the map if it's landscape or in a narrower column if it's portrait, and its description
@@ -85,8 +96,9 @@ site's sections:
     best, the top 10, and the same opt-in form while that best isn't on the board yet. Its last tab
     is the Hall of Fame: visitors who collected every sticker, newest first, each with the sticker
     count they signed with and the month ("13/13 · Oct 2026").
-- **Study** - the wall map (photography by trip), bookshelves (writing), home server, camera and
-    drums.
+- **Study** - the workstation (the Work page) and, at the right end of the same desk, the
+    Raspberry Pi (home server series); the wall map (photography by trip), bookshelves (writing),
+    camera and drums.
 - **Bedroom** - change outfit at the wardrobe, nap until nightfall, step out onto the balcony. The
     Konami code (↑ ↑ ↓ ↓ ← → ← → B A) at the open wardrobe lets the visitor dress João too (and earns
     the *Cheat code* sticker). *Set as new default* makes either look what *Back to the usual*
@@ -103,9 +115,11 @@ hint for any mission under way, and the guestbook shows each one's progress. Mis
 in `src/game/missions.ts`; progress is saved with the guestbook's stats, so it survives reloads and
 tearing out the guestbook page shuts everything again.
 
-A first visit to the home page opens with a welcome card from João: shortcuts to photos, writing,
-films & series and About, or a button to explore the house. Dismissing it is remembered in
-`localStorage`, and visitors arriving on a deep link never see it.
+A first visit to the home page opens with a welcome card from João that asks who's visiting: *I'm a
+friend* goes straight into the house, *Just curious* shows shortcuts to photos, writing, films &
+series and About, and *Here to hire* opens the Work page. Dismissing it is remembered in
+`localStorage`, and visitors arriving on a deep link never see it. From sm width up, the HUD also
+has a Work button; on phones the directory lists Work first, after About.
 
 The guestbook in the hall keeps the visitor's own tallies (rooms visited, distance walked, bicas,
 fridge-magnet scores) and a page of stickers to collect, all in this browser's `localStorage`
@@ -476,7 +490,8 @@ homepage/
 │   ├── events/              # Races, hikes, concerts
 │   ├── gear/                # Cameras, drums, shoes
 │   ├── pages/               # Static pages (About)
-│   └── watch-items/         # One file per synced film/show (editable/hideable)
+│   ├── watch-items/         # One file per synced film/show (editable/hideable)
+│   └── work.yaml            # The Work page (Keystatic singleton)
 ├── data/                # Synced data
 │   └── photos.db            # Local photo database
 ├── scripts/             # House asset generators (LimeZu import, world map, share image)

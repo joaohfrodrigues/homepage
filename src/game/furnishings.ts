@@ -258,7 +258,11 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   // Entered from the end of the corridor, so its whole north wall is free for
   // the map and the desk.
   topicItem('trips', prop('wallmap', 16, 9))
-  topicItem('home-server', prop('desk', 19, 10))
+  // The desk is two things: the monitor half is the workstation, the Pi and
+  // its disk enclosure at the right end are the home server.
+  const desk = prop('desk', 19, 10)
+  topicItem('work', desk.filter((tile) => tile.x < 21))
+  topicItem('home-server', desk.filter((tile) => tile.x === 21))
   prop('officechair', 20, 12, false)
   topicItem('writing', [...prop('bookshelfside', 21, 13), ...prop('bookshelfside', 21, 15)])
   prop('floorlamp', 16, 13)

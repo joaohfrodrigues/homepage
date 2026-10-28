@@ -1,6 +1,7 @@
 import type { RoomId } from './layout'
 
 export type TopicId =
+  | 'work'
   | 'trips'
   | 'writing'
   | 'home-server'
@@ -26,6 +27,14 @@ export interface Topic {
 
 export const TOPICS: Topic[] = [
   {
+    id: 'work',
+    room: 'study',
+    item: 'Workstation',
+    title: 'Work',
+    look: 'A wide monitor full of pipeline code and a mug gone cold beside it: where the day job happens.',
+    href: '/work',
+  },
+  {
     id: 'trips',
     room: 'study',
     item: 'Wall map',
@@ -44,7 +53,7 @@ export const TOPICS: Topic[] = [
   {
     id: 'home-server',
     room: 'study',
-    item: 'Desk & Raspberry Pi',
+    item: 'Raspberry Pi',
     title: 'Home server series',
     look: 'A Raspberry Pi and its disk enclosure blink away at the end of the desk: media center, VPN gateway and secure tunnel, all written up in a series.',
     href: '/writing/projects/raspberry-pi',

@@ -1,0 +1,48 @@
+---
+title: How this site works
+publishedAt: 2026-10-28
+description: The flat you walk around is a Next.js site with a Phaser game on top, hand-drawn sprites, synthesised sound and a couple of Python pipelines that keep it fed.
+draft: false
+---
+This site's home page is a pixel-art flat in Lisbon. You walk around it, and the furniture opens the rest of the site: the TV has the films I've watched, the map in the study has my photos, the bookshelves have this article. It started as an ordinary personal site and turned into the side project I enjoy most. This is a tour of how it's put together.
+
+## Two apps in one window
+
+Underneath, it's a **Next.js** app (App Router, TypeScript, Tailwind) deployed on Vercel. Every page is a real, server-rendered URL. The house is a **Phaser** scene that stays mounted in a layout around those pages, so opening the TV is just navigating to `/hobbies/watching`: the page renders as a window over the game, and the game keeps running underneath.
+
+Phaser and React talk through a small event bridge. The game says "the visitor is facing the coffee machine" or "they pressed E on the fridge"; React decides what opens. Panels, dialogue and the photo lightbox each push their own history entry, so the browser's Back button (or a phone's swipe back) closes just that layer instead of leaving the site.
+
+Every room also has a plain HTML version, for screen readers, crawlers and anyone without JavaScript.
+
+## Drawn in code
+
+There are no image files for the furniture. Each piece is a **grid sprite**: a block of text, one character per pixel, where each character maps to a swatch in an 87-colour palette, lit from the top left. A unit test fails if a sprite uses a colour outside the palette or has a ragged row.
+
+To draw them I built a few small tools: a preview that renders a contact sheet, an exporter and importer so I can touch a sprite up in any free pixel editor, and a Blender script that renders a 3D model at sprite size as a starting point. The characters and plants come from LimeZu's Modern Interiors pack, repacked into atlases by a script.
+
+## Light, weather and time
+
+The house keeps Lisbon's time and follows Lisbon's sun, worked out from the date with no API. Dusk sinks the flat into blue as the lamps come up, and at night the lamps, the TV and the study monitor are real per-pixel lights that fall on the floor and the people. The windows show Lisbon's actual sky from Open-Meteo: rain runs down the panes, a storm brings the odd flash of lightning. The visitor's date puts up decorations: a tree at Christmas, sardines for the Santos Populares, a pumpkin at Halloween.
+
+## Sound without audio files
+
+Almost every sound is synthesised in the browser with the **Web Audio API**: footsteps, the coffee machine's pressure, the magnet clicking onto the map, the lo-fi loop on the record player. A few things only sound right as recordings (the cat, a bottle of Super Bock opening), and those are short MP3s with a synthesised fallback. Everything shares one audio context, follows one volume slider, and stays silent until the visitor's first click.
+
+## The data behind it
+
+Two **Python** pipelines run daily on GitHub Actions and commit their output straight to the repo:
+
+- **Photos**: syncs my Unsplash photos and collections into a SQLite database that the site reads directly.
+- **Watching**: syncs my Plex watch history into one content file per title, falling back to TMDB for posters Plex doesn't have.
+
+The rest of the content (articles, projects, hobbies, gear, races) lives in Markdown and YAML, edited through **Keystatic**, a CMS that commits to the repo too. So the whole site is a Git repository, and a deploy is just a push.
+
+## The one thing visitors write
+
+The fridge-magnet geography game, the coffee game and the Hall of Fame have shared leaderboards, kept in **Upstash Redis** behind a small store interface (tests run on an in-memory one). Nothing is posted until the visitor asks; names and scores are validated on the server, rate-limited per hashed IP and run past a small profanity filter. Everything else (the stickers, the missions, how many bicas you've pulled) lives only in your browser's local storage.
+
+## Why bother?
+
+Partly because it's fun. Partly because it's a good playground for the things I like doing at work: small, well-tested pipelines that run on a schedule and fail gracefully. And partly because it makes a personal site worth visiting twice.
+
+If you're curious about the code, it's [on GitHub](https://github.com/joaohfrodrigues/homepage). If you're here about work, the [workstation in the study](/work) has the short version.

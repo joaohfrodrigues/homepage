@@ -5,6 +5,8 @@ import { getPage } from '@/lib/pages'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { buildOpenGraphMetadata } from '@/lib/site-config'
 import { HouseOverlay } from '@/components/house/house-overlay'
+import Link from 'next/link'
+import { getWork } from '@/lib/work'
 
 export function generateMetadata(): Metadata {
   const page = getPage('about')
@@ -21,13 +23,14 @@ export function generateMetadata(): Metadata {
   }
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
   const page = getPage('about')
   if (!page) notFound()
+  const work = await getWork()
 
   return (
     <HouseOverlay eyebrow="Living room" title="About João" width="narrow">
-      <PersonJsonLd />
+      <PersonJsonLd work={work} />
       <div className="prose prose-neutral max-w-none">
         <ReactMarkdown
           components={{
@@ -45,6 +48,12 @@ export default function AboutPage() {
           {page.content}
         </ReactMarkdown>
       </div>
+      <p className="mt-6 border-t-4 border-[#2a2233] pt-4 text-sm">
+        Here about a job?{' '}
+        <Link href="/work" scroll={false} className="underline underline-offset-4">
+          The work version →
+        </Link>
+      </p>
     </HouseOverlay>
   )
 }
