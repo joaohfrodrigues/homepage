@@ -4,8 +4,9 @@ import { notFound } from 'next/navigation'
 import { ArrowRight, FileText, Mail } from 'lucide-react'
 import { PersonJsonLd } from '@/components/person-jsonld'
 import { HouseOverlay } from '@/components/house/house-overlay'
-import { getWork } from '@/lib/work'
-import { buildOpenGraphMetadata, GITHUB_URL, LINKEDIN_URL } from '@/lib/site-config'
+import { Prompt, Terminal } from '@/components/house/writing-centerpieces'
+import { getWork, type Work } from '@/lib/work'
+import { AUTHOR_NAME, buildOpenGraphMetadata, GITHUB_URL, LINKEDIN_URL } from '@/lib/site-config'
 
 export async function generateMetadata(): Promise<Metadata> {
   const work = await getWork()
@@ -19,6 +20,51 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const LINK = 'pixel-button pointer-coarse:min-h-11'
 
+/** The workstation's monitor: the short version, as a terminal session, before the page spells it out. */
+function WorkTerminal({ work }: { work: Work }) {
+  const now = work.experience.find((job) => job.current)
+  const terminalLink = 'underline-offset-4 hover:text-[#f4ecd8] hover:underline'
+  return (
+    <Terminal>
+      <Prompt host="desk" command="whoami" />
+      <p className="mb-3 text-[#c9d6c3]">
+        {AUTHOR_NAME}: {work.headline}
+      </p>
+      {now && (
+        <>
+          <Prompt host="desk" command="cat ~/work/now" />
+          <p className="mb-3 text-[#c9d6c3]">
+            {now.role} at {now.company}, since {now.period.split('–')[0].trim()}
+          </p>
+        </>
+      )}
+      {work.projects.length > 0 && (
+        <>
+          <Prompt host="desk" command="ls ~/projects" />
+          <p className="mb-3 flex flex-wrap gap-x-5">
+            {work.projects.map((project) => (
+              <Link key={project.title} href={project.href} scroll={false} className={terminalLink}>
+                {project.title.toLowerCase().replace(/\s+/g, '-')}/
+              </Link>
+            ))}
+          </p>
+        </>
+      )}
+      {work.cvUrl && (
+        <>
+          <Prompt host="desk" command="open cv.pdf" />
+          <p className="mb-3">
+            <a href={work.cvUrl} target="_blank" rel="noopener" className={terminalLink}>
+              {work.cvUrl.split('/').pop()}
+            </a>
+          </p>
+        </>
+      )}
+      <Prompt host="desk" />
+    </Terminal>
+  )
+}
+
 /** The professional version of About: the fast lane for anyone hiring. */
 export default async function WorkPage() {
   const work = await getWork()
@@ -27,13 +73,13 @@ export default async function WorkPage() {
   return (
     <HouseOverlay eyebrow="Study · Workstation" title="João Rodrigues">
       <PersonJsonLd work={work} />
-      <p className="font-pixel text-[#8e2a20]">{work.headline}</p>
+      <WorkTerminal work={work} />
       {work.availability && (
         <p className="mt-3 inline-block border-2 border-[#2d6b4f] bg-[#e3efe6] px-3 py-1 text-sm text-[#1f4d38]">
           {work.availability}
         </p>
       )}
-      <p className="mt-4 max-w-prose leading-relaxed">{work.summary}</p>
+      <p className="mt-6 max-w-prose leading-relaxed">{work.summary}</p>
 
       <nav aria-label="Contact" className="mt-5 flex flex-wrap gap-3">
         {work.cvUrl && (

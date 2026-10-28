@@ -17,7 +17,9 @@ the public scoreboards, which live in Upstash Redis.
       [The House](#-the-house) below.
     - **Work page** (`/work`) - the professional version of About for anyone hiring: summary,
       availability, CV, experience, selected projects, stack, education and certifications, edited
-      as the Keystatic `work` singleton (`content/work.yaml`, read by `src/lib/work.ts`). Empty
+      as the Keystatic `work` singleton (`content/work.yaml`, read by `src/lib/work.ts`). It opens
+      on the workstation's monitor: a short terminal session (`whoami`, the current role, the
+      projects and the CV) in the same frame as the project pages' desk terminal. Empty
       fields and sections are hidden, and so is the CV button until its file is in `public/` (it
       links `public/files/joao-rodrigues-cv.pdf`, a version without the phone number). It has its own link-preview image (`src/app/(house)/work/opengraph-image.tsx`: name,
       role, a few tools and a window onto the house), and its content fills the `Person` structured
