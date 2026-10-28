@@ -356,6 +356,11 @@ export function HouseShell({ data, children }: Props) {
     if (ready) bridge.ui.emit('inputEnabled', inputEnabled)
   }, [bridge, ready, inputEnabled])
 
+  const covered = overlayOpen || panel !== null
+  useEffect(() => {
+    if (ready) bridge.ui.emit('covered', covered)
+  }, [bridge, ready, covered])
+
   // Lisbon's real sky, unless a preview asked for another; clear if it can't be had.
   useEffect(() => {
     if (weatherPreview) return

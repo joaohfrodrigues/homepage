@@ -96,6 +96,8 @@ interface UiEvents {
   /** Stand the guest next to an item (or João), facing it; answered with `arrived`. */
   visit: VisitTarget
   inputEnabled: boolean
+  /** Whether a page or panel window sits over the house. */
+  covered: boolean
   /** Trigger whatever the player is currently facing (HUD button / touch). */
   interactFacing: undefined
   /** The on-screen joystick direction being held, or null once it's let go. */

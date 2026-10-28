@@ -31,6 +31,8 @@ export interface Furnishings {
   npcStart: Point
   /** João wanders inside this rectangle when nobody is talking to him. */
   npcArea: { x: number; y: number; w: number; h: number }
+  /** Solid furniture people can still step onto: the sofa's seat, so whoever wakes on it can get up. */
+  seats: Point[]
   zeno: {
     start: Point
     /** Furniture that's solid for people but that Zeno happily walks on. */
@@ -107,7 +109,8 @@ export function furnishHouse(season: Season | null = null): Furnishings {
   prop('chimney', 4, 1, false)
   topicItem('watching', prop('tv', 4, 1))
   prop('coffeetable', 5, 4)
-  prop('sofa', 4, 5)
+  // It faces the TV, so its seat is the top row, its back the bottom one.
+  const seats = prop('sofa', 4, 5).filter((tile) => tile.y === 5)
   prop('floorlamp', 3, 5)
   // Dining behind the sofa, by the kitchen's pocket door: two steps from the hob.
   // Chairs can be walked over (pulled out of the way); tables and sofas can't.
@@ -306,10 +309,11 @@ export function furnishHouse(season: Season | null = null): Furnishings {
     interactables,
     npcStart: { x: 6, y: 8 },
     npcArea: { x: 2, y: 3, w: 8, h: 8 },
+    seats,
     zeno: {
       start: { x: 6, y: 9 },
       perches: [
-        ...[4, 5, 6, 7].map((x) => ({ x, y: 5 })), // the sofa seat, beyond its back
+        ...seats,
         ...[14, 15].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 5, y: 17 }, // the litter box
       ],

@@ -73,6 +73,21 @@ Preview any of these with URL parameters:
 - `?weather=clear|cloudy|rain|storm`
 - `?season=xmas|santos|halloween|newyear|birthday|none`
 
+## Software rendering
+
+Without GPU acceleration (VMs, some Linux setups, acceleration turned off) WebGL runs on the CPU
+through SwiftShader or llvmpipe, and each frame costs the CPU a lot. `software-render.ts` detects
+this, and the scene then:
+
+- lights lamps and screens with their tint images instead of the lit shader (most of the cost),
+- caps itself at 30 fps, and at 5 fps while a page or panel covers the house,
+- draws the drunk blur in one pass instead of four.
+
+On a GPU nothing changes.
+
+The e2e suite (`channel: 'chromium'`) renders on the GPU where there is one. To try the software
+path, open the house in Playwright's default headless shell, which uses SwiftShader.
+
 ## Where things live
 
 | Path | Contents |
