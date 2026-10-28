@@ -141,8 +141,8 @@ export function buildDialogue(
           ],
           choices: [
             { label: 'What should I check out?', kind: 'next', id: 'joao-tip' },
-            { label: 'What do you do for work? →', kind: 'link', href: '/work' },
-            { label: 'More about me →', kind: 'link', href: '/about' },
+            { label: 'What do you do for work?', kind: 'link', href: '/work' },
+            { label: 'More about me', kind: 'link', href: '/about' },
             { label: GOODBYES[0], kind: 'close' },
           ],
         }
@@ -163,8 +163,8 @@ export function buildDialogue(
           ...(tips.length > 1 ? [{ label: rotate(['Any other tips?', 'What else is there?'], chats), kind: 'next', id: 'joao-tip' } as const] : []),
           rotate<DialogueChoice>(
             [
-              { label: 'What do you do for work? →', kind: 'link', href: '/work' },
-              { label: 'More about me →', kind: 'link', href: '/about' },
+              { label: 'What do you do for work?', kind: 'link', href: '/work' },
+              { label: 'More about me', kind: 'link', href: '/about' },
             ],
             chats,
           ),
@@ -181,7 +181,7 @@ export function buildDialogue(
         speaker: 'João',
         lines: [tip],
         choices: [
-          { label: 'More about me →', kind: 'link', href: '/about' },
+          { label: 'More about me', kind: 'link', href: '/about' },
           { label: rotate(['Thanks!', 'Good shout', 'On it'], chats), kind: 'close' },
         ],
       }

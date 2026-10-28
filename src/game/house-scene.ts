@@ -910,14 +910,18 @@ export class HouseScene extends Phaser.Scene {
         parts.length > 0
           ? parts.map((item) => this.decorRect(item))
           : object.tiles.map((tile) => ({ x: tile.x * TILE, y: tile.y * TILE, w: TILE, h: TILE }))
-      const bx = Math.min(...rects.map((r) => r.x))
-      const by = Math.min(...rects.map((r) => r.y))
-      const bounds = {
-        x: bx,
-        y: by,
-        w: Math.max(...rects.map((r) => r.x + r.w)) - bx,
-        h: Math.max(...rects.map((r) => r.y + r.h)) - by,
-      }
+      const left = Math.min(...rects.map((r) => r.x))
+      const top = Math.min(...rects.map((r) => r.y))
+      // One of several things on a piece of furniture lights up only its own part.
+      const bounds = object.cue
+        ? { ...object.cue, x: left + object.cue.x, y: top + object.cue.y }
+        : {
+            x: left,
+            y: top,
+            w: Math.max(...rects.map((r) => r.x + r.w)) - left,
+            h: Math.max(...rects.map((r) => r.y + r.h)) - top,
+          }
+      const { x: bx, y: by } = bounds
 
       const source = document.createElement('canvas')
       source.width = bounds.w

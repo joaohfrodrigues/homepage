@@ -48,6 +48,7 @@ import {
 } from './mission-dialogues'
 import { stop as stopRecord } from './record-player'
 import { RecordPlayerPanel, useRecordPlayer } from './record-player-panel'
+import { TerminalPanel } from './terminal-panel'
 import * as sfx from './sfx'
 import { StickerToast } from './sticker-toast'
 import { TouchControls } from './touch-controls'
@@ -317,6 +318,7 @@ export function HouseShell({ data, children }: Props) {
       bridge.game.on('gull', sfx.gull),
       bridge.game.on('interact', (action) => {
         if (action.type === 'panel' && action.panel === 'leaderboards') sfx.rustle()
+        else if (action.type === 'panel' && action.panel === 'terminal') sfx.keys()
         else if (action.type !== 'dialogue') sfx.pop()
         else if (action.id === 'zeno') sfx.meow()
         else if (action.id === 'bathroom') sfx.doorRattle()
@@ -865,6 +867,7 @@ export function HouseShell({ data, children }: Props) {
       {panel === 'guestbook' && <GuestbookPanel onReset={syncUnlocks} onHallOfFame={openHallOfFame} onClose={() => setPanel(null)} />}
       {panel === 'leaderboards' && <ScoresPanel onClose={() => setPanel(null)} />}
       {panel === 'recordplayer' && <RecordPlayerPanel onClose={() => setPanel(null)} />}
+      {panel === 'terminal' && data.workstation && <TerminalPanel info={data.workstation} onClose={() => setPanel(null)} />}
 
       {/* Not behind `ready`: it has to be listening before the visit below is counted. */}
       {comic && <ComicStrip key={comic} id={comic} looks={looks} onDone={finishComic} />}
