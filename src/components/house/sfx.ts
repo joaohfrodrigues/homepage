@@ -6,7 +6,7 @@
  * hidden behaviours' heartbeat, beers, snores and morning birds, the
  * workstation's keyboard and its terminal bell, the
  * gulls over the roofs, and the fridge magnets' pin and scores. Most are synthesised with the Web Audio API; Zeno,
- * the Super Bock and the coffee machine are recordings from `public/house/sounds/` (see CREDITS.txt there),
+ * the Super Bock, the coffee machine and the gulls are recordings from `public/house/sounds/` (see CREDITS.txt there),
  * with a synthesised stand-in should a file fail to load. They're on by
  * default but stay silent until the visitor has clicked or pressed a key, and
  * the HUD's sound button turns them off.
@@ -17,7 +17,7 @@ import { isSoundOn, noiseBuffer, sample, wake, type Audio } from './audio'
 type Sound = (audio: Audio, start: number) => void
 
 /** The recordings, each with the gain that sits it level with the synthesised sounds. */
-const RECORDINGS = { 'zeno-meow': 0.35, beer: 0.12, coffee: 0.6 } as const
+const RECORDINGS = { 'zeno-meow': 0.35, beer: 0.12, coffee: 0.6, seagull: 0.13 } as const
 type Recording = keyof typeof RECORDINGS
 
 let preloaded = false
@@ -415,12 +415,15 @@ export function birdsong() {
   })
 }
 
-/** A gull gliding over the rooftops: a few falling "kyow"s, far off. */
+/** A gull gliding over the rooftops: a herring gull's long call, far off. */
 export function gull() {
-  play((audio, t) => {
-    const calls = 2 + Math.floor(Math.random() * 3)
-    for (let i = 0; i < calls; i++) gullCall(audio, t + i * 0.28)
-  })
+  void recorded('seagull', synthGull)
+}
+
+/** The stand-in: a few falling "kyow"s. */
+const synthGull: Sound = (audio, t) => {
+  const calls = 2 + Math.floor(Math.random() * 3)
+  for (let i = 0; i < calls; i++) gullCall(audio, t + i * 0.28)
 }
 
 const gullCall: Sound = ({ ctx, out }, t) => {
