@@ -1,6 +1,6 @@
 import { test as base } from '@playwright/test'
 
-export { expect, type Page } from '@playwright/test'
+export { expect, type Locator, type Page } from '@playwright/test'
 
 /**
  * Every page boots the house, which asks /api/weather for Lisbon's sky. Answer
