@@ -582,6 +582,7 @@ export class HouseScene extends Phaser.Scene {
       const tiles = decorTiles(item)
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
+    this.furnishings.seats.forEach((tile) => this.solid.delete(key(tile)))
     for (const object of this.interactables()) {
       object.tiles.forEach((tile) => this.objectsByTile.set(key(tile), object))
     }
