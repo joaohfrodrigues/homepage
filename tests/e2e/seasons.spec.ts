@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { furnishHouse } from '../../src/game/furnishings'
 import { SEASONS, currentSeason, seasonOn, type Season } from '../../src/game/seasons'
 
@@ -49,7 +49,7 @@ test.describe('Seasons', () => {
       page.on('pageerror', (error) => errors.push(error.message))
       await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'))
       await page.goto(`/?season=${season}`)
-      await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
       await expect(page.getByText('João’s house')).toBeVisible()
       // The dev server exposes the game for poking at; check the scene got the season.
       const config = await page.evaluate(() => {

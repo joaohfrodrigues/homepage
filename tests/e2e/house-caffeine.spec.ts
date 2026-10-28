@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 
-/** What the house scene knows about effects on the guest (the game is exposed in dev). */
+/** What the house scene knows about effects on the guest (the game is exposed in dev and in the e2e build). */
 async function guestEffect(page: Page) {
   return page.evaluate(() => {
     const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house
@@ -50,7 +50,7 @@ test.describe('Too many bicas', () => {
   test('ten in a row set the guest vibrating, until a nap', async ({ page }) => {
     // No season: a holiday greeting would come before João's aside and throw off the clicks below.
     await page.goto('/?season=none')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     const bica = await openBica(page)
     await pull(page, 4)
     await expect(bica.getByText(/Are you sure/)).toHaveCount(0)
@@ -103,12 +103,12 @@ test.describe('Too many bicas', () => {
 
   test('nothing carries over a reload', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await openBica(page)
     await pull(page, 10)
     await expect(page.getByRole('dialog', { name: 'Talking to João' })).toBeVisible()
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.getByRole('button', { name: /Directory/ }).waitFor()
     expect((await guestEffect(page)).sources).toEqual([])
     const bica = await openBica(page)
@@ -118,7 +118,7 @@ test.describe('Too many bicas', () => {
   test('the count forgets bicas older than five minutes', async ({ page }) => {
     await page.clock.install()
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     const bica = await openBica(page)
     await pull(page, 9)
     await expect(bica.getByText('Are you sure? That’s your 10th.')).toBeVisible()
@@ -132,11 +132,11 @@ test.describe('Too many bicas', () => {
   test('the jitters wear off on their own', async ({ page }) => {
     await page.clock.install()
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await openBica(page)
     await pull(page, 10)
     await page.keyboard.press('Escape')
-    expect((await guestEffect(page)).sources).toEqual(['caffeine'])
+    await expect.poll(() => guestEffect(page).then((e) => e.sources)).toEqual(['caffeine'])
     await page.clock.fastForward('01:30')
     await expect.poll(() => guestEffect(page)).toMatchObject({ sources: [], tinted: false })
   })
@@ -144,7 +144,7 @@ test.describe('Too many bicas', () => {
   test('under reduced motion the overdose is a flush, not a shake', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await openBica(page)
     await pull(page, 10)
     await expect(page.getByRole('dialog', { name: 'Talking to João' })).toContainText('You’re vibrating.')

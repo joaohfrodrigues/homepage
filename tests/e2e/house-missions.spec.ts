@@ -1,9 +1,9 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page } from './fixtures'
 import type { DialogueId } from '../../src/game/bridge'
 import { MISSIONS } from '../../src/game/missions'
 import { ACHIEVEMENTS } from '../../src/components/house/visitor-stats'
 
-/** Does what the scene does when the guest uses something that opens a dialogue (via the dev-only `__house`). */
+/** Does what the scene does when the guest uses something that opens a dialogue (via `__house`, exposed in dev and in the e2e build). */
 async function interact(page: Page, id: DialogueId) {
   await page.evaluate((id) => {
     const game = (window as unknown as { __house: { scene: { getScene(key: string): unknown } } }).__house

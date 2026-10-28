@@ -37,7 +37,7 @@ test.describe('House', () => {
 
   test('M opens the directory and a room teleports there', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory).toBeVisible()
@@ -53,7 +53,7 @@ test.describe('House', () => {
     test(`the directory opens on subjects, all on screen (${size.name})`, async ({ page }) => {
       await page.setViewportSize(size)
       await page.goto('/')
-      await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
       await page.getByRole('button', { name: /Directory/ }).click()
       const list = subjects(page)
       await expect(list.getByRole('link', { name: /^Trips & photography/ })).toContainText('Study · Wall map')
@@ -65,7 +65,7 @@ test.describe('House', () => {
 
   test('a subject walks the guest to its item, where they stand once the page closes', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('link', { name: /^Trips & photography/ }).click()
     await expect(page.getByRole('dialog', { name: 'Travel map' })).toBeVisible()
@@ -78,7 +78,7 @@ test.describe('House', () => {
 
   test('the floor plan reaches the balcony off the bedroom and keeps the bathroom shut', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory.getByLabel('Bathroom (stuck shut)')).toBeVisible()
@@ -108,7 +108,7 @@ test.describe('House', () => {
 
   test('a page opened from the directory closes straight back to the house', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await directory.getByRole('navigation', { name: 'Subjects' }).getByRole('link', { name: /^About João/ }).click()
@@ -137,7 +137,7 @@ test.describe('House', () => {
 
   test('Escape closes the directory after focus leaves it', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     const directory = page.getByRole('dialog', { name: 'What are you after?' })
     await expect(directory).toBeVisible()
@@ -147,9 +147,9 @@ test.describe('House', () => {
   })
 
   test('hobby items open themed windows with the existing cards', async ({ page }) => {
-    // In dev, the first visit after a change compiles the hobby route, which
-    // can outlast the default 30s on its own.
-    test.slow()
+    // In dev (E2E_DEV=1), the first visit after a change compiles the hobby
+    // route, which can outlast the default 30s on its own.
+    test.slow(process.env.E2E_DEV === '1', 'the dev server compiles the hobby route on first visit')
     await page.goto('/hobbies/running')
     const overlay = page.getByRole('dialog', { name: 'Running' })
     await expect(overlay).toBeVisible()
@@ -161,7 +161,7 @@ test.describe('House', () => {
 
   test('kitchen games open from the directory', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
@@ -180,7 +180,7 @@ test.describe('House', () => {
 
   test('the guestbook tallies the coffee machine and survives a reload', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
@@ -195,7 +195,7 @@ test.describe('House', () => {
     await page.keyboard.press('Escape')
 
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.getByRole('button', { name: 'Guestbook' }).click()
     await expect(guestbook).toContainText('this is your first visit')
     await expect(guestbook.getByRole('region', { name: 'Coffee machine' })).toContainText('1bica pulled')
@@ -206,7 +206,7 @@ test.describe('House', () => {
     const audioContexts = await countAudioContexts(page)
 
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     const panel = await openRecordPlayer(page)
     await expect(panel.getByText('Needle up')).toBeVisible()
     expect(await audioContexts()).toBeLessThanOrEqual(1)
@@ -235,7 +235,7 @@ test.describe('House', () => {
 
     // Volume and mute are remembered; playing isn't.
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     const again = await openRecordPlayer(page)
     await expect(again.getByText('Needle up')).toBeVisible()
     await again.getByRole('button', { name: 'Unmute' }).click()
@@ -244,7 +244,7 @@ test.describe('House', () => {
 
   test('in the record player, Enter plays and stops and the side arrows set the house volume', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     const panel = await openRecordPlayer(page)
     const volume = panel.getByRole('slider', { name: 'Volume' })
     await expect(volume).toHaveValue('70')
@@ -270,7 +270,7 @@ test.describe('House', () => {
 
     // The volume is the house's: it's still there after a reload.
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await expect((await openRecordPlayer(page)).getByRole('slider', { name: 'Volume' })).toHaveValue('60')
   })
 
@@ -283,7 +283,7 @@ test.describe('House', () => {
     }
 
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.waitForTimeout(300)
     expect(await audioContexts()).toBe(0)
     // Footsteps; the first sound also fetches the recordings.
@@ -299,7 +299,7 @@ test.describe('House', () => {
 
     // Remembered: after a reload, walking stays silent.
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('button', { name: 'Unmute sounds' })).toBeVisible()
     await walk()
     expect(await audioContexts()).toBe(0)
@@ -319,7 +319,7 @@ test.describe('House', () => {
     const coffeeStarts = () => page.evaluate(() => (window as unknown as { __coffeeStarts: number }).__coffeeStarts)
 
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
@@ -334,7 +334,7 @@ test.describe('House', () => {
 
   test('a new sticker gets a toast once, which opens the guestbook', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     const bica = page.getByRole('dialog', { name: 'Pull a bica' })
@@ -350,7 +350,7 @@ test.describe('House', () => {
 
     // Already announced: neither a reload nor more coffee shows it again.
     await page.reload()
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await subjects(page).getByRole('button', { name: /^Pull a bica/ }).click()
     await bica.getByRole('button', { name: 'Start the pull' }).click()
@@ -365,7 +365,7 @@ test.describe('House', () => {
       window.localStorage.setItem('house:stats', JSON.stringify({ visits: 1, chats: 5, pets: 5 }))
     })
     await page.goto('/')
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     // Counting the visit already checked for new stickers: Chatterbox and Cat person stay quiet.
     await expect(page.getByText('João’s house')).toBeVisible()
     await expect(page.getByRole('status')).toBeEmpty()
@@ -385,7 +385,7 @@ test.describe('Lisbon weather', () => {
 
   /** Jumps to the balcony and steps up to the railing to look out. */
   async function lookOut(page: Page) {
-    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('button', { name: /Directory/ })).toBeVisible({ timeout: 15_000 })
     await page.keyboard.press('m')
     await page.getByRole('dialog', { name: 'What are you after?' }).getByRole('button', { name: 'Go to the balcony' }).click()
     await expect(page.getByText('Balcony', { exact: true })).toBeVisible()
@@ -669,7 +669,7 @@ test.describe('Welcome card', () => {
   })
 })
 
-/** Where a map tile's centre sits on screen, read from the house camera (exposed in dev). */
+/** Where a map tile's centre sits on screen, read from the house camera (exposed in dev and in the e2e build). */
 /** Walks to the living room's turntable and opens it. */
 async function openRecordPlayer(page: Page) {
   await page.keyboard.press('m')

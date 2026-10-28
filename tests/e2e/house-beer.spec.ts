@@ -1,4 +1,4 @@
-import { test, expect, type Locator, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from './fixtures'
 import { furnishHouse } from '../../src/game/furnishings'
 import { TILE, type Point } from '../../src/game/layout'
 
@@ -13,7 +13,7 @@ interface SceneHandle {
   cameras: { main: { worldView: { x: number; y: number }; zoom: number } }
 }
 
-/** Reads from the house scene (the game is exposed in dev). */
+/** Reads from the house scene (the game is exposed in dev and in the e2e build). */
 async function scene<T>(page: Page, read: (scene: SceneHandle) => T): Promise<T> {
   return page.evaluate(`(${read.toString()})(window.__house.scene.getScene('house'))`) as Promise<T>
 }
@@ -115,7 +115,7 @@ test.describe('Beers from the fridge', () => {
     await expect(cheers.getByRole('img', { name: 'João' })).toBeVisible()
     await cheers.click()
     await expect(cheers).toHaveCount(0)
-    // The scene takes the effect on at its next frame.
+    // The scene takes each beer's effect on at its next frame.
     await expect.poll(() => guestEffect(page)).toMatchObject({ sources: ['beer'], sway: 3, vignette: 0.2, tinted: true })
     expect((await guestEffect(page)).drift).toBeUndefined()
 
@@ -163,7 +163,7 @@ test.describe('Beers from the fridge', () => {
     expect(await scene(page, (s) => s.lighting.darkImage.alpha)).toBe(0)
     await expect(page.getByLabel('Day')).toBeVisible()
     // The night is over, but not the hangover.
-    expect((await guestEffect(page)).sources).toEqual(['hangover'])
+    await expect.poll(() => guestEffect(page).then((e) => e.sources)).toEqual(['hangover'])
 
     // Ask what happened, then how many; each answer still offers water or coffee.
     await choose(wake, 'Ughhh… what happened??')
@@ -208,7 +208,7 @@ test.describe('Beers from the fridge', () => {
       await grabBeer(page)
       await closeDialogue(page)
     }
-    expect((await guestEffect(page)).sources).toEqual(['beer'])
+    await expect.poll(() => guestEffect(page).then((e) => e.sources)).toEqual(['beer'])
 
     await toggleNight(page)
     await expect.poll(() => guestEffect(page)).toMatchObject({ sources: [], tinted: false })
