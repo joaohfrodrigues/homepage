@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { getRoom, type RoomId } from '@/game/layout'
+import { MISSIONS, currentStep, isMissionStarted, missionProgress, type Mission } from '@/game/missions'
+import { submittedScore } from '@/lib/scores/client'
 import { cn } from '@/lib/utils'
+import { HALL } from './leaderboard'
 import { PanelWindow } from './panel-window'
 import {
   ACHIEVEMENTS,
@@ -15,6 +18,10 @@ import {
 } from './visitor-stats'
 
 interface Props {
+  /** After the page is torn out, so the house can shut whatever missions had opened. */
+  onReset?: () => void
+  /** Opens the Hall of Fame on the trophy poster, to sign it or see it. */
+  onHallOfFame?: () => void
   onClose: () => void
 }
 
@@ -116,10 +123,51 @@ function Intro({ stats }: { stats: VisitorStats }) {
 }
 
 /**
+ * A mission's progress: unstarted ones are only a teaser, then every step done
+ * so far, the one to do with its hint, and nothing of what comes after.
+ */
+function MissionCard({ mission, stats }: { mission: Mission; stats: VisitorStats }) {
+  const done = missionProgress(stats, mission)
+  const next = currentStep(stats, mission)
+  if (!isMissionStarted(stats, mission)) {
+    return (
+      <li className="border-2 border-dashed border-[#b5aa94] p-2 text-sm text-[#8a7f70]">
+        <span className="font-pixel block text-xs">???</span>
+        <span className="block text-xs">{mission.steps[0].hint}</span>
+      </li>
+    )
+  }
+  return (
+    <li className="border-2 border-[#2a2233] bg-[#ebe0c8] p-2 text-sm">
+      <p className="font-pixel flex justify-between gap-2 text-xs">
+        <span>{mission.title}</span>
+        <span className={next ? 'text-[#6d6359]' : 'text-[#c9a227]'}>
+          {next ? `${done} of ${mission.steps.length}` : '★ Done'}
+        </span>
+      </p>
+      <ol className="mt-1 space-y-0.5 text-xs">
+        {mission.steps.slice(0, done).map((step) => (
+          <li key={step.id} className="text-[#6d6359] line-through">
+            {step.title}
+          </li>
+        ))}
+        {next && (
+          <li>
+            <span className="font-semibold">▸ {next.title}</span>
+            <span className="block text-[#6d6359]">{next.hint}</span>
+          </li>
+        )}
+      </ol>
+      {!next && <p className="mt-1 text-xs text-[#6d6359]">{mission.reward.text}</p>}
+    </li>
+  )
+}
+
+/**
  * The hall guestbook: the visitor's own stats and best scores, plus a page of
  * stickers to collect. Everything comes from this browser's localStorage.
  */
-export function GuestbookPanel({ onClose }: Props) {
+export function GuestbookPanel({ onReset, onHallOfFame, onClose }: Props) {
   // A snapshot: walking keeps changing the live stats, but nobody walks with this open.
   const [stats, setStats] = useState(() => structuredClone(readStats()))
   const [confirmReset, setConfirmReset] = useState(false)
@@ -131,6 +179,9 @@ export function GuestbookPanel({ onClose }: Props) {
   const bicas = totalBicas(stats)
   const walked = distance(metresWalked(stats))
   const earned = ACHIEVEMENTS.filter((achievement) => achievement.earned(stats))
+  const fullSet = earned.length === ACHIEVEMENTS.length
+  // Signed with every sticker there is now; new stickers make it signable again.
+  const signed = submittedScore(HALL) >= ACHIEVEMENTS.length
 
   function reset() {
     if (!confirmReset) {
@@ -140,6 +191,7 @@ export function GuestbookPanel({ onClose }: Props) {
     resetStats()
     setStats(structuredClone(readStats()))
     setConfirmReset(false)
+    onReset?.()
   }
 
   return (
@@ -194,14 +246,24 @@ export function GuestbookPanel({ onClose }: Props) {
         <Section title="Odds and ends">
           <div className="grid grid-cols-2 gap-3">
             <Stat value={stats.chats} label="chats with João" />
-            <Stat value={stats.knocks} label="knocks on the bathroom door" />
+            <Stat value={stats.doorTries} label="tries of the stuck bathroom door" />
             <Stat value={stats.pets} label="pets for Zeno" />
             <Stat value={stats.scoops} label="litter boxes scooped" />
             <Stat value={stats.naps} label="naps until evening" />
             <Stat value={stats.outfits} label="outfit changes" />
+            <Stat value={stats.beers} label={stats.beers === 1 ? 'beer from the fridge' : 'beers from the fridge'} />
           </div>
         </Section>
       </div>
+
+      <section className="mt-6" aria-label="Missions">
+        <h3 className="font-pixel mb-3 text-xs uppercase tracking-widest text-[#8e2a20]">Missions</h3>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {MISSIONS.map((mission) => (
+            <MissionCard key={mission.id} mission={mission} stats={stats} />
+          ))}
+        </ul>
+      </section>
 
       <section className="mt-6" aria-label="Stickers">
         <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -235,10 +297,24 @@ export function GuestbookPanel({ onClose }: Props) {
             )
           })}
         </ul>
+        {fullSet && onHallOfFame ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-2 border-[#2a2233] bg-[#f0dc96] p-3 text-sm">
+            <p>
+              {signed
+                ? 'You’re in the Hall of Fame on the corridor’s trophy poster.'
+                : 'Every sticker! Put your name in the Hall of Fame.'}
+            </p>
+            <button type="button" className="pixel-button" onClick={onHallOfFame}>
+              {signed ? 'See the Hall of Fame' : 'Sign the Hall of Fame'}
+            </button>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-[#6d6359]">Collect every sticker to sign the Hall of Fame on the corridor’s trophy poster.</p>
+        )}
       </section>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-[#b5aa94] pt-4">
-        <p className="text-xs text-[#6d6359]">Kept only in this browser. Nothing here is sent anywhere.</p>
+        <p className="text-xs text-[#6d6359]">Kept only in this browser. Only a name and score you choose to submit to a public board ever leave it.</p>
         <button
           type="button"
           className="pixel-button"

@@ -108,8 +108,6 @@ the tests and for inspecting the database:
 - `get_latest_photos(...)` - Paginated photos with sorting
 - `get_all_collections()` - All collections with cover photos
 - `get_collection_photos(...)` - Photos in a collection
-- `get_collection_by_slug(slug)` / `get_collection_by_id(id)` - One collection
-- `search_photos(...)` - Full-text search
 - `get_photo_by_id(photo_id)` - Single photo details
 - `get_database_stats()` / `get_collection_stats()` - Database statistics
 

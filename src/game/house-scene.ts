@@ -1,14 +1,14 @@
 import * as Phaser from 'phaser'
-import type { HouseBridge, Hint, InteractAction, VisitTarget } from './bridge'
+import type { EffectSource, HouseBridge, Hint, InteractAction, PlayerEffect, VisitTarget } from './bridge'
 import { decorTiles, furnishHouse, propTiles, type Decor, type Furnishings, type Interactable } from './furnishings'
 import {
-  FLOOR_PLAN,
   MAP_HEIGHT,
   MAP_WIDTH,
   TILE,
   cellAt,
   getRoom,
   isFloorCell,
+  isRoomOpen,
   roomAt,
   roomBelow,
   roomOf,
@@ -16,12 +16,16 @@ import {
   type Direction,
   type Point,
   type RoomId,
+  type UnlockId,
 } from './layout'
 import { LIMEZU_FURNITURE_URL, drawLimezu, limezuRect } from './limezu-furniture'
 import { fitView, isOnMap, projectToMap } from './map-projection'
 import { LAND_URL, renderMap, type LandData } from './world-map'
+import { WeatherLayer } from './weather-layer'
+import { Exterior } from './exterior'
+import { Lighting } from './lighting'
+import { isNight, type Sky } from '@/lib/sun'
 import {
-  LIGHT_SOURCES,
   MAP_WALL,
   FACINGS,
   PROP_SIZES,
@@ -29,19 +33,19 @@ import {
   CAT_FRAMES,
   drawCat,
   drawHeart,
-  drawPartyHat,
   drawPoop,
   drawStink,
   drawFocusArrow,
   drawSparkle,
   traceSilhouette,
-  drawCapWindow,
+  DOOR_FRAME,
+  drawBathroomDoor,
   drawDoorway,
+  type DoorPose,
   drawFloor,
   drawRailingFront,
   drawRailingSide,
   drawWindow,
-  drawClosedDoor,
   drawFrontDoor,
   drawSideDoorway,
   drawProp,
@@ -58,21 +62,33 @@ import {
   CHAR_H,
   CHAR_HEADROOM,
   CHAR_W,
-  LOOKS,
   drawCharacter,
   type CharacterName,
   type Outfit,
 } from './characters'
 import type { Trip } from '@/lib/photos'
+import type { Season } from './seasons'
 
 export interface HouseSceneConfig {
   bridge: HouseBridge
   trips: Trip[]
   startRoom: RoomId
   fontFamily: string
-  night: boolean
+  /** Lisbon's light when the house opens. */
+  sky: Sky
   outfit: Outfit
+  /** João's look: the owner's, or one this browser picked in the wardrobe. */
+  joaoLook: Outfit
+  /** What missions have opened up already. */
+  unlocks: UnlockId[]
+  /** Holiday decorations to put up, if any. */
+  season: Season | null
 }
+
+/** How long the light takes to catch up with Lisbon's sun after each tick of the clock. */
+const SKY_EASE_MS = 2500
+/** Waking on the sofa after a heavy night: full daylight, still a little golden. */
+const MORNING: Omit<Sky, 'moon'> = { night: 0, warmth: 0.35 }
 
 const DELTAS: Record<Direction, Point> = {
   up: { x: 0, y: -1 },
@@ -94,6 +110,20 @@ const KEY_STEPS: Record<string, Direction> = {
 
 const PLAYER_STEP_MS = 150
 const NPC_STEP_MS = 260
+/** The bathroom door's frames: shut, the two halves of a rattle, then swinging open to fully open. */
+const DOOR_POSES: DoorPose[] = [
+  { open: 0 },
+  { open: 0, handleDown: true, nudge: 1 },
+  { open: 0, handleDown: true, nudge: -1 },
+  { open: 0.25 },
+  { open: 0.5 },
+  { open: 0.75 },
+  { open: 1 },
+]
+const DOOR_SHUT = 0
+const DOOR_OPEN_FRAME = DOOR_POSES.length - 1
+const DOOR_OPEN = 'bathroom-door-open'
+const DOOR_RATTLE = 'bathroom-door-rattle'
 const ZENO_STEP_MS = 300
 const ZENO_TICK_MS = 380
 /** Zeno gives up on a favourite spot that's further than this many steps away. */
@@ -104,6 +134,12 @@ const TOY_SLIDE_MS = 120
 /** Gaps between his games with the toy, and between litter box visits. */
 const ZENO_PLAY_GAP_MS: [number, number] = [60_000, 120_000]
 const ZENO_LITTER_GAP_MS: [number, number] = [120_000, 240_000]
+/** Gap between an effect's camera-shake bursts, and between jitters of the guest. */
+const SHAKE_GAP_MS = 1100
+const JITTER_MS = 70
+/** Pace of a drunk vignette's breathing and of the view sliding in and out of focus (ms per radian). */
+const VIGNETTE_BREATH_MS = 700
+const BLUR_DRIFT_MS = 1100
 /** People leave chairs to visitors and cats; João stays off them. */
 const CHAIR_PROPS = new Set<PropName>(['chair', 'chairup', 'officechair', 'cafechair'])
 
@@ -125,6 +161,7 @@ export class HouseScene extends Phaser.Scene {
   private cfg!: HouseSceneConfig
   private furnishings!: Furnishings
   private solid = new Set<string>()
+  private unlocks = new Set<UnlockId>()
   private objectsByTile = new Map<string, Interactable>()
   private player!: Walker
   private npc!: Walker
@@ -159,8 +196,6 @@ export class HouseScene extends Phaser.Scene {
   private zenoLitterTrip = false
   /** Busy in his litter box: not to be petted. */
   private zenoInBox = false
-  /** Put on by the Konami code, for the rest of the visit. */
-  private partyHat: Phaser.GameObjects.Image | null = null
   private litterDirty = false
   private stink!: Phaser.GameObjects.Image
   private poop!: Phaser.GameObjects.Image
@@ -168,8 +203,14 @@ export class HouseScene extends Phaser.Scene {
   private focusArrow!: Phaser.GameObjects.Image
   private focused: Target | null = null
   private reducedMotion = false
-  private glows: { image: Phaser.GameObjects.Image; day: number; night: number }[] = []
-  private nightOverlay!: Phaser.GameObjects.Rectangle
+  /** The bathroom's door over its doorway: shut, rattling while it's stuck, or swung open. */
+  private bathroomDoor?: Phaser.GameObjects.Sprite
+  private lighting!: Lighting
+  private houseBase!: Phaser.GameObjects.Image
+  private sky: Sky = { night: 0, warmth: 0, moon: 0 }
+  private skyTween: Phaser.Tweens.Tween | null = null
+  private weather!: WeatherLayer
+  private exterior?: Exterior
   private inputEnabled = true
   private path: Point[] = []
   private pendingTarget: Target | null = null
@@ -192,6 +233,17 @@ export class HouseScene extends Phaser.Scene {
   private hasMoved = false
   private npcTalking = false
   private unsubscribers: (() => void)[] = []
+  /** Effects on the guest (too much coffee…), each with when it wears off. */
+  private effects = new Map<EffectSource, { effect: PlayerEffect; until: number }>()
+  /** All of them combined, refreshed every frame. */
+  private effect: Omit<PlayerEffect, 'ms'> = {}
+  private nextShakeAt = 0
+  private nextJitterAt = 0
+  /** Made on first use: a soft dark ring over the view, and (null on renderers without camera filters) a blur. */
+  private vignette?: HTMLDivElement
+  private blur?: Phaser.Filters.Blur | null
+  /** Passed out: the keys wait until the guest comes to. */
+  private dozing = false
 
   constructor() {
     super('house')
@@ -199,7 +251,8 @@ export class HouseScene extends Phaser.Scene {
 
   init(cfg: HouseSceneConfig) {
     this.cfg = cfg
-    this.furnishings = furnishHouse()
+    this.unlocks = new Set(cfg.unlocks)
+    this.furnishings = furnishHouse(cfg.season)
   }
 
   preload() {
@@ -209,13 +262,22 @@ export class HouseScene extends Phaser.Scene {
   }
 
   create() {
+    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     this.bakeHouse()
+    this.addBathroomDoor()
     this.bakeCharacters()
     this.bakeZeno()
     this.buildCollision()
     this.addAmbience()
 
     this.bakeCues()
+    this.weather = new WeatherLayer(this, this.reducedMotion)
+    this.weather.setNight(this.sky.night, this.sky.moon)
+    this.exterior = new Exterior(this, {
+      reducedMotion: this.reducedMotion,
+      night: isNight(this.cfg.sky),
+      onCry: () => this.cfg.bridge.game.emit('gull'),
+    })
 
     const start = getRoom(this.cfg.startRoom).spawn
     this.player = this.addWalker('guest', start, this.spawnFacing(this.cfg.startRoom))
@@ -270,6 +332,10 @@ export class HouseScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1800, loop: true, callback: () => this.wanderNpc() })
     this.time.addEvent({ delay: ZENO_TICK_MS, loop: true, callback: () => this.tickZeno() })
 
+    const lit = [this.houseBase, this.player.sprite, this.npc.sprite, this.zeno.sprite, this.toy, this.poop]
+    if (this.bathroomDoor) lit.push(this.bathroomDoor)
+    this.lighting.useShaderLights(lit)
+
     this.updateRoom()
     this.updateHint()
     this.cfg.bridge.game.emit('ready')
@@ -279,15 +345,15 @@ export class HouseScene extends Phaser.Scene {
 
   update(time: number) {
     this.animateCues(time)
-    this.placePartyHat()
-    if (!this.inputEnabled || this.player.moving) return
+    this.applyEffects(time)
+    if (!this.inputEnabled || this.dozing || this.player.moving) return
 
     const direction = this.heldDirection() ?? this.queuedStep
     this.queuedStep = null
     if (direction) {
       this.path = []
       this.pendingTarget = null
-      this.tryStep(direction)
+      this.tryStep(this.veer(direction))
       return
     }
 
@@ -322,17 +388,24 @@ export class HouseScene extends Phaser.Scene {
   // Baking the static house into one texture
 
   private bakeHouse() {
-    const width = MAP_WIDTH * TILE
-    const height = MAP_HEIGHT * TILE
-    const texture = this.textures.createCanvas('house-base', width, height)!
+    const texture = this.textures.createCanvas('house-base', MAP_WIDTH * TILE, MAP_HEIGHT * TILE)!
+    this.paintHouse(texture)
+    this.houseBase = this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
+  }
+
+  /** Draws the plan, as far as missions have opened it, and the furniture onto the base texture. */
+  private paintHouse(texture: Phaser.Textures.CanvasTexture) {
     const ctx = texture.getContext()
     ctx.imageSmoothingEnabled = false
+    ctx.clearRect(0, 0, texture.width, texture.height)
+    // Shut doors that missions have opened read as doorways.
+    const openCellAt = (x: number, y: number) => cellAt(x, y, this.unlocks)
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
         const ox = x * TILE
         const oy = y * TILE
-        const cell = FLOOR_PLAN[y][x]
+        const cell = openCellAt(x, y)
         const below = roomBelow(x, y)
         if (cell === ' ') {
           // Outside the flat: leave it to the camera's dark background.
@@ -344,21 +417,19 @@ export class HouseScene extends Phaser.Scene {
         } else if (cell === '.') {
           drawFloor(ctx, ox, oy, roomAt(x, y)?.floor ?? 'oak', x, y)
         } else if (cell === 'F') {
-          drawFrontDoor(ctx, ox, oy, cellAt(x - 1, y) === 'F' ? 'right' : 'left')
+          drawFrontDoor(ctx, ox, oy, openCellAt(x - 1, y) === 'F' ? 'right' : 'left')
         } else if (cell === 'd') {
           drawSideDoorway(ctx, ox, oy, roomAt(x - 1, y)?.floor ?? 'oak', roomAt(x + 1, y)?.floor ?? 'oak', x, y)
         } else {
           const part = wallPartAt(x, y)
-          const edges = { left: cellAt(x - 1, y) !== cell, right: cellAt(x + 1, y) !== cell }
-          if (cell === 'W' && (part === 'cap' || !below)) {
-            drawCapWindow(ctx, ox, oy, edges)
-          } else if (part === 'cap' || !below) {
+          const edges = { left: openCellAt(x - 1, y) !== cell, right: openCellAt(x + 1, y) !== cell }
+          // A back window seen from above is just wall: only the street windows show the sky.
+          if (part === 'cap' || !below) {
             drawWallCap(ctx, ox, oy)
           } else if (cell === 'W') {
             drawWindow(ctx, ox, oy, below.wall, part, edges)
-          } else if (cell === 'X') {
-            drawClosedDoor(ctx, ox, oy, below.wall, part, cellAt(x - 1, y) === 'X' ? 'right' : 'left')
-          } else if (cell === 'D') {
+          } else if (cell === 'D' || cell === 'X') {
+            // A shut door is a doorway too, with the door itself a sprite over it (see addBathroomDoor).
             drawDoorway(ctx, ox, oy, below.floor, part, x, y, edges)
           } else {
             drawWallFace(ctx, ox, oy, below.wall, part)
@@ -371,7 +442,6 @@ export class HouseScene extends Phaser.Scene {
 
     this.drawWallMap(ctx)
     texture.refresh()
-    this.add.image(0, 0, 'house-base').setOrigin(0, 0).setDepth(0)
   }
 
   /** The trip map in its frame on the study wall, one pin per trip. */
@@ -412,7 +482,7 @@ export class HouseScene extends Phaser.Scene {
     const texture = this.textures.createCanvas('house-chars', frames.length * CHAR_W, who.length * CHAR_H)!
     const ctx = texture.getContext()
     who.forEach((name, row) => {
-      const look = name === 'guest' ? this.cfg.outfit : LOOKS[name]
+      const look = name === 'guest' ? this.cfg.outfit : this.cfg.joaoLook
       frames.forEach((f, col) => {
         drawCharacter(ctx, atlas, col * CHAR_W, row * CHAR_H, look, f.direction, f.anim, f.frame)
         texture.add(`${name}-${f.name}`, 0, col * CHAR_W, row * CHAR_H, CHAR_W, CHAR_H)
@@ -421,20 +491,9 @@ export class HouseScene extends Phaser.Scene {
     texture.refresh()
 
     // Matching outline frames (1px larger each side) for João's focus cue.
-    const OUT_W = CHAR_W + 2
-    const OUT_H = CHAR_H + 2
-    const outlines = this.textures.createCanvas('house-chars-outline', frames.length * OUT_W, OUT_H)!
-    const frame = document.createElement('canvas')
-    frame.width = CHAR_W
-    frame.height = CHAR_H
-    const frameCtx = frame.getContext('2d')!
-    frames.forEach((f, col) => {
-      frameCtx.clearRect(0, 0, CHAR_W, CHAR_H)
-      drawCharacter(frameCtx, atlas, 0, 0, LOOKS.joao, f.direction, f.anim, f.frame)
-      outlines.getContext().drawImage(traceSilhouette(frame).outline, col * OUT_W, 0)
-      outlines.add(`joao-${f.name}`, 0, col * OUT_W, 0, OUT_W, OUT_H)
-    })
-    outlines.refresh()
+    const outlines = this.textures.createCanvas('house-chars-outline', frames.length * (CHAR_W + 2), CHAR_H + 2)!
+    frames.forEach((f, col) => outlines.add(`joao-${f.name}`, 0, col * (CHAR_W + 2), 0, CHAR_W + 2, CHAR_H + 2))
+    this.paintJoaoOutlines(this.cfg.joaoLook)
 
     // A walk cycle covers two steps; the idle loop is a slow breath.
     for (const name of who) {
@@ -460,11 +519,13 @@ export class HouseScene extends Phaser.Scene {
     frame.width = TILE
     frame.height = TILE
     const frameCtx = frame.getContext('2d')!
+    // He dresses up for Halloween, whether he likes it or not.
+    const costume = this.cfg.season === 'halloween' ? 'witch' : undefined
     CAT_FRAMES.forEach((name, i) => {
-      drawCat(sheet.getContext(), i * TILE, 0, name)
+      drawCat(sheet.getContext(), i * TILE, 0, name, costume)
       sheet.add(`zeno-${name}`, 0, i * TILE, 0, TILE, TILE)
       frameCtx.clearRect(0, 0, TILE, TILE)
-      drawCat(frameCtx, 0, 0, name)
+      drawCat(frameCtx, 0, 0, name, costume)
       outlines.getContext().drawImage(traceSilhouette(frame).outline, i * OUT, 0)
       outlines.add(`zeno-${name}`, 0, i * OUT, 0, OUT, OUT)
     })
@@ -491,15 +552,15 @@ export class HouseScene extends Phaser.Scene {
     const heart = this.textures.createCanvas('zeno-heart', 7, 6)!
     drawHeart(heart.getContext())
     heart.refresh()
-    const hat = this.textures.createCanvas('zeno-party-hat', 7, 7)!
-    drawPartyHat(hat.getContext())
-    hat.refresh()
   }
 
+  /** Solid tiles and who stands where to use what; rebuilt when a mission opens something. */
   private buildCollision() {
+    this.solid.clear()
+    this.objectsByTile.clear()
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
-        if (!isFloorCell(x, y)) this.solid.add(key({ x, y }))
+        if (!isFloorCell(x, y, this.unlocks)) this.solid.add(key({ x, y }))
       }
     }
     for (const item of this.furnishings.decor) {
@@ -508,9 +569,76 @@ export class HouseScene extends Phaser.Scene {
       const tiles = decorTiles(item)
       tiles.forEach((tile) => this.solid.add(key(tile)))
     }
-    for (const object of this.furnishings.interactables) {
+    for (const object of this.interactables()) {
       object.tiles.forEach((tile) => this.objectsByTile.set(key(tile), object))
     }
+  }
+
+  /** The interactables still there, given what's been unlocked. */
+  private interactables(): Interactable[] {
+    return this.furnishings.interactables.filter((object) => !object.until || !this.unlocks.has(object.until))
+  }
+
+  /**
+   * Opens (or, after a guestbook reset, shuts again) whatever missions unlock:
+   * repaints the plan and rebuilds collision. Anyone left standing inside a
+   * room that just shut is moved out to its doorstep.
+   */
+  private setUnlocks(unlocks: UnlockId[]) {
+    const next = new Set(unlocks)
+    if (next.size === this.unlocks.size && unlocks.every((id) => this.unlocks.has(id))) return
+    this.unlocks = next
+    this.paintHouse(this.textures.get('house-base') as Phaser.Textures.CanvasTexture)
+    this.syncBathroomDoor(true)
+    this.buildCollision()
+    const shut = (tile: Point) => {
+      const room = roomAt(tile.x, tile.y)
+      return this.solid.has(key(tile)) || (room !== undefined && !isRoomOpen(room, this.unlocks))
+    }
+    if (shut(this.player.tile)) {
+      const corridor = getRoom('corridor')
+      this.placeGuest(corridor.spawn, corridor.spawnFacing)
+    }
+    if (shut(this.zeno.tile)) {
+      const start = this.furnishings.zeno.start
+      this.zenoPath = []
+      this.zeno.tile = { ...start }
+      this.zeno.sprite.setPosition(start.x * TILE + TILE / 2, (start.y + 1) * TILE).setDepth(10 + start.y / 100)
+    }
+    this.updateHint()
+  }
+
+  /** Draws the bathroom door's frames and hangs it over its doorway, shut or open as the missions say. */
+  private addBathroomDoor() {
+    const { w, h } = DOOR_FRAME
+    const sheet = this.textures.createCanvas('bathroom-door', w * DOOR_POSES.length, h)!
+    DOOR_POSES.forEach((pose, i) => {
+      drawBathroomDoor(sheet.getContext(), i * w, 0, pose)
+      sheet.add(i, 0, i * w, 0, w, h)
+    })
+    sheet.refresh()
+    const frames = (indexes: number[]) => indexes.map((frame) => ({ key: 'bathroom-door', frame }))
+    this.anims.create({ key: DOOR_OPEN, frames: frames([3, 4, 5, 6]), frameRate: 12 })
+    // The handle goes down and the door knocks against its frame, twice, then settles shut.
+    this.anims.create({ key: DOOR_RATTLE, frames: frames([1, 2, 1, 2, DOOR_SHUT]), frameRate: 14 })
+
+    let doorway: Point | undefined
+    for (let y = 0; y < MAP_HEIGHT && !doorway; y++) {
+      for (let x = 0; x < MAP_WIDTH && !doorway; x++) if (cellAt(x, y) === 'X') doorway = { x, y }
+    }
+    if (!doorway) return
+    this.bathroomDoor = this.add.sprite(doorway.x * TILE, doorway.y * TILE, 'bathroom-door', DOOR_SHUT).setOrigin(0, 0).setDepth(1)
+    this.syncBathroomDoor(false)
+  }
+
+  /** Shut while the bathroom is locked; open once it isn't, swinging open if `animate` and motion is fine. */
+  private syncBathroomDoor(animate: boolean) {
+    const door = this.bathroomDoor
+    if (!door) return
+    const open = this.unlocks.has('bathroom')
+    door.stop()
+    if (open && animate && !this.reducedMotion) door.play(DOOR_OPEN)
+    else door.setFrame(open ? DOOR_OPEN_FRAME : DOOR_SHUT)
   }
 
   private textStyle(color: string, background?: string, fontSize = '6px'): Phaser.Types.GameObjects.Text.TextStyle {
@@ -528,35 +656,10 @@ export class HouseScene extends Phaser.Scene {
     return this.furnishings.decor.find((item) => item.kind === 'prop' && item.prop === name)
   }
 
-  /** The cosy bits: warm light pools under lamps and screens, and the Pi's blinking LEDs. */
+  /** The house's light, day and night, and the Pi's blinking LEDs. */
   private addAmbience() {
-    const glow = this.textures.createCanvas('glow', 64, 64)!
-    const gctx = glow.getContext()
-    const gradient = gctx.createRadialGradient(32, 32, 0, 32, 32, 32)
-    gradient.addColorStop(0, 'rgba(255, 196, 120, 0.55)')
-    gradient.addColorStop(1, 'rgba(255, 196, 120, 0)')
-    gctx.fillStyle = gradient
-    gctx.fillRect(0, 0, 64, 64)
-    glow.refresh()
-
-    for (const item of this.furnishings.decor) {
-      if (item.kind !== 'prop') continue
-      const light = LIGHT_SOURCES[item.prop]
-      if (!light) continue
-      const image = this.add
-        .image(item.x * TILE + light.x, item.y * TILE + light.y, 'glow')
-        .setDisplaySize(light.radius * 2, light.radius * 2)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(30)
-      this.glows.push({ image, day: item.prop === 'tv' ? 0.35 : 0.6, night: item.prop === 'tv' ? 0.8 : 1 })
-    }
-
-    // Night: everything but the light pools and interaction cues sinks into blue.
-    this.nightOverlay = this.add
-      .rectangle(-20 * TILE, -20 * TILE, (MAP_WIDTH + 40) * TILE, (MAP_HEIGHT + 40) * TILE, 0x0b1030)
-      .setOrigin(0)
-      .setDepth(29)
-    this.applyNight(this.cfg.night)
+    this.lighting = new Lighting(this, this.furnishings.decor, this.reducedMotion)
+    this.applySky(this.cfg.sky)
 
     // The Pi's disk enclosure on the study desk.
     const rack = this.propAt('desk')
@@ -579,36 +682,195 @@ export class HouseScene extends Phaser.Scene {
     }
   }
 
-  private applyNight(on: boolean) {
-    this.nightOverlay.setAlpha(on ? 0.55 : 0)
-    for (const glow of this.glows) glow.image.setAlpha(on ? glow.night : glow.day)
+  private applySky(sky: Sky) {
+    this.sky = sky
+    this.lighting.setSky(sky)
+    this.exterior?.setNight(isNight(sky))
+    this.weather?.setNight(sky.night, sky.moon)
   }
 
-  /** Fade out, flip day/night, fade back in — as if the visitor just woke up. */
-  private setNight(on: boolean, animate: boolean) {
-    if (!animate || this.reducedMotion) {
-      this.applyNight(on)
+  /**
+   * Lisbon's light moves on: eased in over a few seconds as the sun goes, or,
+   * after a nap, faded through black as if the visitor just woke up.
+   */
+  private setSky(sky: Sky, animate: boolean) {
+    this.skyTween?.stop()
+    if (animate && !this.reducedMotion) {
+      const camera = this.cameras.main
+      camera.fadeOut(450, 8, 10, 24)
+      camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        this.applySky(sky)
+        camera.fadeIn(700, 8, 10, 24)
+      })
       return
     }
-    const camera = this.cameras.main
-    camera.fadeOut(450, 8, 10, 24)
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      this.applyNight(on)
-      camera.fadeIn(700, 8, 10, 24)
+    if (animate || this.reducedMotion) return this.applySky(sky)
+    const from = this.sky
+    this.skyTween = this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: SKY_EASE_MS,
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 1
+        this.applySky({
+          night: from.night + (sky.night - from.night) * t,
+          warmth: from.warmth + (sky.warmth - from.warmth) * t,
+          moon: sky.moon,
+        })
+      },
     })
   }
 
-  /** Redraw the visitor's frames in a new outfit from the wardrobe. */
-  private repaintGuest(outfit: Outfit) {
+  private setEffect(source: EffectSource, effect: PlayerEffect | null) {
+    if (effect) this.effects.set(source, { effect, until: this.time.now + effect.ms })
+    else this.effects.delete(source)
+  }
+
+  /**
+   * Per frame: wears effects off, combines the rest (speeds multiply, the
+   * others take the strongest) and applies them to the guest and the camera.
+   * Under reduced motion only the speed and the tint survive.
+   */
+  private applyEffects(time: number) {
+    const combined: Omit<PlayerEffect, 'ms'> = {}
+    let pounding = false
+    for (const [source, { effect, until }] of this.effects) {
+      if (time >= until) {
+        this.effects.delete(source)
+        continue
+      }
+      if (effect.shake) pounding = true
+      if (effect.speed) combined.speed = (combined.speed ?? 1) * effect.speed
+      if (effect.tint !== undefined) combined.tint = effect.tint
+      for (const name of ['vignette', 'blur'] as const) {
+        if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
+      }
+      if (this.reducedMotion) continue
+      for (const name of ['shake', 'jitter', 'sway', 'drift'] as const) {
+        if (effect[name]) combined[name] = Math.max(combined[name] ?? 0, effect[name])
+      }
+    }
+    this.effect = combined
+
+    const { sprite } = this.player
+    const camera = this.cameras.main
+    if (combined.tint === undefined) sprite.clearTint()
+    else sprite.setTint(combined.tint)
+    if (!combined.jitter) sprite.setOrigin(0.5, 1)
+    else if (time >= this.nextJitterAt) {
+      this.nextJitterAt = time + JITTER_MS
+      sprite.setOrigin(0.5 + Phaser.Math.Between(-combined.jitter, combined.jitter) / sprite.width, 1)
+    }
+    const sway = combined.sway ?? 0
+    camera.setFollowOffset(Math.sin(time / 900) * sway, Math.sin(time / 1400) * sway * 0.5)
+    if (pounding && time >= this.nextShakeAt) {
+      this.nextShakeAt = time + SHAKE_GAP_MS
+      if (combined.shake) camera.shake(160, combined.shake)
+      this.cfg.bridge.game.emit('heartbeat')
+    }
+    // The edges breathe in and out, and the view slides out of focus now and
+    // then; both hold still, the blur fainter, under reduced motion.
+    if (combined.vignette) this.vignette ??= this.makeVignette()
+    if (this.vignette) {
+      // Breathing in, the ring darkens and closes in a little.
+      const breath = this.reducedMotion ? 0 : Math.sin(time / VIGNETTE_BREATH_MS)
+      const { style } = this.vignette
+      style.display = combined.vignette ? '' : 'none'
+      style.opacity = (Math.min(1, (combined.vignette ?? 0) * 2) * (0.85 + 0.15 * breath)).toFixed(3)
+      // Never below full size, or the view's edges would show past it.
+      style.transform = `scale(${(1.04 - 0.04 * breath).toFixed(3)})`
+    }
+    if (combined.blur) this.blur ??= camera.filters?.external.addBlur(0, 2, 2, 0) ?? null
+    if (this.blur) {
+      const focus = this.reducedMotion ? 0.35 : Math.max(0, Math.sin(time / BLUR_DRIFT_MS)) ** 2
+      this.blur.active = !!combined.blur
+      this.blur.strength = (combined.blur ?? 0) * focus
+    }
+  }
+
+  /**
+   * The vignette is a CSS gradient over the canvas rather than something the
+   * game draws: Phaser's vignette filter goes solid past its radius, leaving a
+   * hard ring when it's faint, while a radial gradient eases from clear in the
+   * middle to dark in the corners. It sits under the HUD, which comes later in the page.
+   */
+  private makeVignette() {
+    const vignette = document.createElement('div')
+    vignette.dataset.vignette = ''
+    vignette.style.cssText = [
+      'position:absolute',
+      'inset:0',
+      'pointer-events:none',
+      'background:radial-gradient(ellipse at center, transparent 15%, rgb(8 5 14 / 0.35) 35%, rgb(8 5 14 / 0.7) 55%, rgb(8 5 14 / 0.9) 75%, rgb(8 5 14) 90%)',
+    ].join(';')
+    this.game.canvas.parentElement?.appendChild(vignette)
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => vignette.remove())
+    return vignette
+  }
+
+  /**
+   * Passing out after one too many: a slow fade to black, and the guest comes
+   * to on the living-room sofa in the morning, with João standing over them.
+   */
+  private doze() {
+    const sofa = this.propAt('sofa')
+    if (!sofa) return this.cfg.bridge.game.emit('dozed')
+    this.dozing = true
+    this.effects.clear()
+    // The seat is the sofa's top row: it faces the TV, its back to the room.
+    const seat = { x: sofa.x + 1, y: sofa.y }
+    this.placeGuest(
+      seat,
+      'up',
+      () => {
+        this.applySky({ ...MORNING, moon: this.sky.moon })
+        // Behind the sofa, a little to one side, so he doesn't hide the guest.
+        const beside = [1, -1, 0]
+          .map((dx) => ({ x: seat.x + dx, y: seat.y + 2 }))
+          .find((t) => this.isWalkable(t.x, t.y, this.npc))
+        if (beside) {
+          this.npc.tile = beside
+          this.npc.sprite.setPosition(beside.x * TILE + TILE / 2, (beside.y + 1) * TILE).setDepth(10 + beside.y / 100)
+          this.face(this.npc, this.directionToward(beside, [seat]))
+          this.syncNpcLabel()
+        }
+        this.dozing = false
+        this.cfg.bridge.game.emit('dozed')
+      },
+      { out: 1200, in: 1500, colour: [0, 0, 0] },
+    )
+  }
+
+  /** Redraw someone's frames in a new look from the wardrobe. */
+  private repaintCharacter(name: CharacterName, look: Outfit) {
     const texture = this.textures.get('house-chars') as Phaser.Textures.CanvasTexture
     const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
     const ctx = texture.getContext()
-    // The guest is the first row of the sheet.
-    ctx.clearRect(0, 0, texture.width, CHAR_H)
+    // The guest is the first row of the sheet, João the second.
+    const y = name === 'guest' ? 0 : CHAR_H
+    ctx.clearRect(0, y, texture.width, CHAR_H)
     this.characterFrames().forEach((f, col) => {
-      drawCharacter(ctx, atlas, col * CHAR_W, 0, outfit, f.direction, f.anim, f.frame)
+      drawCharacter(ctx, atlas, col * CHAR_W, y, look, f.direction, f.anim, f.frame)
     })
     texture.refresh()
+    if (name === 'joao') this.paintJoaoOutlines(look)
+  }
+
+  /** Traces João's focus-cue outlines from his look, frame by frame. */
+  private paintJoaoOutlines(look: Outfit) {
+    const outlines = this.textures.get('house-chars-outline') as Phaser.Textures.CanvasTexture
+    const atlas = this.textures.get('house-characters').getSourceImage() as HTMLImageElement
+    const frame = document.createElement('canvas')
+    frame.width = CHAR_W
+    frame.height = CHAR_H
+    const frameCtx = frame.getContext('2d')!
+    outlines.getContext().clearRect(0, 0, outlines.width, outlines.height)
+    this.characterFrames().forEach((f, col) => {
+      frameCtx.clearRect(0, 0, CHAR_W, CHAR_H)
+      drawCharacter(frameCtx, atlas, 0, 0, look, f.direction, f.anim, f.frame)
+      outlines.getContext().drawImage(traceSilhouette(frame).outline, col * (CHAR_W + 2), 0)
+    })
+    outlines.refresh()
   }
 
 
@@ -631,7 +893,6 @@ export class HouseScene extends Phaser.Scene {
    * sparkle shown while the visitor is close by.
    */
   private bakeCues() {
-    this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     const small = (name: string, w: number, h: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
       const texture = this.textures.createCanvas(name, w, h)!
       draw(texture.getContext())
@@ -649,14 +910,18 @@ export class HouseScene extends Phaser.Scene {
         parts.length > 0
           ? parts.map((item) => this.decorRect(item))
           : object.tiles.map((tile) => ({ x: tile.x * TILE, y: tile.y * TILE, w: TILE, h: TILE }))
-      const bx = Math.min(...rects.map((r) => r.x))
-      const by = Math.min(...rects.map((r) => r.y))
-      const bounds = {
-        x: bx,
-        y: by,
-        w: Math.max(...rects.map((r) => r.x + r.w)) - bx,
-        h: Math.max(...rects.map((r) => r.y + r.h)) - by,
-      }
+      const left = Math.min(...rects.map((r) => r.x))
+      const top = Math.min(...rects.map((r) => r.y))
+      // One of several things on a piece of furniture lights up only its own part.
+      const bounds = object.cue
+        ? { ...object.cue, x: left + object.cue.x, y: top + object.cue.y }
+        : {
+            x: left,
+            y: top,
+            w: Math.max(...rects.map((r) => r.x + r.w)) - left,
+            h: Math.max(...rects.map((r) => r.y + r.h)) - top,
+          }
+      const { x: bx, y: by } = bounds
 
       const source = document.createElement('canvas')
       source.width = bounds.w
@@ -704,7 +969,8 @@ export class HouseScene extends Phaser.Scene {
 
   /** Within two tiles, and in the same room — walls shouldn't leak sparkles. */
   private isNear(objectId: string): boolean {
-    const object = this.furnishings.interactables.find((o) => o.id === objectId)!
+    const object = this.interactables().find((o) => o.id === objectId)
+    if (!object) return false
     const { x, y } = this.player.tile
     const here = roomAt(x, y)?.id ?? this.currentRoom
     if (roomOf(object.tiles)?.id !== here) return false
@@ -836,12 +1102,21 @@ export class HouseScene extends Phaser.Scene {
       this.cfg.bridge.game.emit('moved')
     }
     this.cfg.bridge.game.emit('step')
-    this.moveWalker(walker, target, PLAYER_STEP_MS, () => {
+    this.moveWalker(walker, target, PLAYER_STEP_MS / (this.effect.speed ?? 1), () => {
       this.updateRoom()
       this.updateHint()
       // Stop the walk cycle unless the next frame keeps us moving.
       if (!this.heldDirection() && !this.queuedStep && this.path.length === 0) this.setIdle(walker)
     })
+  }
+
+  /** Dizzy steering: now and then a step veers off to one side. Taps and clicks walk straight. */
+  private veer(direction: Direction): Direction {
+    if (Math.random() >= (this.effect.drift ?? 0)) return direction
+    const sides: Direction[] = direction === 'up' || direction === 'down' ? ['left', 'right'] : ['up', 'down']
+    const side = sides[Math.floor(Math.random() * sides.length)]
+    const tile = { x: this.player.tile.x + DELTAS[side].x, y: this.player.tile.y + DELTAS[side].y }
+    return this.isWalkable(tile.x, tile.y) ? side : direction
   }
 
   private moveWalker(walker: Walker, target: Point, duration: number, onDone: () => void) {
@@ -1197,27 +1472,6 @@ export class HouseScene extends Phaser.Scene {
     })
   }
 
-  private throwParty() {
-    this.partyHat ??= this.add.image(0, 0, 'zeno-party-hat').setOrigin(0.5, 1)
-    this.placePartyHat()
-    if (this.reducedMotion) return
-    this.tweens.add({ targets: this.partyHat, scaleY: { from: 0.2, to: 1 }, duration: 300, ease: 'Back.easeOut' })
-  }
-
-  /** Keeps the hat on Zeno's head, which sits further forward side-on (and on the other side when flipped). */
-  private placePartyHat() {
-    const hat = this.partyHat
-    if (!hat) return
-    const sprite = this.zeno.sprite
-    const frame = String(sprite.frame.name)
-    const forward = frame.includes('side') ? 4 : frame.includes('sit') ? 2 : 0
-    const top = frame.includes('sit') ? 3 : 4
-    hat
-      .setPosition(sprite.x + (sprite.flipX ? -forward : forward), sprite.y - TILE + top + 1)
-      .setDepth(sprite.depth + 0.001)
-      .setVisible(sprite.visible)
-  }
-
   // -------------------------------------------------------------------------
   // Interaction
 
@@ -1282,8 +1536,7 @@ export class HouseScene extends Phaser.Scene {
       action = target.object.action
     }
     if (action.type === 'dialogue' && action.id === 'bathroom' && !this.reducedMotion) {
-      // Knock knock.
-      this.cameras.main.shake(160, 0.003)
+      this.bathroomDoor?.play(DOOR_RATTLE)
     }
     this.cfg.bridge.game.emit('interact', action)
   }
@@ -1387,7 +1640,7 @@ export class HouseScene extends Phaser.Scene {
       targetId === 'joao'
         ? { kind: 'npc' }
         : (() => {
-            const object = this.furnishings.interactables.find((o) => o.id === targetId)
+            const object = this.interactables().find((o) => o.id === targetId)
             return object ? { kind: 'object', object } : null
           })()
     const arrive = () => this.cfg.bridge.game.emit('arrived', targetId)
@@ -1412,7 +1665,12 @@ export class HouseScene extends Phaser.Scene {
   }
 
   /** Moves the guest to `spot` behind a quick fade (a cut under reduced motion). */
-  private placeGuest(spot: Point, facing: Direction, onPlaced?: () => void) {
+  private placeGuest(
+    spot: Point,
+    facing: Direction,
+    onPlaced?: () => void,
+    fade: { out: number; in: number; colour: [number, number, number] } = { out: 140, in: 180, colour: [20, 18, 28] },
+  ) {
     this.path = []
     this.pendingTarget = null
     const move = () => {
@@ -1441,14 +1699,14 @@ export class HouseScene extends Phaser.Scene {
       this.player.facing = facing
       this.setIdle(this.player)
       this.cameras.main.centerOn(this.player.sprite.x, this.player.sprite.y)
-      if (!this.reducedMotion) this.cameras.main.fadeIn(180, 20, 18, 28)
+      if (!this.reducedMotion) this.cameras.main.fadeIn(fade.in, ...fade.colour)
       this.currentRoom = null
       this.updateRoom()
       this.updateHint()
       onPlaced?.()
     }
     if (this.reducedMotion) return move()
-    this.cameras.main.fadeOut(140, 20, 18, 28)
+    this.cameras.main.fadeOut(fade.out, ...fade.colour)
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, move)
   }
 
@@ -1513,9 +1771,17 @@ export class HouseScene extends Phaser.Scene {
     this.unsubscribers.push(
       ui.on('teleport', (room) => this.teleport(room)),
       ui.on('visit', (target) => this.visit(target)),
-      ui.on('night', ({ on, animate }) => this.setNight(on, animate)),
-      ui.on('outfit', (outfit) => this.repaintGuest(outfit)),
-      ui.on('party', () => this.throwParty()),
+      ui.on('sky', ({ animate, ...sky }) => this.setSky(sky, animate)),
+      ui.on('weather', (weather) => {
+        this.weather.set(weather)
+        this.exterior?.setWeather(weather)
+        this.lighting.setWeather(weather)
+      }),
+      ui.on('outfit', (outfit) => this.repaintCharacter('guest', outfit)),
+      ui.on('joaoLook', (look) => this.repaintCharacter('joao', look)),
+      ui.on('unlocks', (unlocks) => this.setUnlocks(unlocks)),
+      ui.on('effect', ({ source, effect }) => this.setEffect(source, effect)),
+      ui.on('doze', () => this.doze()),
       ui.on('interactFacing', () => this.interactFacing()),
       ui.on('padDirection', (direction) => {
         // A quick flick that lets go before the next frame still takes one step.

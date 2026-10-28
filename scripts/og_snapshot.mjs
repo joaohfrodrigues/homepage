@@ -10,7 +10,8 @@
  * imports it, so Next fingerprints its URL: a new snapshot gets a new URL and
  * link previews pick it up instead of a cached copy.
  *
- * Re-run it and commit the PNG whenever the house art changes.
+ * Re-run it and commit the PNG whenever the house art changes (seasonal
+ * decorations don't count: the snapshot is always taken without them).
  */
 import { statSync } from 'node:fs';
 import { chromium } from '@playwright/test';
@@ -28,7 +29,8 @@ const page = await browser.newPage({
 });
 // Skip the first-visit welcome card so M reaches the directory.
 await page.addInitScript(() => window.localStorage.setItem('house:welcomed', '1'));
-await page.goto(BASE);
+// Always the everyday look, even if the snapshot is taken in December.
+await page.goto(new URL('/?season=none', BASE).href);
 await page.locator('canvas').waitFor({ timeout: 30_000 });
 await page.getByText('João’s house').waitFor();
 

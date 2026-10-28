@@ -1,7 +1,10 @@
 import { METRES_PER_TILE, type RoomId } from '@/game/layout'
+import { isMissionComplete } from '@/game/missions'
 
 const STATS_KEY = 'house:stats'
 const VISIT_KEY = 'house:visit-counted'
+/** Sticker ids already announced with a toast, so a reload doesn't announce them again. */
+const SEEN_KEY = 'house:stickers-seen'
 
 export type BicaResult = 'perfect' | 'good' | 'under' | 'over'
 
@@ -20,12 +23,23 @@ export interface VisitorStats {
   geoClosestKm: number | null
   geoWorstKm: number | null
   chats: number
-  knocks: number
+  /** Times the visitor tried the bathroom door while it was stuck (saved as `knocks` by older visits). */
+  doorTries: number
   pets: number
   scoops: number
   naps: number
   outfits: number
-  parties: number
+  /** Times the Konami code was entered at the wardrobe; once is enough to dress João. */
+  cheats: number
+  /** Mission steps done, as `mission/step` (see `src/game/missions.ts`). */
+  missionSteps: string[]
+  /** Times the visitor had so many bicas so fast that they started vibrating. */
+  overdoses: number
+  /** Super Bocks from the fridge, and times they ended in a nap on the sofa. */
+  beers: number
+  dozes: number
+  /** Paracetamol from the bathroom cabinet, taken for a hangover. */
+  paracetamols: number
 }
 
 function emptyStats(): VisitorStats {
@@ -43,12 +57,17 @@ function emptyStats(): VisitorStats {
     geoClosestKm: null,
     geoWorstKm: null,
     chats: 0,
-    knocks: 0,
+    doorTries: 0,
     pets: 0,
     scoops: 0,
     naps: 0,
     outfits: 0,
-    parties: 0,
+    cheats: 0,
+    missionSteps: [],
+    overdoses: 0,
+    beers: 0,
+    dozes: 0,
+    paracetamols: 0,
   }
 }
 
@@ -62,8 +81,15 @@ function load(): VisitorStats {
   try {
     const saved = window.localStorage.getItem(STATS_KEY)
     if (saved) {
-      const parsed = JSON.parse(saved) as Partial<VisitorStats>
-      Object.assign(stats, parsed, { bicas: { ...stats.bicas, ...parsed.bicas }, rooms: { ...parsed.rooms } })
+      const parsed = JSON.parse(saved) as Partial<VisitorStats> & { knocks?: number }
+      // Before the door was stuck, someone was in the bathroom and tries were knocks.
+      const { knocks, ...current } = parsed
+      Object.assign(stats, current, {
+        doorTries: parsed.doorTries ?? knocks ?? 0,
+        bicas: { ...stats.bicas, ...parsed.bicas },
+        rooms: { ...parsed.rooms },
+        missionSteps: Array.isArray(parsed.missionSteps) ? parsed.missionSteps : [],
+      })
     }
   } catch {
     // Private mode or a mangled entry: start a fresh page.
@@ -92,6 +118,7 @@ export function readStats(): VisitorStats {
 export function updateStats(change: (stats: VisitorStats) => void) {
   change(load())
   saveTimer ??= setTimeout(save, 1000)
+  announceStickers()
 }
 
 /** Writes any batched changes now, e.g. before the tab goes away. */
@@ -115,10 +142,58 @@ export function countVisit() {
   })
 }
 
+let seen: Set<string> | null = null
+const stickerListeners = new Set<(achievement: Achievement) => void>()
+
+function earnedIds(stats: VisitorStats): string[] {
+  return ACHIEVEMENTS.filter((achievement) => achievement.earned(stats)).map((achievement) => achievement.id)
+}
+
+function saveSeen(ids: Set<string>): Set<string> {
+  seen = ids
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify([...ids]))
+  } catch {
+    // Private mode: the stickers already shown are remembered until the tab closes.
+  }
+  return ids
+}
+
+function loadSeen(): Set<string> {
+  if (seen) return seen
+  try {
+    const saved = window.localStorage.getItem(SEEN_KEY)
+    if (saved) return (seen = new Set(JSON.parse(saved) as string[]))
+  } catch {
+    // Private mode or a mangled entry: treat it like a first look below.
+  }
+  // Stickers earned before toasts existed count as seen, so returning visitors aren't flooded.
+  return saveSeen(new Set(earnedIds(load())))
+}
+
+/** Tells the sticker listeners about any sticker earned since they last heard. */
+function announceStickers() {
+  // Nobody to show them yet: they wait, unseen, for the next change.
+  if (stickerListeners.size === 0) return
+  const known = loadSeen()
+  const fresh = ACHIEVEMENTS.filter((achievement) => !known.has(achievement.id) && achievement.earned(load()))
+  if (fresh.length === 0) return
+  saveSeen(new Set([...known, ...fresh.map((achievement) => achievement.id)]))
+  fresh.forEach((achievement) => stickerListeners.forEach((fn) => fn(achievement)))
+}
+
+/** Calls `fn` with each sticker the visitor newly earns. Returns the unsubscribe. */
+export function onStickerEarned(fn: (achievement: Achievement) => void): () => void {
+  loadSeen()
+  stickerListeners.add(fn)
+  return () => stickerListeners.delete(fn)
+}
+
 /** Tears the page out of the guestbook: everything starts again from this visit. */
 export function resetStats() {
   cache = { ...emptyStats(), visits: 1, firstVisit: new Date().toISOString() }
   save()
+  saveSeen(new Set(earnedIds(cache)))
 }
 
 export function totalBicas(stats: VisitorStats): number {
@@ -129,8 +204,11 @@ export function metresWalked(stats: VisitorStats): number {
   return Math.round(stats.steps * METRES_PER_TILE)
 }
 
-/** Rooms a visitor can actually walk into (the bathroom stays occupied). */
-export const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
+/**
+ * Rooms a visitor can walk into from the start. The bathroom only opens with
+ * its mission, so it stays out and earlier tours still count.
+ */
+const TOUR_ROOMS: RoomId[] = ['hall', 'corridor', 'living', 'kitchen', 'study', 'bedroom', 'balcony']
 
 export interface Achievement {
   id: string
@@ -150,9 +228,12 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'couch-to-1k', title: 'Couch to 1K', hint: 'Walk a kilometre around the flat.', earned: (s) => metresWalked(s) >= 1000 },
   { id: 'chatterbox', title: 'Chatterbox', hint: 'Talk to João five times.', earned: (s) => s.chats >= 5 },
   { id: 'cat-person', title: 'Cat person', hint: 'Pet Zeno five times.', earned: (s) => s.pets >= 5 },
-  { id: 'still-occupied', title: 'Still occupied', hint: 'Knock on the bathroom door three times.', earned: (s) => s.knocks >= 3 },
   { id: 'night-owl', title: 'Night owl', hint: 'Nap until evening.', earned: (s) => s.naps >= 1 },
   { id: 'fashion-week', title: 'Fashion week', hint: 'Change outfit five times.', earned: (s) => s.outfits >= 5 },
+  { id: 'cheat-code', title: 'Cheat code', hint: 'The wardrobe has a secret, if you know the old ways.', earned: (s) => s.cheats >= 1 },
   { id: 'regular', title: 'Regular', hint: 'Come back for a fifth visit.', earned: (s) => s.visits >= 5 },
-  { id: 'party-animal', title: 'Party animal', hint: 'Enter a very old cheat code.', earned: (s) => s.parties >= 1 },
+  { id: 'unstuck', title: 'Shoulder to it', hint: 'Get the bathroom door open.', earned: (s) => isMissionComplete(s, 'bathroom') },
+  { id: 'sofa-surfer', title: 'Sofa surfer', hint: 'Wake up somewhere you didn’t fall asleep.', earned: (s) => s.dozes >= 1 },
+  { id: 'never-again', title: 'Never again', hint: 'Find something for the morning after.', earned: (s) => s.paracetamols >= 1 },
+  { id: 'wired', title: 'Wired', hint: 'Find out what too many bicas too fast does.', earned: (s) => s.overdoses >= 1 },
 ]

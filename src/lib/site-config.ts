@@ -26,6 +26,7 @@ export function buildOpenGraphMetadata({
   image,
   url,
   publishedTime,
+  ownImage = false,
 }: {
   type: 'article' | 'website'
   title: string
@@ -33,14 +34,16 @@ export function buildOpenGraphMetadata({
   image?: string | null
   url: string
   publishedTime?: string
+  /** The route has its own opengraph-image and twitter-image files, which only apply when no images are set here. */
+  ownImage?: boolean
 }) {
-  const images = image ? [image] : [DEFAULT_OG_IMAGE]
+  const images = ownImage ? {} : { images: image ? [image] : [DEFAULT_OG_IMAGE] }
   return {
     openGraph: {
       type,
       title,
       description,
-      images,
+      ...images,
       url,
       ...(publishedTime ? { publishedTime } : {}),
     },
@@ -48,7 +51,7 @@ export function buildOpenGraphMetadata({
       card: 'summary_large_image' as const,
       title,
       description,
-      images,
+      ...images,
     },
   }
 }

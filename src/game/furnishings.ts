@@ -1,7 +1,8 @@
 import type { InteractAction } from './bridge'
-import type { Point } from './layout'
+import type { Point, UnlockId } from './layout'
 import type { LimezuSprite } from './limezu-furniture'
 import { PROP_SIZES, type PropName } from './pixels'
+import type { Season } from './seasons'
 import { getTopic, type TopicId } from './topics'
 
 export type Decor =
@@ -15,6 +16,13 @@ export interface Interactable {
   label: string
   tiles: Point[]
   action: InteractAction
+  /** Gone once this is unlocked, like the handle of a door that now stands open. */
+  until?: UnlockId
+  /**
+   * The part of the furniture to light up, in pixels from its top-left, when the
+   * thing is one of several on the same piece (the post on the hall console).
+   */
+  cue?: { x: number; y: number; w: number; h: number }
 }
 
 export interface Furnishings {
@@ -54,17 +62,17 @@ export function decorTiles(decor: Decor): Point[] {
   return [{ x: decor.x, y: decor.y }]
 }
 
-/** Opening a topic goes straight into its window; the Pi first offers a shell on it too. */
-export function topicAction(id: TopicId): InteractAction {
-  if (id === 'home-server') return { type: 'dialogue', id: 'raspberry-pi' }
+/** Opening a topic goes straight into its window. */
+function topicAction(id: TopicId): InteractAction {
   return { type: 'navigate', href: getTopic(id).href }
 }
 
 /**
  * Everything placed in the house. Props drawn on a wall face (the rows directly
  * above a room) sit on tiles that are already solid; floor props block movement.
+ * A `season` adds its decorations on top.
  */
-export function furnishHouse(): Furnishings {
+export function furnishHouse(season: Season | null = null): Furnishings {
   const decor: Decor[] = []
   const interactables: Interactable[] = []
   const limezu = (sprite: LimezuSprite, x: number, y: number, solid = true) =>
@@ -109,7 +117,12 @@ export function furnishHouse(): Furnishings {
   prop('chairup', 2, 10, false)
   prop('chairup', 4, 10, false)
   // The right-hand side stays clear: it's the way in from the hall.
-  prop('recordplayer', 9, 5)
+  interactables.push({
+    id: 'recordplayer',
+    label: 'Record player — put some music on',
+    tiles: prop('recordplayer', 9, 5),
+    action: { type: 'panel', panel: 'recordplayer' },
+  })
   limezu('leafyPlant', 2, 3)
   limezu('tallBush', 9, 3)
 
@@ -126,9 +139,9 @@ export function furnishHouse(): Furnishings {
   })
   interactables.push({
     id: 'fridge',
-    label: 'Fridge magnets — where was this taken?',
+    label: 'Fridge — magnets, and something cold',
     tiles: prop('fridge', 3, 12),
-    action: { type: 'panel', panel: 'geoguess' },
+    action: { type: 'dialogue', id: 'fridge' },
   })
   prop('kcounter', 1, 14)
   prop('khob', 1, 15)
@@ -149,12 +162,14 @@ export function furnishHouse(): Furnishings {
     label: 'Post on the console — get in touch',
     tiles: [{ x: 7, y: 13 }],
     action: { type: 'dialogue', id: 'letterbox' },
+    cue: { x: 4, y: 9, w: 9, h: 6 },
   })
   interactables.push({
     id: 'directory',
     label: 'Floor plan — house directory',
     tiles: [{ x: 7, y: 14 }],
     action: { type: 'panel', panel: 'directory' },
+    cue: { x: 4, y: 16, w: 9, h: 11 },
   })
   topicItem('hiking', [...prop('coatstand', 9, 13), ...prop('boots', 9, 15)])
   interactables.push({
@@ -172,6 +187,15 @@ export function furnishHouse(): Furnishings {
       { x: 9, y: 18 },
     ],
     action: { type: 'dialogue', id: 'front-door' },
+  })
+
+  // --- Corridor (2 × 1m) ---------------------------------------------------------
+  // Its one free stretch of wall, left of the bedroom door, carries the leaderboards.
+  interactables.push({
+    id: 'leaderboards',
+    label: 'Trophy poster — leaderboards',
+    tiles: limezuArea('trophyPoster', 11, 9, 2, 2),
+    action: { type: 'panel', panel: 'leaderboards' },
   })
 
   // --- Bedroom (3 × 3m) ---------------------------------------------------------
@@ -214,7 +238,7 @@ export function furnishHouse(): Furnishings {
     action: { type: 'dialogue', id: 'balcony' },
   })
 
-  // --- Bathroom (2 × 2.5m), behind a shut door ------------------------------
+  // --- Bathroom (2 × 2.5m), behind a stuck door until its mission -------------
   interactables.push({
     id: 'bathroom-door',
     label: 'Bathroom door',
@@ -225,9 +249,15 @@ export function furnishHouse(): Furnishings {
       { x: 14, y: 14 },
     ],
     action: { type: 'dialogue', id: 'bathroom' },
+    until: 'bathroom',
   })
   prop('toilet', 11, 14)
-  prop('basin', 12, 14)
+  interactables.push({
+    id: 'cabinet',
+    label: 'Mirror cabinet',
+    tiles: prop('basin', 12, 14),
+    action: { type: 'dialogue', id: 'cabinet' },
+  })
   prop('shower', 13, 18)
   prop('bathmat', 11, 18, false)
 
@@ -235,13 +265,41 @@ export function furnishHouse(): Furnishings {
   // Entered from the end of the corridor, so its whole north wall is free for
   // the map and the desk.
   topicItem('trips', prop('wallmap', 16, 9))
-  topicItem('home-server', prop('desk', 19, 10))
+  // The workstation: its terminal is logged into the Pi at the end of the desk
+  // and links the Work page (the directory's Work entry walks here too). The
+  // home server series itself lives on the bookshelves.
+  interactables.push({
+    id: 'work',
+    label: getTopic('work').item,
+    tiles: prop('desk', 19, 10),
+    action: { type: 'panel', panel: 'terminal' },
+  })
   prop('officechair', 20, 12, false)
   topicItem('writing', [...prop('bookshelfside', 21, 13), ...prop('bookshelfside', 21, 15)])
   prop('floorlamp', 16, 13)
   topicItem('drums', prop('drums', 16, 15))
   topicItem('camera', prop('camerastand', 19, 16))
   limezu('pottedTree', 21, 17)
+
+  // --- Seasonal -----------------------------------------------------------------
+  // Only spare floor, tabletops and wall faces, so every path and item
+  // stays reachable whatever the date.
+  const garlands = () => [2, 4, 6, 8].forEach((x) => prop('garland', x, 1, false))
+  if (season === 'xmas') {
+    prop('xmastree', 5, 8)
+    prop('bolorei', 3, 8, false)
+  } else if (season === 'santos') {
+    garlands()
+    prop('sardines', 19, 4, false)
+    // Manjericos in their pots along the balcony railing.
+    limezu('sprig', 19, 2, false)
+    limezu('sprig', 20, 2, false)
+  } else if (season === 'halloween') {
+    prop('pumpkin', 9, 17)
+  } else if (season === 'newyear' || season === 'birthday') {
+    garlands()
+    prop('balloons', 5, 8)
+  }
 
   return {
     decor,
@@ -251,12 +309,12 @@ export function furnishHouse(): Furnishings {
     zeno: {
       start: { x: 6, y: 9 },
       perches: [
-        ...[4, 5, 6, 7].map((x) => ({ x, y: 6 })), // the sofa seat
+        ...[4, 5, 6, 7].map((x) => ({ x, y: 5 })), // the sofa seat, beyond its back
         ...[14, 15].flatMap((x) => [3, 4].map((y) => ({ x, y }))), // the duvet
         { x: 5, y: 17 }, // the litter box
       ],
       spots: [
-        { x: 5, y: 6 }, // sofa
+        { x: 5, y: 5 }, // sofa
         { x: 15, y: 4 }, // bed
         { x: 8, y: 3 }, // under the street window
         { x: 18, y: 6 }, // balcony

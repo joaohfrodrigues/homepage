@@ -3,6 +3,8 @@
  * generator pieces (limezu.itch.io). scripts/import_limezu.mjs packs the
  * picked pieces' idle and walk rows into one atlas plus character-pieces.json.
  * Pieces stack body, eyes, outfit, hair, face, hat, all on the same 16x32 grid.
+ * Extra pieces can be packed for the house's own people only, never offered in
+ * the wardrobe; none are at the moment.
  */
 import PIECES from './character-pieces.json'
 import type { Direction } from './layout'
@@ -47,7 +49,10 @@ export const LOOKS: Record<CharacterName, Outfit> = {
 }
 export const DEFAULT_OUTFIT: Outfit = LOOKS.guest
 
-const SLOTS = new Map(Object.values(PARTS).flatMap((styles) => styles.flatMap((s) => s.variants.map((v) => [v.id, v.slot] as const))))
+const SLOTS = new Map([
+  ...Object.values(PARTS).flatMap((styles) => styles.flatMap((s) => s.variants.map((v) => [v.id, v.slot] as const))),
+  ...(PIECES.extras as { id: string; slot: number }[]).map((piece) => [piece.id, piece.slot] as const),
+])
 
 /** Where a piece id sits in its part: which style, which colour variant. */
 export function findPiece(part: PartName, id: string | null): { style: number; variant: number } | null {
@@ -70,6 +75,15 @@ export function cleanOutfit(saved: unknown): Outfit {
   return outfit
 }
 
+/** A complete look made only of pieces the wardrobe offers, as the owner's saved look for João must be. */
+export function isOutfit(value: unknown): value is Outfit {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const look = value as Record<string, unknown>
+  return (Object.keys(PARTS) as PartName[]).every((part) =>
+    look[part] === null ? OPTIONAL_PARTS.includes(part) : typeof look[part] === 'string' && findPiece(part, look[part]) !== null,
+  )
+}
+
 /** A random look; optional parts are left off about half the time. */
 export function randomOutfit(random = Math.random): Outfit {
   const pick = <T,>(items: T[]) => items[Math.floor(random() * items.length)]
@@ -82,7 +96,8 @@ export function randomOutfit(random = Math.random): Outfit {
 
 /**
  * Draws one CHAR_W x CHAR_H frame of a look from the atlas image. `frame` is
- * 0..CHAR_FRAMES-1 within the direction's animation.
+ * 0..CHAR_FRAMES-1 within the direction's animation. With `eyesClosed`, each
+ * eye becomes a short line along its bottom row, for someone nodding off.
  */
 export function drawCharacter(
   ctx: CanvasRenderingContext2D,
@@ -93,16 +108,45 @@ export function drawCharacter(
   direction: Direction,
   anim: CharacterAnim,
   frame: number,
+  { eyesClosed = false }: { eyesClosed?: boolean } = {},
 ) {
   const col = CHARACTER_DIRECTIONS.indexOf(direction) * CHAR_FRAMES + frame
   const row = anim === 'idle' ? 0 : 1
   const piece = (part: PartName) => (outfit[part] ? SLOTS.get(outfit[part]) : undefined)
+  const source = (slot: number) =>
+    [(slot % PIECES.columns) * PIECES.slot.w + col * CHAR_W, Math.floor(slot / PIECES.columns) * PIECES.slot.h + row * CHAR_H] as const
   // Bottom to top, as the pack's generator stacks them.
-  const stack = [piece('skin'), PIECES.eyes, piece('outfit'), piece('hair'), piece('face'), piece('hat')]
+  const stack = [piece('skin'), eyesClosed ? undefined : PIECES.eyes, piece('outfit'), piece('hair'), piece('face'), piece('hat')]
   for (const slot of stack) {
     if (slot === undefined) continue
-    const sx = (slot % PIECES.columns) * PIECES.slot.w + col * CHAR_W
-    const sy = Math.floor(slot / PIECES.columns) * PIECES.slot.h + row * CHAR_H
-    ctx.drawImage(atlas, sx, sy, CHAR_W, CHAR_H, ox, oy, CHAR_W, CHAR_H)
+    ctx.drawImage(atlas, ...source(slot), CHAR_W, CHAR_H, ox, oy, CHAR_W, CHAR_H)
+    // Shut eyes go on just above the skin, so hair and hats still cover them.
+    if (eyesClosed && slot === piece('skin')) drawClosedEyes(ctx, atlas, source(PIECES.eyes), ox, oy)
+  }
+}
+
+function drawClosedEyes(
+  ctx: CanvasRenderingContext2D,
+  atlas: CanvasImageSource,
+  [sx, sy]: readonly [number, number],
+  ox: number,
+  oy: number,
+) {
+  const scratch = document.createElement('canvas')
+  scratch.width = CHAR_W
+  scratch.height = CHAR_H
+  const eyes = scratch.getContext('2d', { willReadFrequently: true })
+  if (!eyes) return
+  eyes.drawImage(atlas, sx, sy, CHAR_W, CHAR_H, 0, 0, CHAR_W, CHAR_H)
+  const pixels = eyes.getImageData(0, 0, CHAR_W, CHAR_H).data
+  for (let x = 0; x < CHAR_W; x++) {
+    for (let y = CHAR_H - 1; y >= 0; y--) {
+      const i = (y * CHAR_W + x) * 4
+      if (pixels[i + 3] === 0) continue
+      ctx.fillStyle = `rgb(${pixels[i]} ${pixels[i + 1]} ${pixels[i + 2]})`
+      // The lid line reaches one pixel outwards, away from the nose.
+      ctx.fillRect(ox + Math.min(x, x + (x < CHAR_W / 2 ? -1 : 1)), oy + y, 2, 1)
+      break
+    }
   }
 }

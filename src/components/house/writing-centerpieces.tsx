@@ -4,8 +4,8 @@ import type { ProjectSummary } from '@/lib/projects'
 
 /*
  * Pixel centrepieces for the study's writing: the bookshelves (the /writing
- * index) and the desk monitor (a project page). Like the travel map, they sit
- * above the existing article lists rather than replacing them.
+ * index) and the desk monitor (a project page, and the Work page). Like the
+ * travel map, they sit above the existing article lists rather than replacing them.
  */
 
 const SPINES = ['#8e2f35', '#2f5f63', '#c9a227', '#3f6b8a', '#6b4a7a', '#4f7a3a']
@@ -73,6 +73,29 @@ export function Bookshelf({
   )
 }
 
+/** The desk monitor's frame and stand, for a terminal session; the Work page uses it too. */
+export function Terminal({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div className="border-[6px] border-[#2a2233] bg-[#0f1a14] p-4 font-mono text-sm leading-relaxed text-[#7fd1b9] shadow-[0_6px_0_#6b4a2e]">
+        {children}
+      </div>
+      <div className="mx-auto h-3 w-24 bg-[#2a2233]" aria-hidden />
+    </div>
+  )
+}
+
+/** A shell prompt on `host`, then the command typed, or a blinking cursor without one. */
+export function Prompt({ host, command }: { host: string; command?: string }) {
+  return (
+    <p>
+      <span className="text-[#e8c95a]">joao@{host}</span>
+      <span className="text-[#a69cba]">:~$ </span>
+      {command ?? <span className="inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-[#7fd1b9]" aria-hidden />}
+    </p>
+  )
+}
+
 /** The desk monitor: the project's README and its articles, oldest first, as a terminal session. */
 export function DeskTerminal({
   project,
@@ -82,40 +105,24 @@ export function DeskTerminal({
   articles: ArticleSummary[]
 }) {
   const host = project.slug === 'raspberry-pi' ? 'pi' : 'desk'
-  const prompt = (
-    <span>
-      <span className="text-[#e8c95a]">joao@{host}</span>
-      <span className="text-[#a69cba]">:~$ </span>
-    </span>
-  )
   const inOrder = [...articles].reverse()
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <div className="border-[6px] border-[#2a2233] bg-[#0f1a14] p-4 font-mono text-sm leading-relaxed text-[#7fd1b9] shadow-[0_6px_0_#6b4a2e]">
-        <p>
-          {prompt}cat ~/writing/{project.slug}/README
-        </p>
-        <p className="mb-3 text-[#c9d6c3]">{project.description}</p>
-        <p>
-          {prompt}ls ~/writing/{project.slug}
-        </p>
-        <ol className="mb-3">
-          {inOrder.map((article, i) => (
-            <li key={article.slug} className="flex gap-3">
-              <span className="text-[#a69cba]">{String(i + 1).padStart(2, '0')}</span>
-              <Link href={articleHref(article)} scroll={false} className="hover:text-[#f4ecd8] hover:underline">
-                {article.title}
-              </Link>
-            </li>
-          ))}
-        </ol>
-        <p>
-          {prompt}
-          <span className="inline-block h-4 w-2 translate-y-0.5 animate-pulse bg-[#7fd1b9]" aria-hidden />
-        </p>
-      </div>
-      <div className="mx-auto h-3 w-24 bg-[#2a2233]" aria-hidden />
-    </div>
+    <Terminal>
+      <Prompt host={host} command={`cat ~/writing/${project.slug}/README`} />
+      <p className="mb-3 text-[#c9d6c3]">{project.description}</p>
+      <Prompt host={host} command={`ls ~/writing/${project.slug}`} />
+      <ol className="mb-3">
+        {inOrder.map((article, i) => (
+          <li key={article.slug} className="flex gap-3">
+            <span className="text-[#a69cba]">{String(i + 1).padStart(2, '0')}</span>
+            <Link href={articleHref(article)} scroll={false} className="hover:text-[#f4ecd8] hover:underline">
+              {article.title}
+            </Link>
+          </li>
+        ))}
+      </ol>
+      <Prompt host={host} />
+    </Terminal>
   )
 }

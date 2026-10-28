@@ -442,13 +442,18 @@ export interface GeoPhoto {
   lon: number
   tripSlug: string
   tripTitle: string
+  width: number
+  height: number
+  /** The photo's average colour, behind it while it loads and around it when it doesn't fill its frame. */
+  color: string
 }
 
 /** The most-viewed geotagged photos, each with the trip it belongs to. */
 export function getGeoPhotos(limit = 80): GeoPhoto[] {
   const rows = getDb()
     .prepare(
-      `SELECT p.id, p.url_small, p.alt_description, p.location_city, p.location_name,
+      `SELECT p.id, p.url_regular, p.url_small, p.width, p.height, p.color, p.alt_description,
+        p.location_city, p.location_name,
         p.location_latitude AS lat, p.location_longitude AS lon,
         MIN(c.slug) AS trip_slug, MIN(c.title) AS trip_title
       FROM photos p
@@ -463,12 +468,16 @@ export function getGeoPhotos(limit = 80): GeoPhoto[] {
     .all(limit) as RawRow[]
   return rows.map((r) => ({
     id: r.id as string,
-    url: (r.url_small as string) || '',
+    // The game shows the photo large, so it gets the 1080px version rather than the 400px one.
+    url: (r.url_regular as string) || (r.url_small as string) || '',
     alt: (r.alt_description as string) || 'Travel photograph',
     place: (r.location_city as string) || ((r.location_name as string) || '').split(',')[0].trim(),
     lat: r.lat as number,
     lon: r.lon as number,
     tripSlug: r.trip_slug as string,
     tripTitle: formatCollectionTitle(r.trip_title as string),
+    width: (r.width as number) || 4,
+    height: (r.height as number) || 3,
+    color: (r.color as string) || '#2a2233',
   }))
 }

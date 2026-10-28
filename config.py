@@ -29,15 +29,6 @@ FETCH_MODE = os.getenv('FETCH_MODE', 'details')
 # Defaults to false so development runs log and skip invalid items.
 ETL_STRICT_VALIDATION = os.getenv('ETL_STRICT_VALIDATION', 'false').lower() in ('1', 'true', 'yes')
 
-# Collection badges configuration
-# Add collection IDs here to mark them as "Editor's Pick"
-# To find collection IDs, check: http://localhost:5001/collections or run:
-#   sqlite3 data/photos.db "SELECT id, title FROM collections;"
-FEATURED_COLLECTION_IDS = [
-    # Example: 'GRVDIk0USf4',  # 25' Valencia
-    # Example: 'py2j-CBPSoM',  # 24' Gerês
-]
-
 # Default values for missing EXIF and metadata fields
 # Centralized here to ensure consistency across all code locations (ETL, API, frontend)
 DEFAULT_EXIF_VALUES = {
@@ -49,7 +40,6 @@ DEFAULT_EXIF_VALUES = {
     'iso': 'N/A',
 }
 DEFAULT_USER_NAME = 'Unknown'
-DEFAULT_LOCATION_NAME = 'Unknown'
 
 # Log configuration status
 logger.info(f'Unsplash configured: {bool(UNSPLASH_ACCESS_KEY)}')
