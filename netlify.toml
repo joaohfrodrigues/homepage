@@ -7,3 +7,6 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Netlify's default Bun (1.3.x) ignores better-sqlite3's "gypfile": false and tries to
+  # compile it with node-gyp, which the build image lacks. Bun 1.4+ uses the prebuilt binary.
+  BUN_VERSION = "1.4.4"
