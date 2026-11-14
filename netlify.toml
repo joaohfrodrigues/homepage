@@ -1,0 +1,9 @@
+# Netlify build settings. Netlify's Next.js adapter is applied automatically, so API
+# routes, image optimisation and the files in next.config.ts's outputFileTracingIncludes
+# (data/photos.db, content/) work without a plugin entry here.
+[build]
+  command = "bun run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
