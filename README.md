@@ -5,7 +5,7 @@ pixel-art Lisbon flat you walk around, and each room leads to part of the site.
 
 ## How it fits together
 
-- **Site** (`src/`) — Next.js 16 (App Router, TypeScript, Tailwind) on Vercel. Content lives in
+- **Site** (`src/`) — Next.js 16 (App Router, TypeScript, Tailwind) on Vercel or Netlify. Content lives in
     `content/` as Markdown/YAML, edited through Keystatic CMS at `/keystatic`.
 - **The house** (`src/game/`, `src/components/house/`) — a Phaser scene with React panels on top.
     Every page under `src/app/(house)/` opens inside it. See [docs/house.md](./docs/house.md).
@@ -70,9 +70,18 @@ CI (`.github/workflows/dev.yaml`) runs the pre-commit hooks, pytest, the Bun uni
 
 ## Deploying
 
-Import the repo in Vercel and add the variables from `.env.example`. For the scoreboards, add
-**Upstash for Redis** from the Vercel Marketplace, which sets its URL and token, then add
-`SCORES_ADMIN_SECRET` and `HOUSE_OWNER_SECRET`. Each pipeline commit triggers a redeploy.
+The site runs on Vercel or Netlify; both redeploy on every commit, so each pipeline commit
+triggers a redeploy. On either, add the variables from `.env.example`, including
+`SCORES_ADMIN_SECRET` and `HOUSE_OWNER_SECRET`. The Keystatic variables are needed for the build
+itself to pass.
+
+- **Vercel**: import the repo (settings in `vercel.json`). For the scoreboards, add **Upstash for
+    Redis** from the Vercel Marketplace, which sets its URL and token.
+- **Netlify**: import the repo (settings in `netlify.toml`; the Next.js adapter is applied
+    automatically). Create a free database at [upstash.com](https://upstash.com) and copy its
+    REST URL and token into the site's variables yourself.
+
+After moving hosts, update the Keystatic GitHub OAuth app's callback URL to the new domain.
 
 ## Project structure
 
@@ -97,7 +106,7 @@ tests/              unit_ts/ (Bun), e2e/ (Playwright), unit_tests/ (pytest),
 
 Next.js 16, React 19, Phaser 4, Tailwind 4, Keystatic, Bun · SQLite (`better-sqlite3`) · Upstash
 Redis · Unsplash, Plex, TMDB, Open-Meteo · Web Audio API for the house's sound · Playwright, Bun
-test, pytest, Ruff · Vercel, GitHub Actions. Characters, plants, rugs, the bed and the trophy
+test, pytest, Ruff · Vercel or Netlify, GitHub Actions. Characters, plants, rugs, the bed and the trophy
 poster come from LimeZu's [Modern Interiors](https://limezu.itch.io/moderninteriors); the rest of
 the furniture is drawn in code.
 

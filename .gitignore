@@ -235,3 +235,6 @@ yarn-error.log*
 # Local session keys
 .sesskey
 .DS_Store
+
+# Netlify local build output
+.netlify/
