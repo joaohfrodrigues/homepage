@@ -77,8 +77,8 @@ itself to pass.
 
 - **Vercel**: import the repo (settings in `vercel.json`). For the scoreboards, add **Upstash for
     Redis** from the Vercel Marketplace, which sets its URL and token.
-- **Netlify**: import the repo (settings in `netlify.toml`; the Next.js adapter is applied
-    automatically). Create a free database at [upstash.com](https://upstash.com) and copy its
+- **Netlify**: import the repo (settings, including the Next.js adapter, in `netlify.toml`).
+    Create a free database at [upstash.com](https://upstash.com) and copy its
     REST URL and token into the site's variables yourself.
 
 After moving hosts, update the Keystatic GitHub OAuth app's callback URL to the new domain.
