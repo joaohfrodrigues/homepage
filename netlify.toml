@@ -1,6 +1,6 @@
-# Netlify build settings. Netlify's Next.js adapter is applied automatically, so API
-# routes, image optimisation and the files in next.config.ts's outputFileTracingIncludes
-# (data/photos.db, content/) work without a plugin entry here.
+# Netlify build settings. The Next.js adapter below serves the pages, API routes and
+# image optimisation, and ships the files in next.config.ts's outputFileTracingIncludes
+# (data/photos.db, content/) with the server function.
 [build]
   command = "bun run build"
   publish = ".next"
@@ -10,3 +10,8 @@
   # Netlify's default Bun (1.3.x) ignores better-sqlite3's "gypfile": false and tries to
   # compile it with node-gyp, which the build image lacks. Bun 1.4+ uses the prebuilt binary.
   BUN_VERSION = "1.4.4"
+
+# Declared explicitly: Netlify only adds it on its own when it detects Next.js, and
+# without it the raw .next folder is published and every URL is "Page not found".
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
